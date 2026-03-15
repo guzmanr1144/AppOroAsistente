@@ -5,6 +5,8 @@ import openpyxl
 import PyPDF2
 from fpdf import FPDF
 from io import BytesIO
+from datetime import datetime
+import pytz
 
 st.set_page_config(page_title="Oro Asistente", page_icon="🏆")
 
@@ -14,23 +16,24 @@ st.markdown("""
     <style>
     .stButton>button { width: 100%; border-radius: 10px; height: 3.5em; background-color: #007bff; color: white; font-weight: bold; }
     h1 { text-align: center; color: #1e3a8a; }
+    .footer { text-align: center; font-size: 12px; color: gray; margin-top: 50px; }
     </style>
     """, unsafe_allow_html=True)
 
 st.title("🏆 Oro Asistente")
 
 # ==========================================
-# CEREBRO IA INTACTO (IGUAL QUE EN TELEGRAM)
+# CEREBRO IA INTACTO CON BUG CORREGIDO
 # ==========================================
 
 def solicitar_resumen_estructurado(texto, orden_especifica=None):
-    url_list = f"https://generativelanguage.googleapis.com/v1beta/models?key={LLAVE_GEMINI}"
     try:
+        url_list = f"https://generativelanguage.googleapis.com/v1beta/models?key={LLAVE_GEMINI}"
         r_list = requests.get(url_list, timeout=10)
         modelos_disponibles = [m['name'] for m in r_list.json().get('models', []) if 'generateContent' in m.get('supportedGenerationMethods', [])]
-        modelo_usar = modelos_disponibles[0] if modelos_disponibles else "gemini-1.5-flash"
+        modelo_usar = modelos_disponibles[0] if modelos_disponibles else "models/gemini-1.5-flash"
     except:
-        modelo_usar = "gemini-1.5-flash"
+        modelo_usar = "models/gemini-1.5-flash"
 
     instruccion = orden_especifica if orden_especifica else "Analiza el documento."
 
@@ -52,8 +55,16 @@ def solicitar_resumen_estructurado(texto, orden_especifica=None):
     }
 
     try:
+        if not modelo_usar.startswith("models/"):
+            modelo_usar = f"models/{modelo_usar}"
+            
         url = f"https://generativelanguage.googleapis.com/v1beta/{modelo_usar}:generateContent?key={LLAVE_GEMINI}"
         r = requests.post(url, json=payload, timeout=30)
+        
+        if r.status_code != 200:
+            st.error(f"Error API: {r.text}")
+            return None
+            
         res_data = r.json()
 
         if "candidates" in res_data:
@@ -74,13 +85,13 @@ def solicitar_resumen_estructurado(texto, orden_especifica=None):
     return None
 
 def solicitar_informe_ia(texto):
-    url_list = f"https://generativelanguage.googleapis.com/v1beta/models?key={LLAVE_GEMINI}"
     try:
+        url_list = f"https://generativelanguage.googleapis.com/v1beta/models?key={LLAVE_GEMINI}"
         r_list = requests.get(url_list, timeout=10)
         modelos = [m['name'] for m in r_list.json().get('models', []) if 'generateContent' in m.get('supportedGenerationMethods', [])]
-        modelo = modelos[0] if modelos else "gemini-1.5-flash"
+        modelo_usar = modelos[0] if modelos else "models/gemini-1.5-flash"
     except: 
-        modelo = "gemini-1.5-flash"
+        modelo_usar = "models/gemini-1.5-flash"
 
     instruccion = (
         "Actúa como un analista experto y multidisciplinario. Escribe un informe ejecutivo en texto plano basado en los siguientes datos. "
@@ -96,7 +107,14 @@ def solicitar_informe_ia(texto):
         ]]
     }
     try:
-        r = requests.post(f"https://generativelanguage.googleapis.com/v1beta/{modelo}:generateContent?key={LLAVE_GEMINI}", json=payload, timeout=30)
+        if not modelo_usar.startswith("models/"):
+            modelo_usar = f"models/{modelo_usar}"
+            
+        url = f"https://generativelanguage.googleapis.com/v1beta/{modelo_usar}:generateContent?key={LLAVE_GEMINI}"
+        r = requests.post(url, json=payload, timeout=30)
+        if r.status_code != 200:
+            st.error(f"Error API: {r.text}")
+            return "Error en la conexión con la IA."
         return r.json()["candidates"][0]["content"]["parts"][0]["text"]
     except Exception: 
         return "No se pudo generar el informe."
@@ -137,7 +155,6 @@ if archivo:
                         info = data.get("datos", {})
                         tipo = data.get("tipo", "Documento")
                         
-                        # Formato idéntico al de Telegram
                         st.markdown(f"📄 **Análisis de {tipo.capitalize()}**")
                         st.markdown(f"🏆 **{info.get('titulo', 'Sin título')}**")
                         st.markdown(f"📝 **Resumen Ejecutivo:**\n{info.get('resumen_ejecutivo', 'No disponible')}")
@@ -176,3 +193,21 @@ if archivo:
 
     except Exception as e:
         st.error(f"Error procesando el archivo: {e}")
+
+# ==========================================
+# SECCIÓN DE MODIFICACIONES Y FECHA
+# ==========================================
+st.divider()
+
+st.subheader("✍️ Modificaciones específicas")
+instruccion = st.text_input("¿Qué quieres que busque o resuma del archivo?")
+
+if instruccion and archivo:
+    with st.spinner("Procesando..."):
+        respuesta = solicitar_informe_ia(f"INSTRUCCIÓN: {instruccion}\n\nTEXTO:\n{texto_extraido}")
+        st.info(respuesta)
+
+# Marca de tiempo para confirmar actualizaciones
+zona_horaria = pytz.timezone('America/Caracas')
+hora_actual = datetime.now(zona_horaria).strftime("%Y-%m-%d %I:%M:%S %p")
+st.markdown(f"<p class='footer'>Última actualización de la App: {hora_actual}</p>", unsafe_allow_html=True)
