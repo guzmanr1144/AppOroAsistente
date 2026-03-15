@@ -1,0 +1,5 @@
+streamlit
+python-docx
+openpyxl
+PyPDF2
+requests
