@@ -23,12 +23,12 @@ st.markdown("""
 st.title("🏆 Oro Asistente")
 
 # ==========================================
-# CEREBRO IA: MODO DEPURACIÓN (DEBUG)
+# CEREBRO IA: MODELO UNIVERSAL (GEMINI-PRO)
 # ==========================================
 
 def solicitar_ia(payload):
-    # Vamos directo al modelo más estable actual para evitar rodeos
-    modelo_dinamico = "models/gemini-1.5-flash-latest"
+    # Usamos el modelo clásico que nunca falla con las llaves de API
+    modelo_dinamico = "models/gemini-pro"
     url = f"https://generativelanguage.googleapis.com/v1beta/{modelo_dinamico}:generateContent?key={LLAVE_GEMINI}"
     
     try:
@@ -36,7 +36,6 @@ def solicitar_ia(payload):
         if r.status_code == 200:
             return r.json()
         else:
-            # AQUÍ ESTÁ LA CLAVE: Mostrar el texto exacto del error de Google
             st.error(f"❌ Error {r.status_code} de Google: {r.text}")
             return None
     except Exception as e:
