@@ -79,11 +79,12 @@ def extraer_json_seguro(texto_ia, es_lista=False):
 # ==========================================
 def solicitar_resumen_estructurado(texto):
     prompt = (
-        "Eres un sistema automatizado. Analiza el siguiente documento.\n"
-        "Devuelve ÚNICAMENTE un JSON válido. NO escribas saludos ni formato markdown.\n"
+        "Eres un analista de datos experto. Analiza el siguiente documento.\n"
+        "Si el documento es una tabla, un listado de personal o atletas, debes proporcionar métricas útiles (ejemplo: conteo total, disciplinas involucradas, municipios).\n"
+        "Devuelve ÚNICAMENTE un JSON válido. NO escribas saludos.\n"
         'Estructura EXACTA obligatoria:\n'
-        '{"tipo": "Documento", "datos": {"titulo": "...", "resumen_ejecutivo": "...", '
-        '"detalles": {"puntos_clave": ["Punto 1"], "metricas_principales": {"Dato": "Valor"}}}}\n\n'
+        '{"tipo": "Registro / Listado", "datos": {"titulo": "...", "resumen_ejecutivo": "Un resumen detallado sobre el propósito del documento y qué información contiene...", '
+        '"detalles": {"puntos_clave": ["Dato importante 1", "Dato importante 2"], "metricas_principales": {"Total Registros": "X", "Dato Relevante": "Y"}}}}\n\n'
         f"TEXTO A ANALIZAR:\n{texto[:10000]}"
     )
     try:
@@ -106,17 +107,13 @@ def solicitar_informe_ia(texto):
     except Exception as e:
         return f"Error al generar respuesta: {e}"
 
-def solicitar_lista_cambios(texto, instruccion):
+def solicitar_lista_cambios_aislada(instruccion):
+    # EL TRUCO ESTÁ AQUÍ: Ya no le mandamos el texto completo, solo la instrucción.
     prompt = (
-        f"INSTRUCCIÓN DEL USUARIO: {instruccion}\n\n"
-        "Eres un asistente MUY ESTRICTO. Tu único trabajo es identificar la solicitud de reemplazo.\n"
-        "REGLAS OBLIGATORIAS:\n"
-        "1. La cadena a buscar puede ser una sola palabra, un nombre y apellido, o una oración completa.\n"
-        "2. Identifica el texto EXACTO original y por cuál texto nuevo quiere cambiarlo el usuario.\n"
-        "3. Devuelve SOLO este formato: [{\"buscar\": \"TEXTO_ORIGINAL\", \"reemplazar\": \"TEXTO_NUEVO\"}]\n"
-        "4. NO devuelvas nunca cambios donde 'buscar' y 'reemplazar' sean idénticos.\n"
-        "5. Ignora el resto del documento.\n\n"
-        f"TEXTO ORIGINAL (solo de referencia):\n{texto[:8000]}"
+        f"INSTRUCCIÓN DEL USUARIO: '{instruccion}'\n\n"
+        "Tu ÚNICO trabajo es extraer qué texto quiere buscar el usuario y por cuál lo quiere reemplazar.\n"
+        "NO inventes palabras. NO intentes adivinar el contexto.\n"
+        "Devuelve ÚNICAMENTE un arreglo JSON con este formato exacto: [{\"buscar\": \"texto a quitar\", \"reemplazar\": \"texto nuevo\"}]\n"
     )
     try:
         model = genai.GenerativeModel(MODELO_ELEGIDO)
@@ -235,25 +232,27 @@ if archivo:
 st.divider()
 
 st.subheader("✍️ Edición Quirúrgica (Mantiene tu diseño original)")
-instruccion = st.text_input("Escribe qué quieres cambiar (Ej: Cambia 'SOPHIA BRITO' por 'DIEGO GUZMAN')")
+instruccion = st.text_input("Escribe qué quieres cambiar (Ej: Cambia 'REMO' por 'CANOTAJE')")
 
 if instruccion and archivo:
-    with st.spinner("Buscando y aislando tu cambio..."):
-        cambios_brutos = solicitar_lista_cambios(texto_extraido, instruccion)
+    with st.spinner("Extrayendo la instrucción de reemplazo..."):
+        cambios_brutos = solicitar_lista_cambios_aislada(instruccion)
         
         cambios_reales = []
         if cambios_brutos:
             for c in cambios_brutos:
+                # Nos aseguramos de que no quiera cambiar la palabra por ella misma
                 if c.get("buscar") != c.get("reemplazar"):
                     cambios_reales.append(c)
         
         if cambios_reales and len(cambios_reales) > 0:
-            st.success("✅ Cambio exacto detectado.")
+            st.success("✅ Instrucción procesada. Listo para aplicar el cambio.")
             for c in cambios_reales:
                 st.write(f"🔄 Se cambiará: **{c.get('buscar')}** por **{c.get('reemplazar')}**")
             
-            archivo.seek(0)
+            archivo.seek(0) # Volvemos al inicio del archivo subido
             
+            # ATENCIÓN: El código es muy estricto con las MAYÚSCULAS y minúsculas.
             if archivo.name.endswith(".docx"):
                 doc_modificado = buscar_y_reemplazar_docx(archivo, cambios_reales)
                 st.download_button("📄 DESCARGAR WORD INTACTO", doc_modificado, f"Corregido_{archivo.name}")
@@ -274,7 +273,7 @@ if instruccion and archivo:
                 st.download_button("📄 DESCARGAR WORD", buf.getvalue(), "Corregido_PDF.docx")
                 
         else:
-            st.warning("⚠️ Escribe de forma más directa, por ejemplo: Cambia 'Nombre Completo 1' por 'Nombre Completo 2'. Asegúrate de que el primer nombre exista en el documento original.")
+            st.warning("⚠️ No entendí qué quieres cambiar. Escribe algo simple como: Cambia 'REMO' por 'CANOTAJE'. Recuerda usar las mayúsculas idénticas al archivo original.")
 
 zona_horaria = pytz.timezone('America/Caracas')
 hora_actual = datetime.now(zona_horaria).strftime("%Y-%m-%d %I:%M:%S %p")
