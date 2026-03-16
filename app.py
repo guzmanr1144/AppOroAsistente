@@ -149,4 +149,35 @@ if archivo:
                         
         with col2:
             if st.button("📄 INFORME EJECUTIVO"):
-                with st.spinner("Redactando informe
+                with st.spinner("Redactando informe..."):
+                    informe = solicitar_informe_ia(texto_extraido)
+                    texto_limpio_informe = informe.replace('*', '').replace('#', '')
+                    
+                    doc_out = Document()
+                    doc_out.add_heading('Informe Ejecutivo', 0)
+                    for parrafo in texto_limpio_informe.split('\n'):
+                        if parrafo.strip(): doc_out.add_paragraph(parrafo.strip())
+                        
+                    buffer = BytesIO()
+                    doc_out.save(buffer)
+                    st.download_button("📥 DESCARGAR WORD", buffer.getvalue(), "Informe_Oro.docx")
+
+    except Exception as e:
+        st.error(f"Error leyendo el archivo: {e}")
+
+# ==========================================
+# SECCIÓN DE MODIFICACIONES (CHAT)
+# ==========================================
+st.divider()
+
+st.subheader("✍️ Modificaciones específicas")
+instruccion = st.text_input("¿Qué quieres que busque, corrija o resuma del archivo?")
+
+if instruccion and archivo:
+    with st.spinner("Procesando tu solicitud..."):
+        respuesta = solicitar_informe_ia(texto_extraido, instruccion)
+        st.info(respuesta)
+
+zona_horaria = pytz.timezone('America/Caracas')
+hora_actual = datetime.now(zona_horaria).strftime("%Y-%m-%d %I:%M:%S %p")
+st.markdown(f"<p class='footer'>Última actualización de la App: {hora_actual}</p>", unsafe_allow_html=True)
