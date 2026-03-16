@@ -4,7 +4,6 @@ import google.generativeai as genai
 from docx import Document
 import openpyxl
 import PyPDF2
-from fpdf import FPDF
 from io import BytesIO
 from datetime import datetime
 import pytz
@@ -13,68 +12,39 @@ import pytz
 st.set_page_config(page_title="Oro Asistente", page_icon="🏆")
 
 # ==========================================
-# CONEXIÓN SEGURA CON LA IA
+# CONEXIÓN SEGURA
 # ==========================================
 try:
-    LLAVE_GEMINI = st.secrets["LLAVE_GEMINI"]
-    genai.configure(api_key=LLAVE_GEMINI)
-except Exception:
-    st.error("🔑 Error: No se encontró la llave en los Secretos de Streamlit.")
+    # Usamos la llave que guardaste en Secrets
+    genai.configure(api_key=st.secrets["LLAVE_GEMINI"])
+except Exception as e:
+    st.error("🔑 Error de configuración: Revisa los Secrets de Streamlit.")
     st.stop()
-
-st.markdown("""
-    <style>
-    .stButton>button { width: 100%; border-radius: 10px; height: 3.5em; background-color: #007bff; color: white; font-weight: bold; }
-    h1 { text-align: center; color: #1e3a8a; }
-    .footer { text-align: center; font-size: 12px; color: gray; margin-top: 50px; }
-    </style>
-    """, unsafe_allow_html=True)
 
 st.title("🏆 Oro Asistente")
 
 # ==========================================
-# FUNCIONES DE IA (MODELO ESTABLE)
+# FUNCIONES DE IA (MODELO COMPATIBILIDAD TOTAL)
 # ==========================================
 
-def solicitar_resumen_estructurado(texto, orden_especifica=None):
-    instruccion = orden_especifica if orden_especifica else "Analiza el documento."
-    prompt = (
-        f"INSTRUCCIÓN: {instruccion}\n\n"
-        "Responde UNICAMENTE con un objeto JSON válido. No uses markdown.\n"
-        'Estructura EXACTA: {"tipo": "...", "datos": {"titulo": "...", "resumen_ejecutivo": "...", '
-        '"detalles": {"puntos_clave": ["Punto 1", "Punto 2"], "metricas_principales": {"Dato": "Valor"}}}, "cambios": []}\n\n'
-        f"CONTENIDO:\n{texto[:10000]}"
-    )
-    try:
-        # CAMBIO AQUÍ: Usamos gemini-pro que es el más estable
-        model = genai.GenerativeModel('gemini-pro')
-        respuesta = model.generate_content(prompt)
-        res_raw = respuesta.text
-        inicio, fin = res_raw.find("{"), res_raw.rfind("}") + 1
-        if inicio != -1:
-            return json.loads(res_raw[inicio:fin], strict=False)
-    except Exception as e:
-        st.error(f"Error en IA: {e}")
+def solicitar_ia_oro(prompt_texto):
+    # Probamos con el nombre técnico más compatible de todos
+    modelos_a_probar = ['gemini-1.0-pro', 'gemini-1.5-flash-latest']
+    
+    for nombre_modelo in modelos_a_probar:
+        try:
+            model = genai.GenerativeModel(nombre_modelo)
+            respuesta = model.generate_content(prompt_texto)
+            return respuesta.text
+        except Exception:
+            continue # Si falla uno, intenta el siguiente
     return None
 
-def solicitar_informe_ia(texto):
-    prompt = (
-        "Escribe un informe ejecutivo profesional en texto plano basándote en los datos. "
-        "Usa párrafos cortos y evita usar asteriscos o formato markdown.\n\n"
-        f"DATOS:\n{texto[:10000]}"
-    )
-    try:
-        # CAMBIO AQUÍ: Usamos gemini-pro
-        model = genai.GenerativeModel('gemini-pro')
-        return model.generate_content(prompt).text
-    except Exception as e:
-        return f"Error al redactar: {e}"
-
 # ==========================================
-# PROCESAMIENTO DE ARCHIVOS
+# LÓGICA DE LA APP
 # ==========================================
 
-archivo = st.file_uploader("📂 Sube tu archivo (Word, Excel o PDF)", type=["docx", "xlsx", "pdf"])
+archivo = st.file_uploader("📂 Sube tu archivo", type=["docx", "xlsx", "pdf"])
 
 if archivo:
     texto_extraido = ""
@@ -86,42 +56,28 @@ if archivo:
             wb = openpyxl.load_workbook(archivo, data_only=True)
             for sheet in wb.worksheets:
                 for row in sheet.iter_rows(values_only=True):
-                    texto_extraido += " | ".join([str(c) for c in row if c]) + "\n"
+                    texto_extraido += " ".join([str(c) for c in row if c]) + "\n"
         elif archivo.name.endswith(".pdf"):
             reader = PyPDF2.PdfReader(archivo)
             for page in reader.pages:
                 texto_extraido += page.extract_text() + "\n"
-                
-        st.success("✅ Documento listo para analizar")
-
-        col1, col2 = st.columns(2)
         
-        with col1:
-            if st.button("📝 GENERAR RESUMEN"):
-                with st.spinner("Analizando..."):
-                    data = solicitar_resumen_estructurado(texto_extraido)
-                    if data:
-                        info = data.get("datos", {})
-                        st.subheader(f"🏆 {info.get('titulo', 'Resumen')}")
-                        st.write(info.get('resumen_ejecutivo', ''))
-                    else:
-                        st.error("No se pudo estructurar el resumen.")
-                        
-        with col2:
-            if st.button("📄 DESCARGAR INFORME"):
-                with st.spinner("Preparando Word..."):
-                    informe = solicitar_informe_ia(texto_extraido)
-                    doc_out = Document()
-                    doc_out.add_heading('Informe Ejecutivo', 0)
-                    doc_out.add_paragraph(informe)
-                    buffer = BytesIO()
-                    doc_out.save(buffer)
-                    st.download_button("📥 GUARDAR WORD", buffer.getvalue(), "Informe_Oro.docx")
+        st.success("✅ Documento cargado")
+
+        if st.button("📝 GENERAR ANÁLISIS"):
+            with st.spinner("La IA está trabajando..."):
+                prompt = f"Analiza este texto y haz un resumen ejecutivo profesional:\n\n{texto_extraido[:8000]}"
+                resultado = solicitar_ia_oro(prompt)
+                
+                if resultado:
+                    st.markdown("### 📄 Resumen Ejecutivo")
+                    st.write(resultado)
+                else:
+                    st.error("❌ Google no respondió. Prueba crear una llave nueva en una región diferente.")
 
     except Exception as e:
-        st.error(f"Error al leer archivo: {e}")
+        st.error(f"Error: {e}")
 
 st.divider()
 zona_horaria = pytz.timezone('America/Caracas')
-hora_actual = datetime.now(zona_horaria).strftime("%Y-%m-%d %I:%M:%S %p")
-st.markdown(f"<p class='footer'>Actualizado: {hora_actual}</p>", unsafe_allow_html=True)
+st.caption(f"Actualizado: {datetime.now(zona_horaria).strftime('%I:%M %p')}")
