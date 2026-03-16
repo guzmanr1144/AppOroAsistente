@@ -47,7 +47,6 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 st.title("🏆 Oro Asistente")
-st.caption(f"🧠 Conectado exitosamente al modelo: {MODELO_ELEGIDO}")
 
 # ==========================================
 # FUNCIONES DE INTELIGENCIA ARTIFICIAL
@@ -96,7 +95,6 @@ def solicitar_modificacion(texto, instruccion):
     )
     try:
         model = genai.GenerativeModel(MODELO_ELEGIDO)
-        # Se le da máxima memoria para que devuelva textos muy largos sin cortarlos
         respuesta = model.generate_content(prompt, generation_config={"max_output_tokens": 8192})
         return respuesta.text
     except Exception as e:
@@ -113,7 +111,22 @@ if archivo:
     try:
         if archivo.name.endswith(".docx"):
             doc = Document(archivo)
-            texto_extraido = "\n".join([p.text for p in doc.paragraphs])
+            texto_docx = []
+            
+            # Extraer párrafos normales
+            for p in doc.paragraphs:
+                if p.text.strip():
+                    texto_docx.append(p.text)
+                    
+            # Extraer contenido de las tablas (LA SOLUCIÓN AL ERROR)
+            for table in doc.tables:
+                for row in table.rows:
+                    fila = [cell.text.strip() for cell in row.cells if cell.text.strip()]
+                    if fila:
+                        texto_docx.append(" | ".join(fila))
+                        
+            texto_extraido = "\n".join(texto_docx)
+            
         elif archivo.name.endswith(".xlsx"):
             wb = openpyxl.load_workbook(archivo, data_only=True)
             for sheet in wb.worksheets:
