@@ -10,7 +10,6 @@ import pytz
 
 st.set_page_config(page_title="Oro Asistente", page_icon="🏆")
 
-# Clave de API
 LLAVE_GEMINI = "AIzaSyADVQhbwbz6SZR-pT1rfpbf-tqJnFxRg-o"
 
 st.markdown("""
@@ -24,44 +23,41 @@ st.markdown("""
 st.title("🏆 Oro Asistente")
 
 # ==========================================
-# CEREBRO IA CORREGIDO (BÚSQUEDA DINÁMICA)
+# CEREBRO IA CON BÚSQUEDA DINÁMICA DE MODELOS
 # ==========================================
 
 def obtener_modelo_valido():
-    """Busca el mejor modelo disponible en la cuenta."""
+    """Busca el mejor modelo disponible en tu cuenta."""
     try:
-        # Probamos primero con v1beta
         url_list = f"https://generativelanguage.googleapis.com/v1beta/models?key={LLAVE_GEMINI}"
         r_list = requests.get(url_list, timeout=10)
         if r_list.status_code == 200:
             modelos = r_list.json().get('models', [])
-            # Buscamos gemini-1.5-flash o el primero que soporte generación
             for m in modelos:
-                if "gemini-1.5-flash" in m['name'] and "generateContent" in m['supportedGenerationMethods']:
-                    return m['name'] # Ya viene como "models/gemini-1.5-flash"
-            
-            # Si no está flash, el primero disponible
-            for m in modelos:
-                if "generateContent" in m['supportedGenerationMethods']:
+                if "gemini-1.5-flash" in m['name'] and "generateContent" in m.get('supportedGenerationMethods', []):
                     return m['name']
-    except:
-        pass
-    return "models/gemini-1.5-flash" # Fallback manual
+            for m in modelos:
+                if "generateContent" in m.get('supportedGenerationMethods', []):
+                    return m['name']
+    except Exception as e:
+        st.error(f"Error buscando modelos: {e}")
+    return "models/gemini-1.5-flash"
 
 def solicitar_ia(payload, endpoint="generateContent"):
+    """Envía la petición y muestra el error exacto si falla."""
     modelo = obtener_modelo_valido()
-    # Limpieza: si el modelo ya tiene "models/", no lo agregamos de nuevo
     nombre_final = modelo if modelo.startswith("models/") else f"models/{modelo}"
     
-    # Intentamos con v1beta, si falla, v1
     for version in ["v1beta", "v1"]:
         url = f"https://generativelanguage.googleapis.com/{version}/{nombre_final}:{endpoint}?key={LLAVE_GEMINI}"
         try:
             r = requests.post(url, json=payload, timeout=30)
             if r.status_code == 200:
                 return r.json()
-        except:
-            continue
+            else:
+                st.error(f"Error API ({version}) - Código {r.status_code}: {r.text}") 
+        except Exception as e:
+            st.error(f"Error de conexión: {e}")
     return None
 
 def solicitar_resumen_estructurado(texto, orden_especifica=None):
@@ -87,7 +83,8 @@ def solicitar_resumen_estructurado(texto, orden_especifica=None):
             res_raw = res_data["candidates"][0]["content"]["parts"][0]["text"]
             inicio, fin = res_raw.find("{"), res_raw.rfind("}") + 1
             return json.loads(res_raw[inicio:fin], strict=False)
-        except:
+        except Exception as e:
+            st.error(f"Error leyendo el JSON de la IA: {e}")
             return None
     return None
 
@@ -105,7 +102,7 @@ def solicitar_informe_ia(texto):
     return "No se pudo generar el informe."
 
 # ==========================================
-# INTERFAZ Y PROCESAMIENTO
+# INTERFAZ Y PROCESAMIENTO DE ARCHIVOS
 # ==========================================
 
 archivo = st.file_uploader("📂 Sube tu archivo (Word, Excel o PDF)", type=["docx", "xlsx", "pdf"])
@@ -142,7 +139,7 @@ if archivo:
                         st.write(info.get('resumen_ejecutivo', ''))
                         st.json(info.get('detalles', {}))
                     else:
-                        st.error("Error al obtener respuesta de la IA.")
+                        st.error("Error al procesar la respuesta.")
                         
         with col2:
             if st.button("📄 INFORME EJECUTIVO"):
@@ -151,7 +148,7 @@ if archivo:
                     st.text_area("Informe Generado", informe, height=300)
 
     except Exception as e:
-        st.error(f"Error: {e}")
+        st.error(f"Error procesando el archivo: {e}")
 
 st.divider()
 instruccion_usuario = st.text_input("¿Qué quieres saber del archivo?")
