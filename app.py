@@ -107,35 +107,54 @@ def solicitar_lista_cambios_aislada(instruccion):
     except: return []
 
 # ==========================================
-# PROCESAMIENTO Y REEMPLAZO
+# PROCESAMIENTO Y REEMPLAZO (MEJORADO)
 # ==========================================
 def realizar_reemplazo_docx(archivo_original, cambios):
     doc = Document(archivo_original)
+    conteo = 0
     for c in cambios:
         b, r = str(c["buscar"]), str(c["reemplazar"])
-        if not b or not r or b == r: continue
-        for p in doc.paragraphs: p.text = p.text.replace(b, r)
+        if not b or not r or b.lower() == r.lower(): continue
+        
+        # Regex para ignorar mayúsculas/minúsculas
+        regex = re.compile(re.escape(b), re.IGNORECASE)
+        
+        for p in doc.paragraphs:
+            if regex.search(p.text):
+                nuevo_texto, n = regex.subn(r, p.text)
+                p.text = nuevo_texto
+                conteo += n
         for t in doc.tables:
             for row in t.rows:
                 for cell in row.cells:
-                    for p in cell.paragraphs: p.text = p.text.replace(b, r)
+                    for p in cell.paragraphs:
+                        if regex.search(p.text):
+                            nuevo_texto, n = regex.subn(r, p.text)
+                            p.text = nuevo_texto
+                            conteo += n
     buf = BytesIO()
     doc.save(buf)
-    return buf.getvalue()
+    return buf.getvalue(), conteo
 
 def realizar_reemplazo_xlsx(archivo_original, cambios):
     wb = openpyxl.load_workbook(archivo_original)
+    conteo = 0
     for c in cambios:
         b, r = str(c["buscar"]), str(c["reemplazar"])
-        if not b or not r or b == r: continue
+        if not b or not r or b.lower() == r.lower(): continue
+        
+        regex = re.compile(re.escape(b), re.IGNORECASE)
+        
         for sheet in wb.worksheets:
             for row in sheet.iter_rows():
                 for cell in row:
-                    if cell.value and b in str(cell.value):
-                        cell.value = str(cell.value).replace(b, r)
+                    if cell.value and regex.search(str(cell.value)):
+                        nuevo_valor, n = regex.subn(r, str(cell.value))
+                        cell.value = nuevo_valor
+                        conteo += n
     buf = BytesIO()
     wb.save(buf)
-    return buf.getvalue()
+    return buf.getvalue(), conteo
 
 def generar_pdf_basico(texto):
     pdf = FPDF()
@@ -187,29 +206,36 @@ if archivo:
 
         st.divider()
         st.subheader("✍️ Edición Quirúrgica")
-        instruccion = st.text_input("Cambio a realizar (Ej: Cambia 'REMO' por 'CANOTAJE')")
+        instruccion = st.text_input("Cambio a realizar (Ej: Cambia 'atletismo' por 'BEISBOL')")
         
         if instruccion:
             cambios = solicitar_lista_cambios_aislada(instruccion)
             if cambios:
-                st.info(f"🔄 Cambio: {cambios[0]['buscar']} ➡️ {cambios[0]['reemplazar']}")
                 archivo.seek(0)
-                
-                # Preparamos los archivos corregidos
+                # Ejecutamos el reemplazo
                 if archivo.name.endswith(".docx"):
-                    final_file = realizar_reemplazo_docx(archivo, cambios)
+                    final_file, n_cambios = realizar_reemplazo_docx(archivo, cambios)
                 elif archivo.name.endswith(".xlsx"):
-                    final_file = realizar_reemplazo_xlsx(archivo, cambios)
+                    final_file, n_cambios = realizar_reemplazo_xlsx(archivo, cambios)
                 else:
                     final_file = texto_extraido.replace(cambios[0]['buscar'], cambios[0]['reemplazar']).encode()
+                    n_cambios = 1 if cambios[0]['buscar'] in texto_extraido else 0
 
-                st.markdown("### 📥 Opciones de descarga")
-                d1, d2, d3 = st.columns(3)
-                d1.download_button("📄 WORD", final_file if archivo.name.endswith(".docx") else b"", "Corregido.docx")
-                d2.download_button("📊 EXCEL", final_file if archivo.name.endswith(".xlsx") else b"", "Corregido.xlsx")
-                d3.download_button("📕 PDF", generar_pdf_basico(texto_extraido.replace(cambios[0]['buscar'], cambios[0]['reemplazar'])), "Corregido.pdf")
+                if n_cambios > 0:
+                    st.success(f"✅ ¡Éxito! Se realizaron {n_cambios} cambios.")
+                    st.markdown("### 📥 Opciones de descarga")
+                    d1, d2, d3 = st.columns(3)
+                    d1.download_button("📄 WORD", final_file if archivo.name.endswith(".docx") else b"", "Corregido.docx")
+                    d2.download_button("📊 EXCEL", final_file if archivo.name.endswith(".xlsx") else b"", "Corregido.xlsx")
+                    # Para el PDF generamos el texto con el cambio aplicado
+                    txt_corregido = texto_extraido
+                    for c in cambios:
+                        txt_corregido = re.compile(re.escape(c['buscar']), re.IGNORECASE).sub(c['reemplazar'], txt_corregido)
+                    d3.download_button("📕 PDF", generar_pdf_basico(txt_corregido), "Corregido.pdf")
+                else:
+                    st.warning(f"⚠️ No encontré la palabra '{cambios[0]['buscar']}' en el documento. Revisa que esté bien escrita.")
             else:
-                st.warning("⚠️ No se identificó el cambio. Intenta: Cambia 'X' por 'Y'.")
+                st.warning("⚠️ No pude entender tu instrucción. Prueba con: Cambia 'X' por 'Y'.")
     except Exception as e:
         st.error(f"Error: {e}")
 
