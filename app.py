@@ -23,36 +23,12 @@ st.markdown("""
 st.title("🏆 Oro Asistente")
 
 # ==========================================
-# CEREBRO IA: BUSCADOR DINÁMICO MEJORADO
+# CEREBRO IA: MODO DEPURACIÓN (DEBUG)
 # ==========================================
 
-def obtener_modelo_valido():
-    url_list = f"https://generativelanguage.googleapis.com/v1beta/models?key={LLAVE_GEMINI}"
-    try:
-        r_list = requests.get(url_list, timeout=10)
-        if r_list.status_code == 200:
-            modelos = r_list.json().get('models', [])
-            # 1. Buscar la versión más rápida y moderna primero
-            for m in modelos:
-                if "flash" in m['name'] and "generateContent" in m.get('supportedGenerationMethods', []):
-                    return m['name']
-            # 2. Si no hay flash, usar cualquiera que genere texto
-            for m in modelos:
-                if "generateContent" in m.get('supportedGenerationMethods', []):
-                    return m['name']
-    except Exception:
-        pass
-    
-    # 3. Respaldo moderno si falla el buscador
-    return "models/gemini-2.0-flash"
-
 def solicitar_ia(payload):
-    modelo_dinamico = obtener_modelo_valido()
-    
-    # Aseguramos que el nombre tenga el formato correcto
-    if not modelo_dinamico.startswith("models/"):
-        modelo_dinamico = f"models/{modelo_dinamico}"
-        
+    # Vamos directo al modelo más estable actual para evitar rodeos
+    modelo_dinamico = "models/gemini-1.5-flash-latest"
     url = f"https://generativelanguage.googleapis.com/v1beta/{modelo_dinamico}:generateContent?key={LLAVE_GEMINI}"
     
     try:
@@ -60,7 +36,8 @@ def solicitar_ia(payload):
         if r.status_code == 200:
             return r.json()
         else:
-            st.error(f"Error del servidor: Código {r.status_code}")
+            # AQUÍ ESTÁ LA CLAVE: Mostrar el texto exacto del error de Google
+            st.error(f"❌ Error {r.status_code} de Google: {r.text}")
             return None
     except Exception as e:
         st.error(f"Error de conexión con Google: {str(e)}")
@@ -151,7 +128,7 @@ if archivo:
         
         with col1:
             if st.button("📝 GENERAR RESUMEN"):
-                with st.spinner("Buscando modelo y analizando..."):
+                with st.spinner("Analizando con IA..."):
                     data = solicitar_resumen_estructurado(texto_extraido)
                     if data:
                         info = data.get("datos", {})
@@ -176,7 +153,7 @@ if archivo:
                                 else:
                                     st.markdown(f"🔸 {p}")
                     else:
-                        st.error("Error al procesar los datos de la IA.")
+                        st.error("Error al procesar los datos.")
                         
         with col2:
             if st.button("📄 INFORME EJECUTIVO"):
