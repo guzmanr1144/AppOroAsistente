@@ -11,7 +11,7 @@ import pytz
 st.set_page_config(page_title="Oro Asistente", page_icon="🏆")
 
 # ==========================================
-# CONEXIÓN Y BUSCADOR DE MODELOS
+# CONEXIÓN SEGURA Y DETECCIÓN DE MODELO
 # ==========================================
 try:
     LLAVE_GEMINI = st.secrets["LLAVE_GEMINI"]
@@ -31,7 +31,6 @@ except Exception as e:
     st.error(f"🔑 Error configurando la IA: {e}")
     st.stop()
 
-# MENÚ LATERAL PARA ELEGIR MODELO
 st.sidebar.title("⚙️ Configuración")
 st.sidebar.info("Si un modelo te da error de límite (Quota exceeded), elige otro de esta lista.")
 
@@ -110,10 +109,14 @@ def solicitar_informe_ia(texto):
 def solicitar_lista_cambios(texto, instruccion):
     prompt = (
         f"INSTRUCCIÓN DEL USUARIO: {instruccion}\n\n"
-        "Busca en el texto original qué palabra o frase exacta debe ser reemplazada.\n"
-        "Devuelve ÚNICAMENTE un arreglo JSON con este formato exacto: [{\"buscar\": \"palabra_vieja\", \"reemplazar\": \"palabra_nueva\"}]\n"
-        "REGLA DE ORO: La palabra en 'buscar' debe existir EXACTAMENTE en el texto original (respeta mayúsculas y acentos).\n\n"
-        f"TEXTO ORIGINAL:\n{texto[:8000]}"
+        "Eres un asistente MUY ESTRICTO. Tu único trabajo es identificar la solicitud de reemplazo.\n"
+        "REGLAS OBLIGATORIAS:\n"
+        "1. La cadena a buscar puede ser una sola palabra, un nombre y apellido, o una oración completa.\n"
+        "2. Identifica el texto EXACTO original y por cuál texto nuevo quiere cambiarlo el usuario.\n"
+        "3. Devuelve SOLO este formato: [{\"buscar\": \"TEXTO_ORIGINAL\", \"reemplazar\": \"TEXTO_NUEVO\"}]\n"
+        "4. NO devuelvas nunca cambios donde 'buscar' y 'reemplazar' sean idénticos.\n"
+        "5. Ignora el resto del documento.\n\n"
+        f"TEXTO ORIGINAL (solo de referencia):\n{texto[:8000]}"
     )
     try:
         model = genai.GenerativeModel(MODELO_ELEGIDO)
@@ -131,7 +134,7 @@ def buscar_y_reemplazar_docx(archivo_original, cambios):
     for c in cambios:
         buscar = str(c.get("buscar", ""))
         reemplazar = str(c.get("reemplazar", ""))
-        if not buscar: continue
+        if not buscar or buscar == reemplazar: continue
         
         for p in doc.paragraphs:
             if buscar in p.text:
@@ -151,7 +154,7 @@ def buscar_y_reemplazar_xlsx(archivo_original, cambios):
     for c in cambios:
         buscar = str(c.get("buscar", ""))
         reemplazar = str(c.get("reemplazar", ""))
-        if not buscar: continue
+        if not buscar or buscar == reemplazar: continue
         
         for sheet in wb.worksheets:
             for row in sheet.iter_rows():
@@ -195,7 +198,7 @@ if archivo:
                 
         st.success("✅ Documento extraído correctamente")
         
-        with st.expander("👁️ Ver vista previa (Ayuda para saber qué copiar)"):
+        with st.expander("👁️ Ver vista previa"):
             st.text(texto_extraido[:1500] + "\n... (texto acortado)")
 
         col1, col2 = st.columns(2)
@@ -211,7 +214,7 @@ if archivo:
                         for clave, valor in info.get("detalles", {}).get("metricas_principales", {}).items():
                             st.markdown(f"🔹 **{str(clave).replace('_', ' ').title()}:** {valor}")
                     else:
-                        st.error("Error: La IA tuvo un problema leyendo la estructura. Intenta de nuevo.")
+                        st.error("Error: La IA tuvo un problema leyendo la estructura.")
                         
         with col2:
             if st.button("📄 INFORME EJECUTIVO"):
@@ -232,31 +235,37 @@ if archivo:
 st.divider()
 
 st.subheader("✍️ Edición Quirúrgica (Mantiene tu diseño original)")
-instruccion = st.text_input("Escribe exactamente qué palabra quieres cambiar y por cuál (Ej: Cambia 'AJEDREZ' por 'Softbol')")
+instruccion = st.text_input("Escribe qué quieres cambiar (Ej: Cambia 'SOPHIA BRITO' por 'DIEGO GUZMAN')")
 
 if instruccion and archivo:
-    with st.spinner("Buscando la palabra en tu documento original..."):
-        cambios = solicitar_lista_cambios(texto_extraido, instruccion)
+    with st.spinner("Buscando y aislando tu cambio..."):
+        cambios_brutos = solicitar_lista_cambios(texto_extraido, instruccion)
         
-        if cambios and len(cambios) > 0:
-            st.success("✅ ¡Palabra encontrada! Listo para descargar sin perder tu formato.")
-            for c in cambios:
+        cambios_reales = []
+        if cambios_brutos:
+            for c in cambios_brutos:
+                if c.get("buscar") != c.get("reemplazar"):
+                    cambios_reales.append(c)
+        
+        if cambios_reales and len(cambios_reales) > 0:
+            st.success("✅ Cambio exacto detectado.")
+            for c in cambios_reales:
                 st.write(f"🔄 Se cambiará: **{c.get('buscar')}** por **{c.get('reemplazar')}**")
             
             archivo.seek(0)
             
             if archivo.name.endswith(".docx"):
-                doc_modificado = buscar_y_reemplazar_docx(archivo, cambios)
+                doc_modificado = buscar_y_reemplazar_docx(archivo, cambios_reales)
                 st.download_button("📄 DESCARGAR WORD INTACTO", doc_modificado, f"Corregido_{archivo.name}")
                 
             elif archivo.name.endswith(".xlsx"):
-                xls_modificado = buscar_y_reemplazar_xlsx(archivo, cambios)
+                xls_modificado = buscar_y_reemplazar_xlsx(archivo, cambios_reales)
                 st.download_button("📊 DESCARGAR EXCEL INTACTO", xls_modificado, f"Corregido_{archivo.name}")
                 
             elif archivo.name.endswith(".pdf"):
-                st.info("⚠️ Los PDF no mantienen formato. Te damos un archivo de Word con el texto nuevo.")
+                st.info("⚠️ Los PDF no mantienen formato. Te damos un Word con el texto nuevo.")
                 texto_nuevo = texto_extraido
-                for c in cambios:
+                for c in cambios_reales:
                     texto_nuevo = texto_nuevo.replace(c.get("buscar", ""), c.get("reemplazar", ""))
                 doc_out = Document()
                 doc_out.add_paragraph(texto_nuevo)
@@ -265,7 +274,7 @@ if instruccion and archivo:
                 st.download_button("📄 DESCARGAR WORD", buf.getvalue(), "Corregido_PDF.docx")
                 
         else:
-            st.warning("⚠️ No encontré esa palabra exacta. Asegúrate de copiarla idéntica a como aparece en el archivo original (revisa la Vista Previa para ayudarte).")
+            st.warning("⚠️ Escribe de forma más directa, por ejemplo: Cambia 'Nombre Completo 1' por 'Nombre Completo 2'. Asegúrate de que el primer nombre exista en el documento original.")
 
 zona_horaria = pytz.timezone('America/Caracas')
 hora_actual = datetime.now(zona_horaria).strftime("%Y-%m-%d %I:%M:%S %p")
