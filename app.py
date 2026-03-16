@@ -86,15 +86,19 @@ def solicitar_informe_ia(texto):
 
 def solicitar_modificacion(texto, instruccion):
     prompt = (
+        "Eres un editor de documentos profesional.\n"
         f"INSTRUCCIÓN DEL USUARIO: {instruccion}\n\n"
-        "Reescribe y corrige el siguiente texto aplicando exactamente lo que pide el usuario. "
-        "Mantén el texto lo más parecido al original posible, aplicando solo las modificaciones solicitadas. "
-        "No agregues comentarios ni explicaciones extras.\n\n"
-        f"TEXTO ORIGINAL:\n{texto[:10000]}"
+        "REGLA OBLIGATORIA: Debes devolver EL DOCUMENTO COMPLETO, desde la primera palabra hasta la última. "
+        "Aplica la instrucción del usuario, pero MANTÉN TODO EL RESTO DEL TEXTO INTACTO. "
+        "NO hagas un resumen, NO recortes partes del texto y NO omitas nada. "
+        "No agregues comentarios tuyos al principio ni al final.\n\n"
+        f"TEXTO ORIGINAL COMPLETAMENTE:\n{texto[:10000]}"
     )
     try:
         model = genai.GenerativeModel(MODELO_ELEGIDO)
-        return model.generate_content(prompt).text
+        # Se le da máxima memoria para que devuelva textos muy largos sin cortarlos
+        respuesta = model.generate_content(prompt, generation_config={"max_output_tokens": 8192})
+        return respuesta.text
     except Exception as e:
         return f"Error al modificar el texto: {e}"
 
@@ -122,7 +126,6 @@ if archivo:
                 
         st.success("✅ Documento extraído correctamente")
         
-        # VISTA PREVIA
         with st.expander("👁️ Ver vista previa del documento"):
             st.text(texto_extraido[:1500] + "\n... (texto acortado para la vista previa)")
 
@@ -169,11 +172,10 @@ st.subheader("✍️ Modificaciones y Correcciones")
 instruccion = st.text_input("¿Qué quieres que corrija, modifique o cambie del archivo?")
 
 if instruccion and archivo:
-    with st.spinner("Aplicando los cambios al documento..."):
+    with st.spinner("Aplicando los cambios al documento completo..."):
         texto_modificado = solicitar_modificacion(texto_extraido, instruccion)
         st.success("✅ Cambios aplicados correctamente")
         
-        # Muestra el texto cambiado en la pantalla
         with st.expander("Ver texto modificado"):
             st.write(texto_modificado)
         
@@ -195,7 +197,6 @@ if instruccion and archivo:
             pdf.add_page()
             pdf.set_font("Arial", size=11)
             for linea in texto_modificado.split('\n'):
-                # Evita errores con acentos en la librería FPDF
                 texto_limpio = linea.encode('latin-1', 'replace').decode('latin-1')
                 pdf.multi_cell(0, 8, txt=texto_limpio)
             
