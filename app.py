@@ -1,5 +1,6 @@
-import os, time, requests, json, shutil, ast
+import os, time, json, ast
 import streamlit as st
+import google.generativeai as genai
 from docx import Document
 import openpyxl
 import PyPDF2
@@ -10,7 +11,9 @@ import pytz
 
 st.set_page_config(page_title="Oro Asistente", page_icon="🏆")
 
+# Configuración OFICIAL de Google
 LLAVE_GEMINI = "AIzaSyADVQhbwbz6SZR-pT1rfpbf-tqJnFxRg-o"
+genai.configure(api_key=LLAVE_GEMINI)
 
 st.markdown("""
     <style>
@@ -23,59 +26,39 @@ st.markdown("""
 st.title("🏆 Oro Asistente")
 
 # ==========================================
-# CEREBRO IA: MODELO UNIVERSAL (GEMINI-PRO)
+# CEREBRO IA: LIBRERÍA OFICIAL DE GOOGLE
 # ==========================================
-
-def solicitar_ia(payload):
-    # Usamos el modelo clásico que nunca falla con las llaves de API
-    modelo_dinamico = "models/gemini-pro"
-    url = f"https://generativelanguage.googleapis.com/v1beta/{modelo_dinamico}:generateContent?key={LLAVE_GEMINI}"
-    
-    try:
-        r = requests.post(url, json=payload, timeout=30)
-        if r.status_code == 200:
-            return r.json()
-        else:
-            st.error(f"❌ Error {r.status_code} de Google: {r.text}")
-            return None
-    except Exception as e:
-        st.error(f"Error de conexión con Google: {str(e)}")
-        return None
 
 def solicitar_resumen_estructurado(texto, orden_especifica=None):
     instruccion = orden_especifica if orden_especifica else "Analiza el documento."
     
-    payload = {
-        "contents": [{"parts": [{"text": (
-            f"INSTRUCCIÓN: {instruccion}\n\n"
-            "Responde UNICAMENTE con un objeto JSON válido. No uses markdown, no digas 'aquí tienes el json'.\n"
-            'Estructura EXACTA: {"tipo": "...", "datos": {"titulo": "...", "resumen_ejecutivo": "...", '
-            '"detalles": {"puntos_clave": ["Punto breve 1", "Punto breve 2"], "metricas_principales": {"Total": "X"}}}, "cambios": []}\n\n'
-            "REGLA 1: En 'puntos_clave' escribe máximo 5 viñetas de texto simple.\n"
-            "REGLA 2: En 'metricas_principales' usa solo valores simples (números o texto corto).\n"
-            "REGLA 3: La lista 'cambios' DEBE estar vacía [] a menos que haya una orden explícita.\n"
-            f"CONTENIDO:\n{texto[:10000]}"
-        )}]}],
-        "safetySettings": [{"category": c, "threshold": "BLOCK_NONE"} for c in [
-            "HARM_CATEGORY_HARASSMENT", "HARM_CATEGORY_HATE_SPEECH", 
-            "HARM_CATEGORY_SEXUALLY_EXPLICIT", "HARM_CATEGORY_DANGEROUS_CONTENT"
-        ]]
-    }
+    prompt = (
+        f"INSTRUCCIÓN: {instruccion}\n\n"
+        "Responde UNICAMENTE con un objeto JSON válido. No uses markdown, no digas 'aquí tienes el json'.\n"
+        'Estructura EXACTA: {"tipo": "...", "datos": {"titulo": "...", "resumen_ejecutivo": "...", '
+        '"detalles": {"puntos_clave": ["Punto breve 1", "Punto breve 2"], "metricas_principales": {"Total": "X"}}}, "cambios": []}\n\n'
+        "REGLA 1: En 'puntos_clave' escribe máximo 5 viñetas de texto simple.\n"
+        "REGLA 2: En 'metricas_principales' usa solo valores simples.\n"
+        "REGLA 3: La lista 'cambios' DEBE estar vacía [] a menos que haya una orden explícita.\n\n"
+        f"CONTENIDO:\n{texto[:10000]}"
+    )
 
-    res_data = solicitar_ia(payload)
-    if res_data and "candidates" in res_data:
-        try:
-            res_raw = res_data["candidates"][0]["content"]["parts"][0]["text"]
-            inicio = res_raw.find("{")
-            fin = res_raw.rfind("}") + 1
-            if inicio != -1 and fin != 0:
-                res_clean = res_raw[inicio:fin]
-                try:
-                    return json.loads(res_clean, strict=False)
-                except json.JSONDecodeError:
-                    return ast.literal_eval(res_clean)
-        except Exception:
-            pass
+    try:
+        # Usamos el modelo estable directamente a través de la librería
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        respuesta = model.generate_content(prompt)
+        res_raw = respuesta.text
+        
+        inicio = res_raw.find("{")
+        fin = res_raw.rfind("}") + 1
+        if inicio != -1 and fin != 0:
+            res_clean = res_raw[inicio:fin]
+            try:
+                return json.loads(res_clean, strict=False)
+            except json.JSONDecodeError:
+                return ast.literal_eval(res_clean)
+    except Exception as e:
+        st.error(f"Error procesando la IA: {str(e)}")
     return None
 
 def solicitar_informe_ia(texto):
@@ -84,18 +67,14 @@ def solicitar_informe_ia(texto):
         "Organiza la información de manera lógica, usa párrafos cortos y resalta los puntos más importantes. "
         "No lo hagas demasiado largo. Escribe en texto COMPLETAMENTE PLANO sin usar asteriscos, almohadillas, ni markdown."
     )
-    payload = {
-        "contents": [{"parts": [{"text": f"{instruccion}\n\nDATOS A ANALIZAR:\n{texto[:10000]}"}]}],
-        "safetySettings": [{"category": c, "threshold": "BLOCK_NONE"} for c in [
-            "HARM_CATEGORY_HARASSMENT", "HARM_CATEGORY_HATE_SPEECH", 
-            "HARM_CATEGORY_SEXUALLY_EXPLICIT", "HARM_CATEGORY_DANGEROUS_CONTENT"
-        ]]
-    }
+    prompt = f"{instruccion}\n\nDATOS A ANALIZAR:\n{texto[:10000]}"
     
-    res_data = solicitar_ia(payload)
-    if res_data and "candidates" in res_data:
-        return res_data["candidates"][0]["content"]["parts"][0]["text"]
-    return "No se pudo generar el informe."
+    try:
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        respuesta = model.generate_content(prompt)
+        return respuesta.text
+    except Exception as e:
+        return f"No se pudo generar el informe. Detalle: {str(e)}"
 
 # ==========================================
 # INTERFAZ Y MANEJO DE ARCHIVOS
