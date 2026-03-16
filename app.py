@@ -4,6 +4,7 @@ import google.generativeai as genai
 from docx import Document
 import openpyxl
 import PyPDF2
+from fpdf import FPDF
 from io import BytesIO
 from datetime import datetime
 import pytz
@@ -17,20 +18,17 @@ try:
     LLAVE_GEMINI = st.secrets["LLAVE_GEMINI"]
     genai.configure(api_key=LLAVE_GEMINI)
     
-    # 1. Le preguntamos a Google qué modelos te permite usar
     modelos_disponibles = []
     for m in genai.list_models():
         if 'generateContent' in m.supported_generation_methods:
-            # Quitamos la palabra 'models/' para que la librería no se confunda
             nombre_limpio = m.name.replace("models/", "")
             modelos_disponibles.append(nombre_limpio)
             
     if not modelos_disponibles:
-        st.error("❌ Tu llave es correcta, pero Google no te habilitó modelos de texto. Crea una nueva en Google AI Studio.")
+        st.error("❌ Google no habilitó modelos de texto para esta llave.")
         st.stop()
         
-    # 2. Elegimos automáticamente el mejor modelo que tengas disponible
-    MODELO_ELEGIDO = modelos_disponibles[0] # Usamos el primero por defecto
+    MODELO_ELEGIDO = modelos_disponibles[0]
     for m in modelos_disponibles:
         if 'flash' in m:
             MODELO_ELEGIDO = m
@@ -49,8 +47,6 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 st.title("🏆 Oro Asistente")
-
-# Mostramos sutilmente qué modelo está usando para estar seguros
 st.caption(f"🧠 Conectado exitosamente al modelo: {MODELO_ELEGIDO}")
 
 # ==========================================
@@ -76,21 +72,31 @@ def solicitar_resumen_estructurado(texto):
         st.error(f"Error procesando resumen: {e}")
     return None
 
-def solicitar_informe_ia(texto, instruccion_extra=""):
-    instruccion_base = (
-        "Actúa como un analista experto. Escribe en texto plano basándote en los datos. "
-        "Usa párrafos cortos y evita usar asteriscos o formato markdown."
+def solicitar_informe_ia(texto):
+    prompt = (
+        "Actúa como un analista experto. Escribe un informe ejecutivo en texto plano basándote en los datos. "
+        "Usa párrafos cortos y evita usar asteriscos o formato markdown.\n\n"
+        f"DATOS:\n{texto[:10000]}"
     )
-    if instruccion_extra:
-        instruccion_base = f"INSTRUCCIÓN DEL USUARIO: {instruccion_extra}\n\n{instruccion_base}"
-        
-    prompt = f"{instruccion_base}\n\nDATOS:\n{texto[:10000]}"
-    
     try:
         model = genai.GenerativeModel(MODELO_ELEGIDO)
         return model.generate_content(prompt).text
     except Exception as e:
         return f"Error al generar respuesta: {e}"
+
+def solicitar_modificacion(texto, instruccion):
+    prompt = (
+        f"INSTRUCCIÓN DEL USUARIO: {instruccion}\n\n"
+        "Reescribe y corrige el siguiente texto aplicando exactamente lo que pide el usuario. "
+        "Mantén el texto lo más parecido al original posible, aplicando solo las modificaciones solicitadas. "
+        "No agregues comentarios ni explicaciones extras.\n\n"
+        f"TEXTO ORIGINAL:\n{texto[:10000]}"
+    )
+    try:
+        model = genai.GenerativeModel(MODELO_ELEGIDO)
+        return model.generate_content(prompt).text
+    except Exception as e:
+        return f"Error al modificar el texto: {e}"
 
 # ==========================================
 # PROCESAMIENTO DE ARCHIVOS
@@ -115,6 +121,10 @@ if archivo:
                 texto_extraido += page.extract_text() + "\n"
                 
         st.success("✅ Documento extraído correctamente")
+        
+        # VISTA PREVIA
+        with st.expander("👁️ Ver vista previa del documento"):
+            st.text(texto_extraido[:1500] + "\n... (texto acortado para la vista previa)")
 
         col1, col2 = st.columns(2)
         
@@ -124,26 +134,11 @@ if archivo:
                     data = solicitar_resumen_estructurado(texto_extraido)
                     if data:
                         info = data.get("datos", {})
-                        tipo = data.get("tipo", "Documento")
-                        
-                        st.markdown(f"📄 **Análisis de {tipo.capitalize()}**")
                         st.markdown(f"🏆 **{info.get('titulo', 'Sin título')}**")
                         st.markdown(f"📝 **Resumen Ejecutivo:**\n{info.get('resumen_ejecutivo', 'No disponible')}")
-                        
                         st.markdown("📊 **Métricas Principales:**")
-                        metricas = info.get("detalles", {}).get("metricas_principales", {})
-                        for clave, valor in metricas.items():
+                        for clave, valor in info.get("detalles", {}).get("metricas_principales", {}).items():
                             st.markdown(f"🔹 **{str(clave).replace('_', ' ').title()}:** {valor}")
-                            
-                        puntos = info.get("detalles", {}).get("puntos_clave", [])
-                        if puntos:
-                            st.markdown("📌 **Puntos Clave:**")
-                            for p in puntos:
-                                if isinstance(p, dict):
-                                    v = list(p.values())[0] if p.values() else ""
-                                    st.markdown(f"🔸 {v}")
-                                else:
-                                    st.markdown(f"🔸 {p}")
                     else:
                         st.error("Error al estructurar los datos.")
                         
@@ -170,13 +165,58 @@ if archivo:
 # ==========================================
 st.divider()
 
-st.subheader("✍️ Modificaciones específicas")
-instruccion = st.text_input("¿Qué quieres que busque, corrija o resuma del archivo?")
+st.subheader("✍️ Modificaciones y Correcciones")
+instruccion = st.text_input("¿Qué quieres que corrija, modifique o cambie del archivo?")
 
 if instruccion and archivo:
-    with st.spinner("Procesando tu solicitud..."):
-        respuesta = solicitar_informe_ia(texto_extraido, instruccion)
-        st.info(respuesta)
+    with st.spinner("Aplicando los cambios al documento..."):
+        texto_modificado = solicitar_modificacion(texto_extraido, instruccion)
+        st.success("✅ Cambios aplicados correctamente")
+        
+        # Muestra el texto cambiado en la pantalla
+        with st.expander("Ver texto modificado"):
+            st.write(texto_modificado)
+        
+        st.markdown("### 📥 Descargar documento modificado")
+        c_w, c_p, c_e = st.columns(3)
+        
+        # BOTÓN WORD
+        doc_mod = Document()
+        for parrafo in texto_modificado.split('\n'):
+            if parrafo.strip():
+                doc_mod.add_paragraph(parrafo.strip())
+        buf_w = BytesIO()
+        doc_mod.save(buf_w)
+        c_w.download_button("📄 WORD", buf_w.getvalue(), "Documento_Modificado.docx", key="w_mod")
+        
+        # BOTÓN PDF
+        try:
+            pdf = FPDF()
+            pdf.add_page()
+            pdf.set_font("Arial", size=11)
+            for linea in texto_modificado.split('\n'):
+                # Evita errores con acentos en la librería FPDF
+                texto_limpio = linea.encode('latin-1', 'replace').decode('latin-1')
+                pdf.multi_cell(0, 8, txt=texto_limpio)
+            
+            salida_pdf = pdf.output(dest='S')
+            if isinstance(salida_pdf, str):
+                pdf_bytes = salida_pdf.encode('latin-1')
+            else:
+                pdf_bytes = bytes(salida_pdf)
+                
+            c_p.download_button("📕 PDF", pdf_bytes, "Documento_Modificado.pdf", key="p_mod")
+        except Exception as e:
+            c_p.error("Error al crear PDF")
+            
+        # BOTÓN EXCEL
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        for i, linea in enumerate(texto_modificado.split('\n')):
+            ws.cell(row=i+1, column=1, value=linea)
+        buf_e = BytesIO()
+        wb.save(buf_e)
+        c_e.download_button("📊 EXCEL", buf_e.getvalue(), "Documento_Modificado.xlsx", key="e_mod")
 
 zona_horaria = pytz.timezone('America/Caracas')
 hora_actual = datetime.now(zona_horaria).strftime("%Y-%m-%d %I:%M:%S %p")
