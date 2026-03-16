@@ -1,4 +1,4 @@
-import os, json, ast
+import os, json, ast, re
 import streamlit as st
 import google.generativeai as genai
 from docx import Document
@@ -83,7 +83,7 @@ def solicitar_resumen_estructurado(texto):
         "Si el documento es una tabla, un listado de personal o atletas, debes proporcionar métricas útiles (ejemplo: conteo total, disciplinas involucradas, municipios).\n"
         "Devuelve ÚNICAMENTE un JSON válido. NO escribas saludos.\n"
         'Estructura EXACTA obligatoria:\n'
-        '{"tipo": "Registro / Listado", "datos": {"titulo": "...", "resumen_ejecutivo": "Un resumen detallado sobre el propósito del documento y qué información contiene...", '
+        '{"tipo": "Registro / Listado", "datos": {"titulo": "...", "resumen_ejecutivo": "Un resumen detallado...", '
         '"detalles": {"puntos_clave": ["Dato importante 1", "Dato importante 2"], "metricas_principales": {"Total Registros": "X", "Dato Relevante": "Y"}}}}\n\n'
         f"TEXTO A ANALIZAR:\n{texto[:10000]}"
     )
@@ -108,12 +108,19 @@ def solicitar_informe_ia(texto):
         return f"Error al generar respuesta: {e}"
 
 def solicitar_lista_cambios_aislada(instruccion):
-    # EL TRUCO ESTÁ AQUÍ: Ya no le mandamos el texto completo, solo la instrucción.
+    # PLAN A: Extraer directamente con Python (Infalible si se usa la palabra "cambia")
+    patron = r"cambi(?:a|ar)\s+['\"]?(.*?)['\"]?\s+por\s+['\"]?(.*?)['\"]?"
+    match = re.search(patron, instruccion, re.IGNORECASE)
+    if match:
+        buscar = match.group(1).strip()
+        reemplazar = match.group(2).strip()
+        return [{"buscar": buscar, "reemplazar": reemplazar}]
+        
+    # PLAN B: Usar Inteligencia Artificial si la instrucción es distinta
     prompt = (
-        f"INSTRUCCIÓN DEL USUARIO: '{instruccion}'\n\n"
-        "Tu ÚNICO trabajo es extraer qué texto quiere buscar el usuario y por cuál lo quiere reemplazar.\n"
-        "NO inventes palabras. NO intentes adivinar el contexto.\n"
-        "Devuelve ÚNICAMENTE un arreglo JSON con este formato exacto: [{\"buscar\": \"texto a quitar\", \"reemplazar\": \"texto nuevo\"}]\n"
+        f"Extrae el texto a buscar y reemplazar de esta instrucción: '{instruccion}'\n\n"
+        "Responde ÚNICAMENTE con este JSON exacto:\n"
+        "[{\"buscar\": \"texto viejo\", \"reemplazar\": \"texto nuevo\"}]"
     )
     try:
         model = genai.GenerativeModel(MODELO_ELEGIDO)
@@ -241,18 +248,18 @@ if instruccion and archivo:
         cambios_reales = []
         if cambios_brutos:
             for c in cambios_brutos:
-                # Nos aseguramos de que no quiera cambiar la palabra por ella misma
                 if c.get("buscar") != c.get("reemplazar"):
-                    cambios_reales.append(c)
+                    buscar_limpio = c.get("buscar").replace("'", "").replace('"', "")
+                    reemplazar_limpio = c.get("reemplazar").replace("'", "").replace('"', "")
+                    cambios_reales.append({"buscar": buscar_limpio, "reemplazar": reemplazar_limpio})
         
         if cambios_reales and len(cambios_reales) > 0:
             st.success("✅ Instrucción procesada. Listo para aplicar el cambio.")
             for c in cambios_reales:
                 st.write(f"🔄 Se cambiará: **{c.get('buscar')}** por **{c.get('reemplazar')}**")
             
-            archivo.seek(0) # Volvemos al inicio del archivo subido
+            archivo.seek(0)
             
-            # ATENCIÓN: El código es muy estricto con las MAYÚSCULAS y minúsculas.
             if archivo.name.endswith(".docx"):
                 doc_modificado = buscar_y_reemplazar_docx(archivo, cambios_reales)
                 st.download_button("📄 DESCARGAR WORD INTACTO", doc_modificado, f"Corregido_{archivo.name}")
