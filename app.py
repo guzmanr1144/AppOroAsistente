@@ -27,7 +27,6 @@ st.title("🏆 Oro Asistente")
 # ==========================================
 
 def obtener_modelo_valido():
-    """Busca el mejor modelo disponible en tu cuenta."""
     try:
         url_list = f"https://generativelanguage.googleapis.com/v1beta/models?key={LLAVE_GEMINI}"
         r_list = requests.get(url_list, timeout=10)
@@ -40,11 +39,10 @@ def obtener_modelo_valido():
                 if "generateContent" in m.get('supportedGenerationMethods', []):
                     return m['name']
     except Exception as e:
-        st.error(f"Error buscando modelos: {e}")
+        pass
     return "models/gemini-1.5-flash"
 
 def solicitar_ia(payload, endpoint="generateContent"):
-    """Envía la petición y muestra el error exacto si falla."""
     modelo = obtener_modelo_valido()
     nombre_final = modelo if modelo.startswith("models/") else f"models/{modelo}"
     
@@ -66,9 +64,12 @@ def solicitar_resumen_estructurado(texto, orden_especifica=None):
     payload = {
         "contents": [{"parts": [{"text": (
             f"INSTRUCCIÓN: {instruccion}\n\n"
-            "Responde UNICAMENTE con un objeto JSON válido. No uses markdown.\n"
-            'Estructura: {"tipo": "...", "datos": {"titulo": "...", "resumen_ejecutivo": "...", '
-            '"detalles": {"puntos_clave": ["Punto 1"], "metricas_principales": {"Total": "X"}}}, "cambios": []}\n\n'
+            "Responde UNICAMENTE con un objeto JSON válido. No uses markdown, no digas 'aquí tienes el json'.\n"
+            'Estructura EXACTA: {"tipo": "...", "datos": {"titulo": "...", "resumen_ejecutivo": "...", '
+            '"detalles": {"puntos_clave": ["Punto breve 1", "Punto breve 2"], "metricas_principales": {"Total": "X"}}}, "cambios": []}\n\n'
+            "REGLA 1: En 'puntos_clave' escribe máximo 5 viñetas de texto simple. NUNCA copies toda la tabla ni uses diccionarios ahí.\n"
+            "REGLA 2: En 'metricas_principales' usa solo valores simples (números o texto corto), NO anides listas ni diccionarios.\n"
+            "REGLA 3: La lista 'cambios' DEBE estar vacía [] a menos que haya una orden explícita del usuario para reemplazar palabras.\n"
             f"CONTENIDO:\n{texto[:10000]}"
         )}]}],
         "safetySettings": [{"category": c, "threshold": "BLOCK_NONE"} for c in [
@@ -81,28 +82,40 @@ def solicitar_resumen_estructurado(texto, orden_especifica=None):
     if res_data and "candidates" in res_data:
         try:
             res_raw = res_data["candidates"][0]["content"]["parts"][0]["text"]
-            inicio, fin = res_raw.find("{"), res_raw.rfind("}") + 1
-            return json.loads(res_raw[inicio:fin], strict=False)
+            inicio = res_raw.find("{")
+            fin = res_raw.rfind("}") + 1
+            if inicio != -1 and fin != 0:
+                res_clean = res_raw[inicio:fin]
+                try:
+                    return json.loads(res_clean, strict=False)
+                except json.JSONDecodeError:
+                    return ast.literal_eval(res_clean)
         except Exception as e:
-            st.error(f"Error leyendo el JSON de la IA: {e}")
-            return None
+            st.error(f"Excepción procesando JSON: {str(e)}")
     return None
 
 def solicitar_informe_ia(texto):
     instruccion = (
-        "Actúa como un analista experto. Escribe un informe ejecutivo en texto plano. "
-        "Sin asteriscos ni markdown. Máximo 2 páginas."
+        "Actúa como un analista experto y multidisciplinario. Escribe un informe ejecutivo en texto plano basado en los siguientes datos. "
+        "Identifica automáticamente de qué trata el documento y adapta tu tono para que sea institucional y profesional. "
+        "Organiza la información de manera lógica, usa párrafos cortos y resalta los puntos más importantes de forma fácil de entender. "
+        "No lo hagas demasiado largo, máximo una o dos páginas. Escribe en texto COMPLETAMENTE PLANO sin usar asteriscos (*), almohadillas (#), ni ningún tipo de markdown."
     )
     payload = {
-        "contents": [{"parts": [{"text": f"{instruccion}\n\nDATOS:\n{texto[:10000]}"}]}]
+        "contents": [{"parts": [{"text": f"{instruccion}\n\nDATOS A ANALIZAR:\n{texto[:10000]}"}]}],
+        "safetySettings": [{"category": c, "threshold": "BLOCK_NONE"} for c in [
+            "HARM_CATEGORY_HARASSMENT", "HARM_CATEGORY_HATE_SPEECH", 
+            "HARM_CATEGORY_SEXUALLY_EXPLICIT", "HARM_CATEGORY_DANGEROUS_CONTENT"
+        ]]
     }
+    
     res_data = solicitar_ia(payload)
     if res_data and "candidates" in res_data:
         return res_data["candidates"][0]["content"]["parts"][0]["text"]
     return "No se pudo generar el informe."
 
 # ==========================================
-# INTERFAZ Y PROCESAMIENTO DE ARCHIVOS
+# INTERFAZ Y MANEJO DE ARCHIVOS
 # ==========================================
 
 archivo = st.file_uploader("📂 Sube tu archivo (Word, Excel o PDF)", type=["docx", "xlsx", "pdf"])
@@ -125,36 +138,71 @@ if archivo:
                 ext = page.extract_text()
                 if ext: texto_extraido += ext + "\n"
                 
-        st.success("✅ Documento cargado")
+        st.success("✅ Documento extraído correctamente")
 
         col1, col2 = st.columns(2)
         
         with col1:
             if st.button("📝 GENERAR RESUMEN"):
-                with st.spinner("Buscando modelo y analizando..."):
+                with st.spinner("Conectando con IA..."):
                     data = solicitar_resumen_estructurado(texto_extraido)
                     if data:
                         info = data.get("datos", {})
-                        st.markdown(f"🏆 **{info.get('titulo', 'Resumen')}**")
-                        st.write(info.get('resumen_ejecutivo', ''))
-                        st.json(info.get('detalles', {}))
+                        tipo = data.get("tipo", "Documento")
+                        
+                        st.markdown(f"📄 **Análisis de {tipo.capitalize()}**")
+                        st.markdown(f"🏆 **{info.get('titulo', 'Sin título')}**")
+                        st.markdown(f"📝 **Resumen Ejecutivo:**\n{info.get('resumen_ejecutivo', 'No disponible')}")
+                        
+                        st.markdown("📊 **Métricas Principales:**")
+                        metricas = info.get("detalles", {}).get("metricas_principales", {})
+                        for clave, valor in metricas.items():
+                            st.markdown(f"🔹 **{str(clave).replace('_', ' ').title()}:** {valor}")
+                            
+                        puntos = info.get("detalles", {}).get("puntos_clave", [])
+                        if puntos:
+                            st.markdown("📌 **Puntos Clave:**")
+                            for p in puntos:
+                                if isinstance(p, dict):
+                                    v = list(p.values())[0] if p.values() else ""
+                                    st.markdown(f"🔸 {v}")
+                                else:
+                                    st.markdown(f"🔸 {p}")
                     else:
-                        st.error("Error al procesar la respuesta.")
+                        st.error("La IA no devolvió el formato correcto o hubo un error de conexión.")
                         
         with col2:
             if st.button("📄 INFORME EJECUTIVO"):
-                with st.spinner("Redactando..."):
+                with st.spinner("Redactando informe..."):
                     informe = solicitar_informe_ia(texto_extraido)
-                    st.text_area("Informe Generado", informe, height=300)
+                    texto_limpio_informe = informe.replace('*', '').replace('#', '')
+                    
+                    doc_out = Document()
+                    doc_out.add_heading('Informe Ejecutivo', 0)
+                    for parrafo in texto_limpio_informe.split('\n'):
+                        if parrafo.strip(): doc_out.add_paragraph(parrafo.strip())
+                        
+                    buffer = BytesIO()
+                    doc_out.save(buffer)
+                    st.download_button("📥 DESCARGAR WORD", buffer.getvalue(), "Informe_Oro.docx")
 
     except Exception as e:
         st.error(f"Error procesando el archivo: {e}")
 
+# ==========================================
+# SECCIÓN DE MODIFICACIONES Y FECHA
+# ==========================================
 st.divider()
-instruccion_usuario = st.text_input("¿Qué quieres saber del archivo?")
-if instruccion_usuario and archivo:
-    res = solicitar_informe_ia(f"ORDEN: {instruccion_usuario}\n\nTEXTO: {texto_extraido}")
-    st.info(res)
 
+st.subheader("✍️ Modificaciones específicas")
+instruccion = st.text_input("¿Qué quieres que busque o resuma del archivo?")
+
+if instruccion and archivo:
+    with st.spinner("Procesando..."):
+        respuesta = solicitar_informe_ia(f"INSTRUCCIÓN: {instruccion}\n\nTEXTO:\n{texto_extraido}")
+        st.info(respuesta)
+
+# Marca de tiempo para confirmar actualizaciones
 zona_horaria = pytz.timezone('America/Caracas')
-st.markdown(f"<p class='footer'>Actualizado: {datetime.now(zona_horaria).strftime('%I:%M %p')}</p>", unsafe_allow_html=True)
+hora_actual = datetime.now(zona_horaria).strftime("%Y-%m-%d %I:%M:%S %p")
+st.markdown(f"<p class='footer'>Última actualización de la App: {hora_actual}</p>", unsafe_allow_html=True)
