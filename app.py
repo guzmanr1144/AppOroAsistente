@@ -12,7 +12,7 @@ import pytz
 st.set_page_config(page_title="Oro Asistente", page_icon="🏆")
 
 # ==========================================
-# CONEXIÓN CON AUTO-DETECTOR DE MODELOS
+# CONEXIÓN SEGURA
 # ==========================================
 try:
     LLAVE_GEMINI = st.secrets["LLAVE_GEMINI"]
@@ -49,13 +49,27 @@ st.markdown("""
 st.title("🏆 Oro Asistente")
 
 # ==========================================
+# LIMPIADOR DE ERRORES DE LA IA
+# ==========================================
+def limpiar_json_ia(texto_raw):
+    # Quita las marcas de código que la IA a veces pone por error
+    texto = texto_raw.strip()
+    if texto.startswith("```json"):
+        texto = texto[7:]
+    elif texto.startswith("```"):
+        texto = texto[3:]
+    if texto.endswith("```"):
+        texto = texto[:-3]
+    return texto.strip()
+
+# ==========================================
 # FUNCIONES DE INTELIGENCIA ARTIFICIAL
 # ==========================================
 
 def solicitar_resumen_estructurado(texto):
     prompt = (
         "Analiza el documento.\n\n"
-        "Responde UNICAMENTE con un objeto JSON válido. No uses markdown.\n"
+        "Responde UNICAMENTE con un objeto JSON válido. NO USES MARKDOWN NI COMILLAS INVERTIDAS.\n"
         'Estructura EXACTA: {"tipo": "...", "datos": {"titulo": "...", "resumen_ejecutivo": "...", '
         '"detalles": {"puntos_clave": ["Punto 1", "Punto 2"], "metricas_principales": {"Dato": "Valor"}}}}\n\n'
         f"CONTENIDO:\n{texto[:10000]}"
@@ -63,12 +77,14 @@ def solicitar_resumen_estructurado(texto):
     try:
         model = genai.GenerativeModel(MODELO_ELEGIDO)
         respuesta = model.generate_content(prompt)
-        res_raw = respuesta.text
-        inicio, fin = res_raw.find("{"), res_raw.rfind("}") + 1
-        if inicio != -1:
-            return json.loads(res_raw[inicio:fin], strict=False)
-    except Exception:
-        pass
+        res_clean = limpiar_json_ia(respuesta.text)
+        
+        inicio = res_clean.find("{")
+        fin = res_clean.rfind("}") + 1
+        if inicio != -1 and fin != 0:
+            return json.loads(res_clean[inicio:fin], strict=False)
+    except Exception as e:
+        st.error(f"Error procesando resumen: La IA no devolvió el formato correcto.")
     return None
 
 def solicitar_informe_ia(texto):
@@ -86,9 +102,9 @@ def solicitar_informe_ia(texto):
 def solicitar_lista_cambios(texto, instruccion):
     prompt = (
         f"INSTRUCCIÓN: {instruccion}\n\n"
-        "Determina qué palabras o frases exactas deben ser reemplazadas en el texto original "
-        "para cumplir con la orden del usuario.\n"
-        "Responde ÚNICAMENTE con un arreglo JSON válido. No uses markdown.\n"
+        "Determina qué palabras exactas deben ser reemplazadas.\n"
+        "REGLA DE ORO: La palabra a 'buscar' debe estar escrita EXACTAMENTE IGUAL a como aparece en el texto original (respeta mayúsculas, minúsculas y acentos).\n"
+        "Responde ÚNICAMENTE con un arreglo JSON válido. NO USES MARKDOWN.\n"
         'Estructura EXACTA: [{"buscar": "palabra original", "reemplazar": "palabra nueva"}]\n'
         "Si la orden pide redactar algo nuevo o no hay cambios exactos, devuelve []\n\n"
         f"TEXTO ORIGINAL:\n{texto[:8000]}"
@@ -96,10 +112,12 @@ def solicitar_lista_cambios(texto, instruccion):
     try:
         model = genai.GenerativeModel(MODELO_ELEGIDO)
         respuesta = model.generate_content(prompt)
-        res_raw = respuesta.text
-        inicio, fin = res_raw.find("["), res_raw.rfind("]") + 1
-        if inicio != -1:
-            return json.loads(res_raw[inicio:fin], strict=False)
+        res_clean = limpiar_json_ia(respuesta.text)
+        
+        inicio = res_clean.find("[")
+        fin = res_clean.rfind("]") + 1
+        if inicio != -1 and fin != 0:
+            return json.loads(res_clean[inicio:fin], strict=False)
     except Exception:
         pass
     return []
@@ -115,11 +133,9 @@ def buscar_y_reemplazar_docx(archivo_original, cambios):
         reemplazar = str(c.get("reemplazar", ""))
         if not buscar: continue
         
-        # Cambiar en párrafos
         for p in doc.paragraphs:
             if buscar in p.text:
                 p.text = p.text.replace(buscar, reemplazar)
-        # Cambiar en tablas manteniendo celdas
         for table in doc.tables:
             for row in table.rows:
                 for cell in row.cells:
@@ -137,13 +153,13 @@ def buscar_y_reemplazar_xlsx(archivo_original, cambios):
         reemplazar = str(c.get("reemplazar", ""))
         if not buscar: continue
         
-        # Cambiar en celdas manteniendo estructura y colores
         for sheet in wb.worksheets:
             for row in sheet.iter_rows():
                 for cell in row:
-                    if cell.value and isinstance(cell.value, str):
-                        if buscar in cell.value:
-                            cell.value = cell.value.replace(buscar, reemplazar)
+                    if cell.value is not None:
+                        valor_celda = str(cell.value)
+                        if buscar in valor_celda:
+                            cell.value = valor_celda.replace(buscar, reemplazar)
     buf = BytesIO()
     wb.save(buf)
     return buf.getvalue()
@@ -182,7 +198,8 @@ if archivo:
             wb = openpyxl.load_workbook(archivo, data_only=True)
             for sheet in wb.worksheets:
                 for row in sheet.iter_rows(values_only=True):
-                    texto_extraido += " | ".join([str(c) for c in row if c]) + "\n"
+                    fila = [str(c) for c in row if c is not None]
+                    if fila: texto_extraido += " | ".join(fila) + "\n"
                     
         elif archivo.name.endswith(".pdf"):
             reader = PyPDF2.PdfReader(archivo)
@@ -200,8 +217,11 @@ if archivo:
                         info = data.get("datos", {})
                         st.markdown(f"🏆 **{info.get('titulo', 'Sin título')}**")
                         st.markdown(f"📝 **Resumen Ejecutivo:**\n{info.get('resumen_ejecutivo', '')}")
+                        st.markdown("📊 **Métricas Principales:**")
+                        for clave, valor in info.get("detalles", {}).get("metricas_principales", {}).items():
+                            st.markdown(f"🔹 **{str(clave).replace('_', ' ').title()}:** {valor}")
                     else:
-                        st.error("Error al estructurar los datos.")
+                        st.error("Error: La IA no envió el formato correcto.")
         with col2:
             if st.button("📄 INFORME EJECUTIVO"):
                 with st.spinner("Redactando informe..."):
@@ -221,30 +241,29 @@ if archivo:
 st.divider()
 
 st.subheader("✍️ Modificaciones con Formato Original")
-instruccion = st.text_input("¿Qué palabra o frase quieres cambiar del archivo original?")
+instruccion = st.text_input("¿Qué quieres que busque y reemplace en el archivo original?")
 
 if instruccion and archivo:
     with st.spinner("Buscando y aplicando los cambios..."):
         cambios = solicitar_lista_cambios(texto_extraido, instruccion)
         
         if cambios:
-            st.success("✅ Cambios detectados y aplicados directamente en tu archivo original.")
+            st.success("✅ Cambios detectados y listos para descargar.")
             for c in cambios:
-                st.write(f"🔄 Cambiado: **{c.get('buscar')}** ➡️ **{c.get('reemplazar')}**")
+                st.write(f"🔄 Se cambiará: **{c.get('buscar')}** por **{c.get('reemplazar')}**")
             
-            # Reiniciamos el archivo original para editarlo
             archivo.seek(0)
             
             if archivo.name.endswith(".docx"):
                 doc_modificado = buscar_y_reemplazar_docx(archivo, cambios)
-                st.download_button("📄 DESCARGAR WORD CON FORMATO INTACTO", doc_modificado, f"Corregido_{archivo.name}")
+                st.download_button("📄 DESCARGAR WORD INTACTO", doc_modificado, f"Corregido_{archivo.name}")
                 
             elif archivo.name.endswith(".xlsx"):
                 xls_modificado = buscar_y_reemplazar_xlsx(archivo, cambios)
-                st.download_button("📊 DESCARGAR EXCEL CON FORMATO INTACTO", xls_modificado, f"Corregido_{archivo.name}")
+                st.download_button("📊 DESCARGAR EXCEL INTACTO", xls_modificado, f"Corregido_{archivo.name}")
                 
             elif archivo.name.endswith(".pdf"):
-                st.info("⚠️ Los PDF no se pueden editar. Te entregamos un Word generado desde cero.")
+                st.info("⚠️ Los PDF no mantienen formato. Aquí tienes el texto nuevo:")
                 texto_nuevo = texto_extraido
                 for c in cambios:
                     texto_nuevo = texto_nuevo.replace(c.get("buscar", ""), c.get("reemplazar", ""))
@@ -255,7 +274,7 @@ if instruccion and archivo:
                 st.download_button("📄 DESCARGAR WORD", buf.getvalue(), "Corregido_PDF.docx")
                 
         else:
-            st.info("No se detectaron reemplazos exactos. Generando respuesta nueva...")
+            st.warning("⚠️ No se encontró la palabra exacta para reemplazar, pero aquí tienes una respuesta nueva:")
             texto_nuevo = generar_texto_completo(texto_extraido, instruccion)
             st.write(texto_nuevo)
 
