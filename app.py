@@ -25,7 +25,7 @@ try:
             modelos_disponibles.append(nombre_limpio)
             
     if not modelos_disponibles:
-        st.error("❌ Google no habilitó modelos de texto para esta llave.")
+        st.error("❌ Google no habilitó modelos de texto.")
         st.stop()
         
     MODELO_ELEGIDO = modelos_disponibles[0]
@@ -67,8 +67,8 @@ def solicitar_resumen_estructurado(texto):
         inicio, fin = res_raw.find("{"), res_raw.rfind("}") + 1
         if inicio != -1:
             return json.loads(res_raw[inicio:fin], strict=False)
-    except Exception as e:
-        st.error(f"Error procesando resumen: {e}")
+    except Exception:
+        pass
     return None
 
 def solicitar_informe_ia(texto):
@@ -83,22 +83,82 @@ def solicitar_informe_ia(texto):
     except Exception as e:
         return f"Error al generar respuesta: {e}"
 
-def solicitar_modificacion(texto, instruccion):
+def solicitar_lista_cambios(texto, instruccion):
     prompt = (
-        "Eres un editor de documentos profesional.\n"
-        f"INSTRUCCIÓN DEL USUARIO: {instruccion}\n\n"
-        "REGLA OBLIGATORIA: Debes devolver EL DOCUMENTO COMPLETO, desde la primera palabra hasta la última. "
-        "Aplica la instrucción del usuario, pero MANTÉN TODO EL RESTO DEL TEXTO INTACTO. "
-        "NO hagas un resumen, NO recortes partes del texto y NO omitas nada. "
-        "No agregues comentarios tuyos al principio ni al final.\n\n"
-        f"TEXTO ORIGINAL COMPLETAMENTE:\n{texto[:10000]}"
+        f"INSTRUCCIÓN: {instruccion}\n\n"
+        "Determina qué palabras o frases exactas deben ser reemplazadas en el texto original "
+        "para cumplir con la orden del usuario.\n"
+        "Responde ÚNICAMENTE con un arreglo JSON válido. No uses markdown.\n"
+        'Estructura EXACTA: [{"buscar": "palabra original", "reemplazar": "palabra nueva"}]\n'
+        "Si la orden pide redactar algo nuevo o no hay cambios exactos, devuelve []\n\n"
+        f"TEXTO ORIGINAL:\n{texto[:8000]}"
     )
     try:
         model = genai.GenerativeModel(MODELO_ELEGIDO)
-        respuesta = model.generate_content(prompt, generation_config={"max_output_tokens": 8192})
-        return respuesta.text
-    except Exception as e:
-        return f"Error al modificar el texto: {e}"
+        respuesta = model.generate_content(prompt)
+        res_raw = respuesta.text
+        inicio, fin = res_raw.find("["), res_raw.rfind("]") + 1
+        if inicio != -1:
+            return json.loads(res_raw[inicio:fin], strict=False)
+    except Exception:
+        pass
+    return []
+
+# ==========================================
+# FUNCIONES DE REEMPLAZO CON FORMATO INTACTO
+# ==========================================
+
+def buscar_y_reemplazar_docx(archivo_original, cambios):
+    doc = Document(archivo_original)
+    for c in cambios:
+        buscar = str(c.get("buscar", ""))
+        reemplazar = str(c.get("reemplazar", ""))
+        if not buscar: continue
+        
+        # Cambiar en párrafos
+        for p in doc.paragraphs:
+            if buscar in p.text:
+                p.text = p.text.replace(buscar, reemplazar)
+        # Cambiar en tablas manteniendo celdas
+        for table in doc.tables:
+            for row in table.rows:
+                for cell in row.cells:
+                    for p in cell.paragraphs:
+                        if buscar in p.text:
+                            p.text = p.text.replace(buscar, reemplazar)
+    buf = BytesIO()
+    doc.save(buf)
+    return buf.getvalue()
+
+def buscar_y_reemplazar_xlsx(archivo_original, cambios):
+    wb = openpyxl.load_workbook(archivo_original)
+    for c in cambios:
+        buscar = str(c.get("buscar", ""))
+        reemplazar = str(c.get("reemplazar", ""))
+        if not buscar: continue
+        
+        # Cambiar en celdas manteniendo estructura y colores
+        for sheet in wb.worksheets:
+            for row in sheet.iter_rows():
+                for cell in row:
+                    if cell.value and isinstance(cell.value, str):
+                        if buscar in cell.value:
+                            cell.value = cell.value.replace(buscar, reemplazar)
+    buf = BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+def generar_texto_completo(texto, instruccion):
+    prompt = (
+        f"INSTRUCCIÓN: {instruccion}\n\n"
+        "Crea un texto nuevo basado en el original. Escribe en texto plano.\n\n"
+        f"TEXTO ORIGINAL:\n{texto[:8000]}"
+    )
+    try:
+        model = genai.GenerativeModel(MODELO_ELEGIDO)
+        return model.generate_content(prompt).text
+    except Exception:
+        return "Error al generar texto nuevo."
 
 # ==========================================
 # PROCESAMIENTO DE ARCHIVOS
@@ -111,20 +171,11 @@ if archivo:
     try:
         if archivo.name.endswith(".docx"):
             doc = Document(archivo)
-            texto_docx = []
-            
-            # Extraer párrafos normales
-            for p in doc.paragraphs:
-                if p.text.strip():
-                    texto_docx.append(p.text)
-                    
-            # Extraer contenido de las tablas (LA SOLUCIÓN AL ERROR)
+            texto_docx = [p.text for p in doc.paragraphs if p.text.strip()]
             for table in doc.tables:
                 for row in table.rows:
                     fila = [cell.text.strip() for cell in row.cells if cell.text.strip()]
-                    if fila:
-                        texto_docx.append(" | ".join(fila))
-                        
+                    if fila: texto_docx.append(" | ".join(fila))
             texto_extraido = "\n".join(texto_docx)
             
         elif archivo.name.endswith(".xlsx"):
@@ -132,18 +183,15 @@ if archivo:
             for sheet in wb.worksheets:
                 for row in sheet.iter_rows(values_only=True):
                     texto_extraido += " | ".join([str(c) for c in row if c]) + "\n"
+                    
         elif archivo.name.endswith(".pdf"):
             reader = PyPDF2.PdfReader(archivo)
             for page in reader.pages:
                 texto_extraido += page.extract_text() + "\n"
                 
         st.success("✅ Documento extraído correctamente")
-        
-        with st.expander("👁️ Ver vista previa del documento"):
-            st.text(texto_extraido[:1500] + "\n... (texto acortado para la vista previa)")
 
         col1, col2 = st.columns(2)
-        
         with col1:
             if st.button("📝 GENERAR RESUMEN"):
                 with st.spinner("Analizando con IA..."):
@@ -151,24 +199,15 @@ if archivo:
                     if data:
                         info = data.get("datos", {})
                         st.markdown(f"🏆 **{info.get('titulo', 'Sin título')}**")
-                        st.markdown(f"📝 **Resumen Ejecutivo:**\n{info.get('resumen_ejecutivo', 'No disponible')}")
-                        st.markdown("📊 **Métricas Principales:**")
-                        for clave, valor in info.get("detalles", {}).get("metricas_principales", {}).items():
-                            st.markdown(f"🔹 **{str(clave).replace('_', ' ').title()}:** {valor}")
+                        st.markdown(f"📝 **Resumen Ejecutivo:**\n{info.get('resumen_ejecutivo', '')}")
                     else:
                         st.error("Error al estructurar los datos.")
-                        
         with col2:
             if st.button("📄 INFORME EJECUTIVO"):
                 with st.spinner("Redactando informe..."):
                     informe = solicitar_informe_ia(texto_extraido)
-                    texto_limpio_informe = informe.replace('*', '').replace('#', '')
-                    
                     doc_out = Document()
-                    doc_out.add_heading('Informe Ejecutivo', 0)
-                    for parrafo in texto_limpio_informe.split('\n'):
-                        if parrafo.strip(): doc_out.add_paragraph(parrafo.strip())
-                        
+                    doc_out.add_paragraph(informe)
                     buffer = BytesIO()
                     doc_out.save(buffer)
                     st.download_button("📥 DESCARGAR WORD", buffer.getvalue(), "Informe_Oro.docx")
@@ -177,60 +216,48 @@ if archivo:
         st.error(f"Error leyendo el archivo: {e}")
 
 # ==========================================
-# SECCIÓN DE MODIFICACIONES (CHAT)
+# SECCIÓN DE MODIFICACIONES INTELIGENTES
 # ==========================================
 st.divider()
 
-st.subheader("✍️ Modificaciones y Correcciones")
-instruccion = st.text_input("¿Qué quieres que corrija, modifique o cambie del archivo?")
+st.subheader("✍️ Modificaciones con Formato Original")
+instruccion = st.text_input("¿Qué palabra o frase quieres cambiar del archivo original?")
 
 if instruccion and archivo:
-    with st.spinner("Aplicando los cambios al documento completo..."):
-        texto_modificado = solicitar_modificacion(texto_extraido, instruccion)
-        st.success("✅ Cambios aplicados correctamente")
+    with st.spinner("Buscando y aplicando los cambios..."):
+        cambios = solicitar_lista_cambios(texto_extraido, instruccion)
         
-        with st.expander("Ver texto modificado"):
-            st.write(texto_modificado)
-        
-        st.markdown("### 📥 Descargar documento modificado")
-        c_w, c_p, c_e = st.columns(3)
-        
-        # BOTÓN WORD
-        doc_mod = Document()
-        for parrafo in texto_modificado.split('\n'):
-            if parrafo.strip():
-                doc_mod.add_paragraph(parrafo.strip())
-        buf_w = BytesIO()
-        doc_mod.save(buf_w)
-        c_w.download_button("📄 WORD", buf_w.getvalue(), "Documento_Modificado.docx", key="w_mod")
-        
-        # BOTÓN PDF
-        try:
-            pdf = FPDF()
-            pdf.add_page()
-            pdf.set_font("Arial", size=11)
-            for linea in texto_modificado.split('\n'):
-                texto_limpio = linea.encode('latin-1', 'replace').decode('latin-1')
-                pdf.multi_cell(0, 8, txt=texto_limpio)
+        if cambios:
+            st.success("✅ Cambios detectados y aplicados directamente en tu archivo original.")
+            for c in cambios:
+                st.write(f"🔄 Cambiado: **{c.get('buscar')}** ➡️ **{c.get('reemplazar')}**")
             
-            salida_pdf = pdf.output(dest='S')
-            if isinstance(salida_pdf, str):
-                pdf_bytes = salida_pdf.encode('latin-1')
-            else:
-                pdf_bytes = bytes(salida_pdf)
+            # Reiniciamos el archivo original para editarlo
+            archivo.seek(0)
+            
+            if archivo.name.endswith(".docx"):
+                doc_modificado = buscar_y_reemplazar_docx(archivo, cambios)
+                st.download_button("📄 DESCARGAR WORD CON FORMATO INTACTO", doc_modificado, f"Corregido_{archivo.name}")
                 
-            c_p.download_button("📕 PDF", pdf_bytes, "Documento_Modificado.pdf", key="p_mod")
-        except Exception as e:
-            c_p.error("Error al crear PDF")
-            
-        # BOTÓN EXCEL
-        wb = openpyxl.Workbook()
-        ws = wb.active
-        for i, linea in enumerate(texto_modificado.split('\n')):
-            ws.cell(row=i+1, column=1, value=linea)
-        buf_e = BytesIO()
-        wb.save(buf_e)
-        c_e.download_button("📊 EXCEL", buf_e.getvalue(), "Documento_Modificado.xlsx", key="e_mod")
+            elif archivo.name.endswith(".xlsx"):
+                xls_modificado = buscar_y_reemplazar_xlsx(archivo, cambios)
+                st.download_button("📊 DESCARGAR EXCEL CON FORMATO INTACTO", xls_modificado, f"Corregido_{archivo.name}")
+                
+            elif archivo.name.endswith(".pdf"):
+                st.info("⚠️ Los PDF no se pueden editar. Te entregamos un Word generado desde cero.")
+                texto_nuevo = texto_extraido
+                for c in cambios:
+                    texto_nuevo = texto_nuevo.replace(c.get("buscar", ""), c.get("reemplazar", ""))
+                doc_out = Document()
+                doc_out.add_paragraph(texto_nuevo)
+                buf = BytesIO()
+                doc_out.save(buf)
+                st.download_button("📄 DESCARGAR WORD", buf.getvalue(), "Corregido_PDF.docx")
+                
+        else:
+            st.info("No se detectaron reemplazos exactos. Generando respuesta nueva...")
+            texto_nuevo = generar_texto_completo(texto_extraido, instruccion)
+            st.write(texto_nuevo)
 
 zona_horaria = pytz.timezone('America/Caracas')
 hora_actual = datetime.now(zona_horaria).strftime("%Y-%m-%d %I:%M:%S %p")
