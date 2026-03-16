@@ -11,13 +11,33 @@ import pytz
 st.set_page_config(page_title="Oro Asistente", page_icon="🏆")
 
 # ==========================================
-# CONEXIÓN SEGURA CON LA IA
+# CONEXIÓN CON AUTO-DETECTOR DE MODELOS
 # ==========================================
 try:
     LLAVE_GEMINI = st.secrets["LLAVE_GEMINI"]
     genai.configure(api_key=LLAVE_GEMINI)
-except Exception:
-    st.error("🔑 Error: No se encontró la llave en los Secretos de Streamlit.")
+    
+    # 1. Le preguntamos a Google qué modelos te permite usar
+    modelos_disponibles = []
+    for m in genai.list_models():
+        if 'generateContent' in m.supported_generation_methods:
+            # Quitamos la palabra 'models/' para que la librería no se confunda
+            nombre_limpio = m.name.replace("models/", "")
+            modelos_disponibles.append(nombre_limpio)
+            
+    if not modelos_disponibles:
+        st.error("❌ Tu llave es correcta, pero Google no te habilitó modelos de texto. Crea una nueva en Google AI Studio.")
+        st.stop()
+        
+    # 2. Elegimos automáticamente el mejor modelo que tengas disponible
+    MODELO_ELEGIDO = modelos_disponibles[0] # Usamos el primero por defecto
+    for m in modelos_disponibles:
+        if 'flash' in m:
+            MODELO_ELEGIDO = m
+            break
+            
+except Exception as e:
+    st.error(f"🔑 Error configurando la IA: {e}")
     st.stop()
 
 st.markdown("""
@@ -29,6 +49,9 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 st.title("🏆 Oro Asistente")
+
+# Mostramos sutilmente qué modelo está usando para estar seguros
+st.caption(f"🧠 Conectado exitosamente al modelo: {MODELO_ELEGIDO}")
 
 # ==========================================
 # FUNCIONES DE INTELIGENCIA ARTIFICIAL
@@ -43,7 +66,7 @@ def solicitar_resumen_estructurado(texto):
         f"CONTENIDO:\n{texto[:10000]}"
     )
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel(MODELO_ELEGIDO)
         respuesta = model.generate_content(prompt)
         res_raw = respuesta.text
         inicio, fin = res_raw.find("{"), res_raw.rfind("}") + 1
@@ -64,7 +87,7 @@ def solicitar_informe_ia(texto, instruccion_extra=""):
     prompt = f"{instruccion_base}\n\nDATOS:\n{texto[:10000]}"
     
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel(MODELO_ELEGIDO)
         return model.generate_content(prompt).text
     except Exception as e:
         return f"Error al generar respuesta: {e}"
@@ -126,35 +149,4 @@ if archivo:
                         
         with col2:
             if st.button("📄 INFORME EJECUTIVO"):
-                with st.spinner("Redactando informe..."):
-                    informe = solicitar_informe_ia(texto_extraido)
-                    texto_limpio_informe = informe.replace('*', '').replace('#', '')
-                    
-                    doc_out = Document()
-                    doc_out.add_heading('Informe Ejecutivo', 0)
-                    for parrafo in texto_limpio_informe.split('\n'):
-                        if parrafo.strip(): doc_out.add_paragraph(parrafo.strip())
-                        
-                    buffer = BytesIO()
-                    doc_out.save(buffer)
-                    st.download_button("📥 DESCARGAR WORD", buffer.getvalue(), "Informe_Oro.docx")
-
-    except Exception as e:
-        st.error(f"Error leyendo el archivo: {e}")
-
-# ==========================================
-# SECCIÓN DE MODIFICACIONES (CHAT)
-# ==========================================
-st.divider()
-
-st.subheader("✍️ Modificaciones específicas")
-instruccion = st.text_input("¿Qué quieres que busque, corrija o resuma del archivo?")
-
-if instruccion and archivo:
-    with st.spinner("Procesando tu solicitud..."):
-        respuesta = solicitar_informe_ia(texto_extraido, instruccion)
-        st.info(respuesta)
-
-zona_horaria = pytz.timezone('America/Caracas')
-hora_actual = datetime.now(zona_horaria).strftime("%Y-%m-%d %I:%M:%S %p")
-st.markdown(f"<p class='footer'>Última actualización de la App: {hora_actual}</p>", unsafe_allow_html=True)
+                with st.spinner("Redactando informe
