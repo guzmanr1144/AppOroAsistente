@@ -1,4 +1,4 @@
-import os, json, ast, re
+import os, json, ast
 import streamlit as st
 import google.generativeai as genai
 from docx import Document
@@ -11,7 +11,7 @@ import pytz
 st.set_page_config(page_title="Oro Asistente", page_icon="🏆")
 
 # ==========================================
-# CONEXIÓN SEGURA Y DETECCIÓN DE MODELO
+# CONEXIÓN Y BUSCADOR DE MODELOS
 # ==========================================
 try:
     LLAVE_GEMINI = st.secrets["LLAVE_GEMINI"]
@@ -26,16 +26,22 @@ try:
     if not modelos_disponibles:
         st.error("❌ Google no habilitó modelos de texto.")
         st.stop()
-        
-    MODELO_ELEGIDO = modelos_disponibles[0]
-    for m in modelos_disponibles:
-        if 'flash' in m:
-            MODELO_ELEGIDO = m
-            break
             
 except Exception as e:
     st.error(f"🔑 Error configurando la IA: {e}")
     st.stop()
+
+# MENÚ LATERAL PARA ELEGIR MODELO
+st.sidebar.title("⚙️ Configuración")
+st.sidebar.info("Si un modelo te da error de límite (Quota exceeded), elige otro de esta lista.")
+
+indice_por_defecto = 0
+for i, m in enumerate(modelos_disponibles):
+    if '1.5-flash' in m:
+        indice_por_defecto = i
+        break
+
+MODELO_ELEGIDO = st.sidebar.selectbox("🧠 Modelo de IA:", modelos_disponibles, index=indice_por_defecto)
 
 st.markdown("""
     <style>
@@ -48,10 +54,9 @@ st.markdown("""
 st.title("🏆 Oro Asistente")
 
 # ==========================================
-# EXTRACTOR BLINDADO DE DATOS (NUEVO)
+# EXTRACTOR BLINDADO DE DATOS
 # ==========================================
 def extraer_json_seguro(texto_ia, es_lista=False):
-    """Busca y extrae únicamente la estructura JSON, ignorando saludos o formatos markdown de la IA."""
     t = texto_ia.replace("```json", "").replace("```", "").strip()
     char_inicio = "[" if es_lista else "{"
     char_fin = "]" if es_lista else "}"
@@ -73,7 +78,6 @@ def extraer_json_seguro(texto_ia, es_lista=False):
 # ==========================================
 # FUNCIONES DE INTELIGENCIA ARTIFICIAL
 # ==========================================
-
 def solicitar_resumen_estructurado(texto):
     prompt = (
         "Eres un sistema automatizado. Analiza el siguiente documento.\n"
@@ -122,7 +126,6 @@ def solicitar_lista_cambios(texto, instruccion):
 # ==========================================
 # FUNCIONES DE REEMPLAZO CON FORMATO INTACTO
 # ==========================================
-
 def buscar_y_reemplazar_docx(archivo_original, cambios):
     doc = Document(archivo_original)
     for c in cambios:
@@ -164,7 +167,6 @@ def buscar_y_reemplazar_xlsx(archivo_original, cambios):
 # ==========================================
 # PROCESAMIENTO DE ARCHIVOS
 # ==========================================
-
 archivo = st.file_uploader("📂 Sube tu archivo (Word, Excel o PDF)", type=["docx", "xlsx", "pdf"])
 
 if archivo:
