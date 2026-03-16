@@ -2,6 +2,6 @@ streamlit
 python-docx
 openpyxl
 PyPDF2
-requests
+google-generativeai
 pytz
 fpdf
