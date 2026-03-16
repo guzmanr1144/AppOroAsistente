@@ -16,14 +16,12 @@ st.set_page_config(page_title="Oro Asistente", page_icon="🏆")
 # CONEXIÓN SEGURA CON LA IA
 # ==========================================
 try:
-    # Busca la llave en la configuración de Streamlit (Secrets)
     LLAVE_GEMINI = st.secrets["LLAVE_GEMINI"]
     genai.configure(api_key=LLAVE_GEMINI)
 except Exception:
     st.error("🔑 Error: No se encontró la llave en los Secretos de Streamlit.")
     st.stop()
 
-# Estilos visuales
 st.markdown("""
     <style>
     .stButton>button { width: 100%; border-radius: 10px; height: 3.5em; background-color: #007bff; color: white; font-weight: bold; }
@@ -35,7 +33,7 @@ st.markdown("""
 st.title("🏆 Oro Asistente")
 
 # ==========================================
-# FUNCIONES DE INTELIGENCIA ARTIFICIAL
+# FUNCIONES DE IA (MODELO ESTABLE)
 # ==========================================
 
 def solicitar_resumen_estructurado(texto, orden_especifica=None):
@@ -48,7 +46,8 @@ def solicitar_resumen_estructurado(texto, orden_especifica=None):
         f"CONTENIDO:\n{texto[:10000]}"
     )
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # CAMBIO AQUÍ: Usamos gemini-pro que es el más estable
+        model = genai.GenerativeModel('gemini-pro')
         respuesta = model.generate_content(prompt)
         res_raw = respuesta.text
         inicio, fin = res_raw.find("{"), res_raw.rfind("}") + 1
@@ -65,7 +64,8 @@ def solicitar_informe_ia(texto):
         f"DATOS:\n{texto[:10000]}"
     )
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # CAMBIO AQUÍ: Usamos gemini-pro
+        model = genai.GenerativeModel('gemini-pro')
         return model.generate_content(prompt).text
     except Exception as e:
         return f"Error al redactar: {e}"
@@ -104,7 +104,6 @@ if archivo:
                         info = data.get("datos", {})
                         st.subheader(f"🏆 {info.get('titulo', 'Resumen')}")
                         st.write(info.get('resumen_ejecutivo', ''))
-                        st.info("📊 Métricas y Puntos Clave generados.")
                     else:
                         st.error("No se pudo estructurar el resumen.")
                         
@@ -122,7 +121,6 @@ if archivo:
     except Exception as e:
         st.error(f"Error al leer archivo: {e}")
 
-# Pie de página
 st.divider()
 zona_horaria = pytz.timezone('America/Caracas')
 hora_actual = datetime.now(zona_horaria).strftime("%Y-%m-%d %I:%M:%S %p")
