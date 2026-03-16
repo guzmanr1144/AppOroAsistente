@@ -4,3 +4,4 @@ openpyxl
 PyPDF2
 requests
 pytz
+fpdf
