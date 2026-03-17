@@ -463,10 +463,12 @@ except Exception as e:
 with st.sidebar:
     st.markdown("### ⚙️ Configuración")
     idx_default = next((i for i, m in enumerate(modelos_disponibles) if '1.5-flash' in m), 0)
-    MODELO_ELEGIDO = st.selectbox("🧠 Modelo IA:", modelos_disponibles, index=idx_default)
+    sidebar_modelo = st.selectbox("🧠 Modelo IA:", modelos_disponibles, index=idx_default)
     st.markdown("---")
     st.caption("Oro Asistente v2 · Mobile First")
-    st.caption("Sube un archivo · Analiza · Edita · Exporta")
+
+# MODELO_ELEGIDO global — se define antes del selector inline
+MODELO_ELEGIDO = sidebar_modelo
 
 # ==========================================
 # SESSION STATE
@@ -481,6 +483,8 @@ for key, val in {
     "archivo_tipo": "",
     "lista_cambios": [],
     "texto_modificado": "",
+    "generando_resumen": False,
+    "modelo_elegido_state": None,
 }.items():
     if key not in st.session_state:
         st.session_state[key] = val
@@ -1079,6 +1083,26 @@ def reemplazar_xlsx_preservando_formato(archivo_bytes, cambios):
 # ==========================================
 # SUBIDA DE ARCHIVO
 # ==========================================
+# ── Selector de modelo visible en pantalla (sin abrir sidebar) ──
+with st.expander("⚙️ Modelo de IA", expanded=False):
+    idx_default2 = next((i for i, m in enumerate(modelos_disponibles) if '1.5-flash' in m), 0)
+    # Si ya había un modelo guardado, encontrar su índice
+    if st.session_state.modelo_elegido_state in modelos_disponibles:
+        idx_default2 = modelos_disponibles.index(st.session_state.modelo_elegido_state)
+    MODELO_ELEGIDO = st.selectbox(
+        "Selecciona el modelo",
+        modelos_disponibles,
+        index=idx_default2,
+        label_visibility="collapsed",
+        key="modelo_selector_main"
+    )
+    st.session_state.modelo_elegido_state = MODELO_ELEGIDO
+    st.caption(f"✅ Usando: `{MODELO_ELEGIDO}`")
+
+# Usar el modelo del selector inline si fue elegido
+if st.session_state.get("modelo_elegido_state"):
+    MODELO_ELEGIDO = st.session_state.modelo_elegido_state
+
 st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
 
 archivo = st.file_uploader(
@@ -1166,10 +1190,24 @@ if st.session_state.texto_extraido:
         st.markdown('<div class="section-title">📊 Análisis del documento</div>', unsafe_allow_html=True)
         st.markdown('<div class="section-hint">La IA analiza el contenido y te da un resumen claro y profesional.</div>', unsafe_allow_html=True)
 
-        if st.button("⚡ Generar Resumen", use_container_width=True):
-            with st.spinner("🧠 Analizando con IA..."):
-                data = solicitar_resumen_estructurado(texto)
-                st.session_state.resumen_data = data
+        if st.session_state.generando_resumen:
+            st.markdown("""
+            <div style="text-align:center;padding:2rem 0;">
+                <div style="font-size:2.5rem;animation:pulse-glow 1.5s infinite">🧠</div>
+                <div style="color:#60a5fa;font-weight:600;margin-top:0.8rem;font-size:1rem">Analizando documento...</div>
+                <div style="color:#374151;font-size:0.8rem;margin-top:0.3rem">Esto puede tomar unos segundos</div>
+            </div>
+            """, unsafe_allow_html=True)
+            data = solicitar_resumen_estructurado(texto)
+            st.session_state.resumen_data = data
+            st.session_state.generando_resumen = False
+            st.rerun()
+
+        boton_col, _ = st.columns([3, 1])
+        with boton_col:
+            if st.button("⚡ Generar Resumen", use_container_width=True, disabled=st.session_state.generando_resumen):
+                st.session_state.generando_resumen = True
+                st.rerun()
 
         data = st.session_state.resumen_data
         if data:
