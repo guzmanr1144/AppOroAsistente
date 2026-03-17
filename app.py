@@ -130,6 +130,45 @@ with st.sidebar:
     if tema_opc[sel] != st.session_state.tema:
         st.session_state.tema = tema_opc[sel]
         st.rerun()
+    st.markdown("---")
+    # ── Guía asistida en sidebar ──
+    paso_sb = st.session_state.get("guia_paso", 0)
+    if paso_sb > 0 and not st.session_state.get("guia_vista", False):
+        guias_sb = {
+            1: ("🎉", "Paso 1 — Analiza",
+                "Tu archivo está listo.\n\nToca **⚡ Analizar** para que la IA extraiga métricas, puntos clave y un resumen inteligente."),
+            2: ("📊", "Paso 2 — Revisa",
+                "El resumen ya está arriba.\n\nDescarga el informe en Word, Excel o PDF con los botones que aparecen debajo del resumen."),
+            3: ("💬", "Paso 3 — El chat",
+                "El chat de abajo es tu asistente.\n\nPuedes escribir:\n• *cambia X por Y*\n• *agrega el teléfono a Juan*\n• *¿cuántas personas hay?*"),
+        }
+        if paso_sb in guias_sb:
+            ico_sb, tit_sb, desc_sb = guias_sb[paso_sb]
+            st.markdown(f"### {ico_sb} {tit_sb}")
+            st.info(desc_sb)
+            if st.button("👍 Entendido", use_container_width=True, key="guia_ok_sb"):
+                if paso_sb >= 3:
+                    st.session_state.guia_vista = True
+                    st.session_state.guia_paso = 0
+                else:
+                    st.session_state.guia_paso = paso_sb + 1
+                st.rerun()
+            if st.button("✕ Saltar guía", use_container_width=True, key="guia_skip_sb"):
+                st.session_state.guia_vista = True
+                st.session_state.guia_paso = 0
+                st.rerun()
+            st.markdown(f"*Paso {paso_sb} de 3*")
+    elif not st.session_state.get("texto_extraido"):
+        st.markdown("### 👋 Bienvenido")
+        st.info("Sube un archivo Word, Excel o PDF para empezar.\n\nLa IA lo analizará y podrás editarlo con comandos en lenguaje natural.")
+    else:
+        st.markdown("### 💡 Recuerda")
+        st.markdown("""
+**Analizar** → Resumen con IA  
+**Evaluar** → Detectar errores  
+**Chat** → Editar y preguntar  
+        """)
+    st.markdown("---")
     st.caption("Oro Asistente v3")
 
 st.markdown("""
@@ -653,36 +692,51 @@ if st.session_state.texto_extraido:
         <div class="file-info-stats">📝 {palabras:,} palabras{badge_extra}</div></div>
     </div>""", unsafe_allow_html=True)
 
-    # ══════════════════════════════════════════
-    # GUÍA ASISTIDA (primer uso)
-    # ══════════════════════════════════════════
-    paso=st.session_state.get("guia_paso",0)
-    if paso > 0 and not st.session_state.get("guia_vista",False):
-        guias={
-            1:("🎉","¡Archivo cargado!","Tu documento está listo. Ahora toca ⚡ Analizar documento para que la IA lo lea y te dé un resumen inteligente con métricas y puntos clave."),
-            2:("📊","Resumen generado","Aquí ves el análisis de tu documento. Puedes descargarlo como Word, Excel o PDF con los botones de abajo. Cuando quieras editar algo, usa el chat 👇"),
-            3:("💬","El chat es tu asistente","Escríbele lo que necesites: cambia palabras, haz preguntas, pide resúmenes. Todo en lenguaje natural. Ej: *cambia 'pendiente' por 'aprobado'*"),
-        }
-        if paso in guias:
-            ico,titulo,desc=guias[paso]
-            st.markdown(f"""<div class="guia-tooltip">
-                <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.3rem">
-                    <span style="font-size:1.5rem">{ico}</span>
-                    <span class="guia-titulo">{titulo}</span>
-                </div>
-                <div class="guia-texto">{desc}</div>
+    # ── Dos botones principales ──
+    _ba, _be = st.columns(2)
+    with _ba:
+        st.markdown('<div class="btn-analizar">', unsafe_allow_html=True)
+        if st.button("⚡ Analizar", use_container_width=True, key="btn_analizar_top"):
+            st.session_state.generando_resumen = True
+            st.session_state.resumen_data = None
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+    with _be:
+        st.markdown('<div class="btn-evaluar">', unsafe_allow_html=True)
+        if st.button("🔍 Evaluar", use_container_width=True, key="btn_evaluar_top"):
+            st.session_state.ejecutar_evaluacion = True
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # Ejecutar evaluación si se pidió
+    if st.session_state.get("ejecutar_evaluacion"):
+        st.session_state.ejecutar_evaluacion = False
+        with st.spinner("🔎 Analizando calidad..."):
+            resultado = detectar_anomalias(texto_activo)
+        if resultado:
+            niv=resultado.get("nivel_general","Regular"); puntaje=resultado.get("puntaje",0)
+            ncfg={"Excelente":("#10b981","#021008","🟢"),"Bueno":("#34d399","#021008","🟢"),"Regular":("#f59e0b","#1c1003","🟡"),"Deficiente":("#ef4444","#1f0707","🔴")}
+            cfg=ncfg.get(niv,ncfg["Regular"])
+            st.markdown(f"""<div style="text-align:center;padding:.8rem 0 .4rem">
+                <div style="font-size:2.5rem">{cfg[2]}</div>
+                <div style="color:{cfg[0]};font-size:1.2rem;font-weight:800">{niv}</div>
+                <div style="color:#2d6a4f;font-size:.78rem">Puntaje: <strong style="color:{cfg[0]}">{puntaje}/100</strong></div>
             </div>""", unsafe_allow_html=True)
-            c_ok, c_skip = st.columns([2,1])
-            with c_ok:
-                if st.button("👍 Entendido, siguiente", use_container_width=True):
-                    if paso >= 3:
-                        st.session_state.guia_vista=True; st.session_state.guia_paso=0
-                    else:
-                        st.session_state.guia_paso=paso+1
-                    st.rerun()
-            with c_skip:
-                if st.button("✕ Saltar guía", use_container_width=True):
-                    st.session_state.guia_vista=True; st.session_state.guia_paso=0; st.rerun()
+            ne=[("criticos","🔴 Crítico","#ef4444","#1f0707","#450a0a"),("altos","🟠 Alto","#f97316","#1c0a03","#431407"),
+                ("medios","🟡 Medio","#f59e0b","#1c1003","#451a03"),("leves","🟢 Leve","#22c55e","#052e16","#14532d")]
+            hay=False
+            for key,label,cfg2,cbg,cbrd in ne:
+                items_e=resultado.get(key,[])
+                if items_e:
+                    hay=True
+                    rows="".join([f'<div style="color:#d1fae5;font-size:.78rem;padding:.2rem 0;border-bottom:1px solid {cbrd}">• {it}</div>' for it in items_e])
+                    st.markdown(f'<div style="background:{cbg};border:1px solid {cbrd};border-left:4px solid {cfg2};border-radius:12px;padding:.75rem .9rem;margin:.4rem 0"><div style="color:{cfg2};font-weight:700;font-size:.83rem;margin-bottom:.3rem">{label}</div>{rows}</div>', unsafe_allow_html=True)
+            if not hay:
+                st.markdown('<div class="info-box">✅ ¡Sin problemas detectados! 🎉</div>', unsafe_allow_html=True)
+            rec=resultado.get("recomendacion","")
+            if rec: st.markdown(f'<div class="hallazgo-card">💡 <strong>Recomendación:</strong> {rec}</div>', unsafe_allow_html=True)
+        else:
+            st.markdown('<div class="warn-box">⚠️ No se pudo evaluar. Intenta de nuevo.</div>', unsafe_allow_html=True)
 
     st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
 
@@ -708,15 +762,10 @@ if st.session_state.texto_extraido:
 
     data=st.session_state.resumen_data
     if not data and not st.session_state.generando_resumen and not st.session_state.get("resumen_error"):
-        st.markdown("""<div style="text-align:center;padding:1.5rem 0 .8rem">
-            <div style="font-size:2.8rem">🧠</div>
-            <div style="color:#34d399;font-weight:700;font-size:1rem;margin-top:.4rem">¿Listo para analizar?</div>
-            <div style="color:#065f46;font-size:.78rem;margin-top:.2rem">La IA leerá tu documento y extraerá lo más importante</div>
+        st.markdown("""<div style="text-align:center;padding:.8rem 0 .4rem">
+            <div style="font-size:2rem">🧠</div>
+            <div style="color:#34d399;font-weight:600;font-size:.88rem;margin-top:.3rem">Toca ⚡ Analizar para generar el resumen</div>
         </div>""", unsafe_allow_html=True)
-        st.markdown('<div class="btn-analizar">', unsafe_allow_html=True)
-        if st.button("⚡ Analizar documento", use_container_width=True):
-            st.session_state.generando_resumen=True; st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
 
     if data:
         emoji=data.get("emoji_categoria","📋"); titulo_doc=data.get("titulo","Documento analizado")
@@ -756,43 +805,6 @@ if st.session_state.texto_extraido:
 
         if st.button("🔄 Regenerar resumen", use_container_width=True):
             st.session_state.generando_resumen=True; st.session_state.resumen_data=None; st.rerun()
-
-    st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
-
-    # ══════════════════════════════════════════
-    # EVALUAR
-    # ══════════════════════════════════════════
-    st.markdown('<div class="btn-evaluar">', unsafe_allow_html=True)
-    if st.button("🔍 Evaluar documento", use_container_width=True):
-        with st.spinner("🔎 Analizando calidad..."):
-            resultado=detectar_anomalias(texto_activo)
-        if resultado:
-            niv=resultado.get("nivel_general","Regular"); puntaje=resultado.get("puntaje",0)
-            ncfg={"Excelente":("#10b981","#021008","🟢"),"Bueno":("#34d399","#021008","🟢"),"Regular":("#f59e0b","#1c1003","🟡"),"Deficiente":("#ef4444","#1f0707","🔴")}
-            cfg=ncfg.get(niv,ncfg["Regular"])
-            st.markdown(f"""<div style="text-align:center;padding:.8rem 0 .4rem">
-                <div style="font-size:2.5rem">{cfg[2]}</div>
-                <div style="color:{cfg[0]};font-size:1.2rem;font-weight:800">{niv}</div>
-                <div style="color:#2d6a4f;font-size:.78rem">Puntaje: <strong style="color:{cfg[0]}">{puntaje}/100</strong></div>
-            </div>""", unsafe_allow_html=True)
-            ne=[("criticos","🔴 Crítico","#ef4444","#1f0707","#450a0a"),("altos","🟠 Alto","#f97316","#1c0a03","#431407"),
-                ("medios","🟡 Medio","#f59e0b","#1c1003","#451a03"),("leves","🟢 Leve","#22c55e","#052e16","#14532d")]
-            hay=False
-            for key,label,cfg2,cbg,cbrd in ne:
-                items_e=resultado.get(key,[])
-                if items_e:
-                    hay=True
-                    rows="".join([f'<div style="color:#d1fae5;font-size:.78rem;padding:.2rem 0;border-bottom:1px solid {cbrd}">• {it}</div>' for it in items_e])
-                    st.markdown(f'<div style="background:{cbg};border:1px solid {cbrd};border-left:4px solid {cfg2};border-radius:12px;padding:.75rem .9rem;margin:.4rem 0"><div style="color:{cfg2};font-weight:700;font-size:.83rem;margin-bottom:.3rem">{label}</div>{rows}</div>', unsafe_allow_html=True)
-            if not hay:
-                st.markdown('<div class="info-box">✅ ¡Sin problemas detectados! El documento se ve bien 🎉</div>', unsafe_allow_html=True)
-            rec=resultado.get("recomendacion","")
-            if rec: st.markdown(f'<div class="hallazgo-card">💡 <strong>Recomendación:</strong> {rec}</div>', unsafe_allow_html=True)
-        else:
-            st.markdown('<div class="warn-box">⚠️ No se pudo evaluar. Intenta de nuevo.</div>', unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
 
     # ══════════════════════════════════════════
     # PREVIEW cambio pendiente
