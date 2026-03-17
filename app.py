@@ -451,54 +451,72 @@ div[data-testid="stVerticalBlock"] > div:has(> div[data-testid="stButton"]) butt
     padding: 0.5rem 0;
 }
 
-/* ── BARRA NAV FIJA ABAJO ── */
-.nav-bottom-bar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 9999;
-    background: rgba(2, 16, 8, 0.97);
-    border-top: 1px solid #0a3d1a;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    padding: 0.5rem 0.8rem 0.6rem 0.8rem;
-    display: flex;
-    justify-content: space-around;
-    gap: 0.4rem;
+/* ── PESTAÑAS DESLIZABLES ARRIBA ── */
+.tabs-scroll-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin: 0.8rem 0 0 0;
 }
-.nav-btn-item {
-    flex: 1;
+.tabs-scroll-wrap::-webkit-scrollbar { display: none; }
+.tabs-row {
     display: flex;
-    flex-direction: column;
+    gap: 0.5rem;
+    min-width: max-content;
+    padding: 0 0.2rem 0.6rem 0.2rem;
+}
+.tab-pill {
+    display: flex;
     align-items: center;
-    justify-content: center;
-    padding: 0.45rem 0.2rem;
-    border-radius: 12px;
-    cursor: pointer;
-    transition: all 0.15s;
-    border: none;
-    background: transparent;
-    text-decoration: none;
-}
-.nav-btn-item.active {
-    background: linear-gradient(135deg, #065f46, #10b981);
-    box-shadow: 0 2px 12px rgba(16,185,129,0.35);
-}
-.nav-btn-icon { font-size: 1.35rem; line-height: 1; }
-.nav-btn-label {
-    font-size: 0.62rem;
+    gap: 0.45rem;
+    padding: 0.55rem 1.1rem;
+    border-radius: 30px;
+    font-size: 0.88rem;
     font-weight: 600;
-    margin-top: 0.2rem;
-    color: #065f46;
     font-family: 'Outfit', sans-serif;
-    letter-spacing: 0.02em;
+    cursor: pointer;
+    white-space: nowrap;
+    border: 1.5px solid #0a3d1a;
+    background: #021008;
+    color: #065f46;
+    transition: all 0.18s;
+    letter-spacing: 0.01em;
 }
-.nav-btn-item.active .nav-btn-label { color: white; }
+.tab-pill.activa {
+    background: linear-gradient(135deg, #065f46, #10b981);
+    color: white;
+    border-color: #10b981;
+    box-shadow: 0 3px 14px rgba(16,185,129,0.35);
+}
+.tab-pill-icon { font-size: 1.05rem; }
+/* Indicador de scroll */
+.tabs-scroll-hint {
+    text-align: right;
+    font-size: 0.68rem;
+    color: #065f46;
+    margin-bottom: 0.2rem;
+    opacity: 0.7;
+}
 
-/* Espacio para que el contenido no quede bajo la barra */
+/* ── GUÍAS VISUALES ── */
+.guia-card {
+    background: #021008;
+    border: 1px solid #0a3d1a;
+    border-left: 3px solid #10b981;
+    border-radius: 12px;
+    padding: 0.9rem 1rem;
+    margin-bottom: 1rem;
+    display: flex;
+    gap: 0.8rem;
+    align-items: flex-start;
+}
+.guia-icon { font-size: 1.5rem; flex-shrink: 0; }
+.guia-titulo { color: #34d399; font-weight: 700; font-size: 0.9rem; }
+.guia-texto  { color: #065f46; font-size: 0.78rem; margin-top: 0.2rem; line-height: 1.5; }
+
+/* Espacio inferior */
 .main .block-container {
-    padding-bottom: 5.5rem !important;
+    padding-bottom: 2rem !important;
 }
 
 /* ── SELECTBOX SIDEBAR ── */
@@ -1560,34 +1578,57 @@ if st.session_state.texto_extraido:
     </div>
     """, unsafe_allow_html=True)
 
-    # ── Navegación con botones nativos Streamlit ──
-    st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
-    _tabs = [("resumen","📊 Resumen"),("editar","✍️ Editar"),("chat","💬 Chat"),("calidad","🔍 Calidad")]
-    _cols = st.columns(4)
-    for _i, (_key, _label) in enumerate(_tabs):
-        with _cols[_i]:
-            _activo = st.session_state.tab_activa == _key
-            if _activo:
-                st.markdown(
-                    f'<div style="background:linear-gradient(135deg,#065f46,#10b981);'
-                    f'border-radius:12px;padding:0.6rem 0;text-align:center;'
-                    f'color:white;font-weight:700;font-size:0.82rem;cursor:pointer;">'
-                    f'{_label}</div>',
-                    unsafe_allow_html=True
-                )
-            else:
-                if st.button(_label, key=f"nav_{_key}", use_container_width=True):
-                    st.session_state.tab_activa = _key
-                    st.rerun()
-    st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
+    # ── Pestañas deslizables ──
+    _tab_defs = [
+        ("resumen", "📊", "Resumen",  "Análisis inteligente"),
+        ("editar",  "✍️", "Editar",   "Corregir palabras"),
+        ("chat",    "💬", "Chat",     "Hacer preguntas"),
+        ("calidad", "🔍", "Calidad",  "Revisar errores"),
+    ]
+    _activa = st.session_state.tab_activa
+
+    # Construir pills HTML
+    _pills_html = '<div class="tabs-scroll-hint">desliza ›</div><div class="tabs-scroll-wrap"><div class="tabs-row">'
+    for _key, _ico, _label, _desc in _tab_defs:
+        _clase = "tab-pill activa" if _activa == _key else "tab-pill"
+        _pills_html += f'<span class="{_clase}"><span class="tab-pill-icon">{_ico}</span>{_label}</span>'
+    _pills_html += '</div></div>'
+    st.markdown(_pills_html, unsafe_allow_html=True)
+
+    # Botones invisibles para capturar click — uno por pestaña
+    _btn_cols = st.columns(4)
+    for _i, (_key, _ico, _label, _desc) in enumerate(_tab_defs):
+        with _btn_cols[_i]:
+            st.markdown('<div style="visibility:hidden;height:0;overflow:hidden">', unsafe_allow_html=True)
+            if st.button(_label, key=f"nav_{_key}"):
+                st.session_state.tab_activa = _key
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+
+    # Mostrar descripción de la pestaña activa como guía
+    _guias = {
+        "resumen": ("🧠", "Resumen inteligente", "La IA lee tu documento y te da un análisis claro: datos clave, puntos importantes y observaciones destacadas."),
+        "editar":  ("✏️", "Editar documento", "Escribe en lenguaje natural lo que quieres cambiar. Ej: <em>cambia 'negativo' por 'positivo'</em> o <em>agrega el teléfono a Juan</em>."),
+        "chat":    ("💬", "Preguntar al documento", "Hazle cualquier pregunta sobre el contenido. Ej: <em>¿cuántas personas aparecen?</em> o <em>¿qué municipios hay?</em>"),
+        "calidad": ("🔍", "Revisar calidad", "Detecta errores, datos duplicados o inconsistencias en el documento automáticamente."),
+    }
+    _g = _guias.get(_activa, ("📋","",""))
+    st.markdown(f'''
+    <div class="guia-card">
+        <div class="guia-icon">{_g[0]}</div>
+        <div>
+            <div class="guia-titulo">{_g[1]}</div>
+            <div class="guia-texto">{_g[2]}</div>
+        </div>
+    </div>
+    ''', unsafe_allow_html=True)
+
     nav = st.session_state.tab_activa
 
     # ═══════════════════════════════════════
     # PANTALLA 1 — RESUMEN
     # ═══════════════════════════════════════
     if nav == "resumen":
-        st.markdown('<div class="section-title">📊 Análisis del documento</div>', unsafe_allow_html=True)
-        st.markdown('<div class="section-hint">La IA analiza el contenido y te da un resumen claro y profesional.</div>', unsafe_allow_html=True)
 
         if st.session_state.generando_resumen:
             st.markdown("""
@@ -1687,8 +1728,6 @@ if st.session_state.texto_extraido:
     # PANTALLA 2 — EDICIÓN
     # ═══════════════════════════════════════
     elif nav == "editar":
-        st.markdown('<div class="section-title">✍️ Corregir palabras</div>', unsafe_allow_html=True)
-        st.markdown('<div class="section-hint">Escribe qué quieres cambiar en lenguaje natural. Puedes agregar datos, reemplazar palabras o corregir errores.</div>', unsafe_allow_html=True)
 
         instruccion = st.text_input(
             "Instrucción",
@@ -1845,8 +1884,6 @@ if st.session_state.texto_extraido:
     # PANTALLA 3 — CHAT
     # ═══════════════════════════════════════
     elif nav == "chat":
-        st.markdown('<div class="section-title">💬 Pregunta sobre el documento</div>', unsafe_allow_html=True)
-        st.markdown('<div class="section-hint">Hazle cualquier pregunta al asistente sobre el contenido del archivo.</div>', unsafe_allow_html=True)
 
         for msg in st.session_state.historial_chat:
             with st.chat_message("user" if msg["rol"] == "Usuario" else "assistant"):
@@ -1878,8 +1915,6 @@ if st.session_state.texto_extraido:
     # PANTALLA 4 — CALIDAD
     # ═══════════════════════════════════════
     elif nav == "calidad":
-        st.markdown('<div class="section-title">🔍 Análisis de calidad</div>', unsafe_allow_html=True)
-        st.markdown('<div class="section-hint">Detecta errores, inconsistencias o datos duplicados en el documento.</div>', unsafe_allow_html=True)
 
         if st.button("🔎 Analizar Calidad", use_container_width=True):
             with st.spinner("🔍 Revisando el documento..."):
