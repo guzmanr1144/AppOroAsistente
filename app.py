@@ -288,18 +288,64 @@ def solicitar_informe_word(texto):
     except:
         return "Error generando el informe."
 
+def extraer_cambio_con_regex(instruccion):
+    """
+    Fallback: detecta patrones comunes sin necesidad de IA.
+    Soporta variantes como:
+      - cambia 'X' por 'Y'
+      - reemplaza X por Y
+      - X → Y  /  X -> Y
+      - sustituye X con Y
+    """
+    patrones = [
+        r"(?:cambia|reemplaza|sustituye|cambie|reemplaz[ao])\s+['\"]?(.+?)['\"]?\s+(?:por|con|a)\s+['\"]?(.+?)['\"]?\s*$",
+        r"['\"](.+?)['\"]\s*(?:→|->|=>|por|con)\s*['\"]?(.+?)['\"]?\s*$",
+        r"(.+?)\s*(?:→|->|=>)\s*(.+)",
+    ]
+    texto = instruccion.strip()
+    for pat in patrones:
+        m = re.search(pat, texto, re.IGNORECASE)
+        if m:
+            buscar = m.group(1).strip().strip("'\"")
+            reemplazar = m.group(2).strip().strip("'\"")
+            if buscar and reemplazar:
+                return [{"buscar": buscar, "reemplazar": reemplazar}]
+    return []
+
 def solicitar_cambios(instruccion):
     prompt = (
-        f"De esta instrucción: '{instruccion}'\n"
-        "Extrae los cambios a realizar. Responde SOLO con JSON array:\n"
-        '[{"buscar": "texto_original", "reemplazar": "texto_nuevo"}]'
+        "Eres un asistente que extrae instrucciones de edición de texto.\n"
+        "El usuario quiere cambiar una palabra o frase por otra en un documento.\n\n"
+        f"INSTRUCCIÓN DEL USUARIO: \"{instruccion}\"\n\n"
+        "Extrae el texto a buscar y el texto de reemplazo.\n"
+        "REGLAS IMPORTANTES:\n"
+        "- Si el usuario dice 'cambia X por Y', buscar=X y reemplazar=Y\n"
+        "- Si dice 'reemplaza X con Y', buscar=X y reemplazar=Y\n"
+        "- Si dice 'X → Y' o 'X -> Y', buscar=X y reemplazar=Y\n"
+        "- Devuelve los valores EXACTOS sin modificar mayúsculas/minúsculas\n"
+        "- Si hay múltiples cambios, incluye todos en el array\n\n"
+        "Responde ÚNICAMENTE con este JSON (sin texto adicional, sin markdown):\n"
+        '[{"buscar": "texto_exacto_a_buscar", "reemplazar": "texto_nuevo"}]'
     )
     try:
         model = genai.GenerativeModel(MODELO_ELEGIDO)
         resp = model.generate_content(prompt)
-        return extraer_json_seguro(resp.text, es_lista=True) or []
+        resultado = extraer_json_seguro(resp.text, es_lista=True)
+        # Validar que el resultado tiene la estructura correcta
+        if resultado and isinstance(resultado, list):
+            validos = [
+                c for c in resultado
+                if isinstance(c, dict)
+                and "buscar" in c and "reemplazar" in c
+                and str(c["buscar"]).strip()
+                and str(c["reemplazar"]).strip()
+            ]
+            if validos:
+                return validos
     except:
-        return []
+        pass
+    # Fallback: intentar con regex
+    return extraer_cambio_con_regex(instruccion)
 
 def preguntar_al_documento(pregunta, texto):
     historial = st.session_state.historial_chat
