@@ -445,30 +445,38 @@ html, body, [class*="css"] {
 try:
     LLAVE_GEMINI = st.secrets["LLAVE_GEMINI"]
     genai.configure(api_key=LLAVE_GEMINI)
-    modelos_disponibles = []
-    for m in genai.list_models():
-        if 'generateContent' in m.supported_generation_methods:
-            nombre = m.name.replace("models/", "")
-            modelos_disponibles.append(nombre)
-    if not modelos_disponibles:
-        st.error("❌ No se encontraron modelos disponibles.")
-        st.stop()
 except Exception as e:
     st.error(f"🔑 Error configurando la IA: {e}")
     st.stop()
 
-# ==========================================
-# SIDEBAR
-# ==========================================
-with st.sidebar:
-    st.markdown("### ⚙️ Configuración")
-    idx_default = next((i for i, m in enumerate(modelos_disponibles) if '1.5-flash' in m), 0)
-    sidebar_modelo = st.selectbox("🧠 Modelo IA:", modelos_disponibles, index=idx_default)
-    st.markdown("---")
-    st.caption("Oro Asistente v2 · Mobile First")
+# Modelos en orden de preferencia — el sistema prueba cada uno automáticamente
+MODELOS_FALLBACK = [
+    "gemini-3.1-flash-lite-preview",
+    "gemini-3.1-flash-preview",
+    "gemini-3.1-pro-preview",
+]
 
-# MODELO_ELEGIDO global — se define antes del selector inline
-MODELO_ELEGIDO = sidebar_modelo
+def llamar_ia(prompt, es_json=False):
+    """
+    Llama a la IA probando los modelos en orden.
+    Si uno falla, pasa automáticamente al siguiente.
+    El usuario nunca ve qué modelo se está usando.
+    """
+    for modelo in MODELOS_FALLBACK:
+        try:
+            model = genai.GenerativeModel(modelo)
+            resp = model.generate_content(prompt)
+            texto = resp.text
+            if es_json:
+                return extraer_json_seguro(texto, es_lista=texto.strip().startswith("["))
+            return texto
+        except Exception:
+            continue
+    return None
+
+# Sidebar mínimo — solo para info interna si hace falta
+with st.sidebar:
+    st.caption("Oro Asistente v2")
 
 # ==========================================
 # SESSION STATE
@@ -484,7 +492,6 @@ for key, val in {
     "lista_cambios": [],
     "texto_modificado": "",
     "generando_resumen": False,
-    "modelo_elegido_state": None,
 }.items():
     if key not in st.session_state:
         st.session_state[key] = val
@@ -533,12 +540,10 @@ def solicitar_resumen_estructurado(texto):
         '"hallazgo_destacado": "Una observación importante o curiosa del documento"}\n\n'
         f"DOCUMENTO:\n{texto[:12000]}"
     )
-    try:
-        model = genai.GenerativeModel(MODELO_ELEGIDO)
-        resp = model.generate_content(prompt)
-        return extraer_json_seguro(resp.text)
-    except Exception as e:
-        return None
+    resultado = llamar_ia(prompt, es_json=False)
+    if resultado:
+        return extraer_json_seguro(resultado)
+    return None
 
 def solicitar_informe_word(texto):
     prompt = (
@@ -547,11 +552,7 @@ def solicitar_informe_word(texto):
         "Incluye: introducción, hallazgos principales, análisis y conclusión.\n\n"
         f"DATOS:\n{texto[:12000]}"
     )
-    try:
-        model = genai.GenerativeModel(MODELO_ELEGIDO)
-        return model.generate_content(prompt).text
-    except:
-        return "Error generando el informe."
+    return llamar_ia(prompt) or "No se pudo generar el informe."
 
 def extraer_cambio_con_regex(instruccion):
     """
@@ -592,11 +593,9 @@ def solicitar_cambios(instruccion):
         "Responde ÚNICAMENTE con este JSON (sin texto adicional, sin markdown):\n"
         '[{"buscar": "texto_exacto_a_buscar", "reemplazar": "texto_nuevo"}]'
     )
-    try:
-        model = genai.GenerativeModel(MODELO_ELEGIDO)
-        resp = model.generate_content(prompt)
-        resultado = extraer_json_seguro(resp.text, es_lista=True)
-        # Validar que el resultado tiene la estructura correcta
+    resp = llamar_ia(prompt)
+    if resp:
+        resultado = extraer_json_seguro(resp, es_lista=True)
         if resultado and isinstance(resultado, list):
             validos = [
                 c for c in resultado
@@ -607,9 +606,6 @@ def solicitar_cambios(instruccion):
             ]
             if validos:
                 return validos
-    except:
-        pass
-    # Fallback: intentar con regex
     return extraer_cambio_con_regex(instruccion)
 
 def preguntar_al_documento(pregunta, texto):
@@ -622,11 +618,7 @@ def preguntar_al_documento(pregunta, texto):
         f"PREGUNTA: {pregunta}\n"
         "Responde de forma concisa y directa en español."
     )
-    try:
-        model = genai.GenerativeModel(MODELO_ELEGIDO)
-        return model.generate_content(prompt).text
-    except:
-        return "No pude procesar tu pregunta."
+    return llamar_ia(prompt) or "No pude procesar tu pregunta."
 
 def detectar_anomalias(texto):
     prompt = (
@@ -637,12 +629,10 @@ def detectar_anomalias(texto):
         '"recomendacion": "texto breve"}\n\n'
         f"DOCUMENTO:\n{texto[:10000]}"
     )
-    try:
-        model = genai.GenerativeModel(MODELO_ELEGIDO)
-        resp = model.generate_content(prompt)
-        return extraer_json_seguro(resp.text)
-    except:
-        return None
+    resp = llamar_ia(prompt)
+    if resp:
+        return extraer_json_seguro(resp)
+    return None
 
 # ==========================================
 # EXPORTADORES
@@ -1007,7 +997,10 @@ def exportar_pdf(texto, resumen_data=None):
         if linea:
             pdf.multi_cell(190, 5, safe_text(linea))
 
-    return pdf.output(dest='S').encode('latin-1')
+    raw = pdf.output(dest='S')
+    if isinstance(raw, (bytes, bytearray)):
+        return bytes(raw)
+    return raw.encode('latin-1')
 
 
 # ==========================================
@@ -1083,25 +1076,7 @@ def reemplazar_xlsx_preservando_formato(archivo_bytes, cambios):
 # ==========================================
 # SUBIDA DE ARCHIVO
 # ==========================================
-# ── Selector de modelo visible en pantalla (sin abrir sidebar) ──
-with st.expander("⚙️ Modelo de IA", expanded=False):
-    idx_default2 = next((i for i, m in enumerate(modelos_disponibles) if '1.5-flash' in m), 0)
-    # Si ya había un modelo guardado, encontrar su índice
-    if st.session_state.modelo_elegido_state in modelos_disponibles:
-        idx_default2 = modelos_disponibles.index(st.session_state.modelo_elegido_state)
-    MODELO_ELEGIDO = st.selectbox(
-        "Selecciona el modelo",
-        modelos_disponibles,
-        index=idx_default2,
-        label_visibility="collapsed",
-        key="modelo_selector_main"
-    )
-    st.session_state.modelo_elegido_state = MODELO_ELEGIDO
-    st.caption(f"✅ Usando: `{MODELO_ELEGIDO}`")
 
-# Usar el modelo del selector inline si fue elegido
-if st.session_state.get("modelo_elegido_state"):
-    MODELO_ELEGIDO = st.session_state.modelo_elegido_state
 
 st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
 
