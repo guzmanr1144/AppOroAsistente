@@ -10,6 +10,11 @@ import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 import PyPDF2
 from fpdf import FPDF
+try:
+    import fitz  # pymupdf
+    PYMUPDF_OK = True
+except ImportError:
+    PYMUPDF_OK = False
 from io import BytesIO
 from datetime import datetime
 import pytz
@@ -1301,6 +1306,62 @@ def reemplazar_xlsx_preservando_formato(archivo_bytes, cambios):
 
 
 
+def reemplazar_pdf_original(archivo_bytes, cambios):
+    """
+    Edita el PDF original reemplazando texto con pymupdf.
+    Preserva layout, imágenes, logos y formato.
+    Devuelve (bytes_nuevo, conteo_cambios).
+    """
+    if not PYMUPDF_OK:
+        return archivo_bytes, 0
+
+    doc = fitz.open(stream=archivo_bytes, filetype="pdf")
+    conteo = 0
+
+    for c in cambios:
+        buscar = str(c["buscar"]).strip()
+        reemplazar = str(c["reemplazar"]).strip()
+        if not buscar or buscar.lower() == reemplazar.lower():
+            continue
+
+        for pagina in doc:
+            # Buscar todas las instancias (case-insensitive)
+            instancias = pagina.search_for(buscar, quads=False)
+            for rect in instancias:
+                # 1. Obtener info del texto original para mantener fuente/tamaño
+                bloques = pagina.get_text("dict", clip=rect)["blocks"]
+                font_size = 11
+                font_name = "helv"
+                color = (0, 0, 0)
+                for bloque in bloques:
+                    for linea in bloque.get("lines", []):
+                        for span in linea.get("spans", []):
+                            if buscar.lower() in span["text"].lower():
+                                font_size = span["size"]
+                                color_int = span["color"]
+                                r = ((color_int >> 16) & 0xFF) / 255
+                                g = ((color_int >> 8) & 0xFF) / 255
+                                b = (color_int & 0xFF) / 255
+                                color = (r, g, b)
+
+                # 2. Tachar el texto original con un rectángulo del mismo color de fondo
+                pagina.draw_rect(rect, color=(1, 1, 1), fill=(1, 1, 1))
+
+                # 3. Escribir el texto nuevo en la misma posición
+                pagina.insert_text(
+                    rect.tl,  # top-left
+                    reemplazar,
+                    fontsize=font_size,
+                    color=color,
+                )
+                conteo += 1
+
+    buf = BytesIO()
+    doc.save(buf)
+    doc.close()
+    return buf.getvalue(), conteo
+
+
 # ==========================================
 # SUBIDA DE ARCHIVO
 # ==========================================
@@ -1513,22 +1574,26 @@ if st.session_state.texto_extraido:
             if hallazgo:
                 st.markdown(f'<div class="hallazgo-card">💡 <strong>Hallazgo:</strong> {hallazgo}</div>', unsafe_allow_html=True)
 
-            # Exportar — UNA columna en móvil
+            # ── Botones de descarga debajo del resumen completo ──
             st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
             st.markdown('<div class="section-title">📥 Exportar informe</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-hint">Descarga el informe con el resumen y el contenido del documento.</div>', unsafe_allow_html=True)
 
-            word_bytes = exportar_word(texto, data, archivo_bytes=st.session_state.archivo_bytes, archivo_tipo=tipo, cambios=st.session_state.lista_cambios)
-            st.download_button("📄 Descargar Word", word_bytes, "Informe_Oro.docx",
+            cambios_act = st.session_state.lista_cambios
+            ab = st.session_state.archivo_bytes
+
+            word_bytes = exportar_word(texto, data, archivo_bytes=ab, archivo_tipo=tipo, cambios=cambios_act)
+            st.download_button("📄 Informe Word", word_bytes, "Informe_Oro.docx",
                 mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 use_container_width=True)
 
-            excel_bytes = exportar_excel(texto, data, archivo_bytes=st.session_state.archivo_bytes, archivo_tipo=tipo, cambios=st.session_state.lista_cambios)
-            st.download_button("📊 Descargar Excel", excel_bytes, "Informe_Oro.xlsx",
+            excel_bytes = exportar_excel(texto, data, archivo_bytes=ab, archivo_tipo=tipo, cambios=cambios_act)
+            st.download_button("📊 Informe Excel", excel_bytes, "Informe_Oro.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 use_container_width=True)
 
             pdf_bytes = exportar_pdf(texto, data)
-            st.download_button("📕 Descargar PDF", pdf_bytes, "Informe_Oro.pdf",
+            st.download_button("📕 Informe PDF", pdf_bytes, "Informe_Oro.pdf",
                 mime="application/pdf", use_container_width=True)
 
 
@@ -1602,6 +1667,16 @@ if st.session_state.texto_extraido:
                         final_bytes, n = reemplazar_docx_preservando_formato(archivo_bytes_orig, todos_cambios)
                     elif tipo == "xlsx":
                         final_bytes, n = reemplazar_xlsx_preservando_formato(archivo_bytes_orig, todos_cambios)
+                    elif tipo == "pdf":
+                        if PYMUPDF_OK:
+                            final_bytes, n = reemplazar_pdf_original(archivo_bytes_orig, todos_cambios)
+                        else:
+                            # Fallback si no está pymupdf
+                            txt_mod = texto; n = 0
+                            for c in todos_cambios:
+                                txt_mod, cnt = re.compile(re.escape(c["buscar"]), re.IGNORECASE).subn(c["reemplazar"], txt_mod)
+                                n += cnt
+                            final_bytes = exportar_pdf(txt_mod)
                     else:
                         txt_mod = texto; n = 0
                         for c in todos_cambios:
@@ -1649,20 +1724,38 @@ if st.session_state.texto_extraido:
         # ── Descarga ──
         if st.session_state.cambios_aplicados:
             st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
-            st.markdown('<div class="section-title">📥 Descargar corregido</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-title">📥 Descargar documento corregido</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-hint">El archivo original con solo los cambios que indicaste.</div>', unsafe_allow_html=True)
             todos_cambios = st.session_state.lista_cambios
-            word_out = exportar_word(texto, None, archivo_bytes=st.session_state.archivo_bytes, archivo_tipo=tipo, cambios=todos_cambios)
-            st.download_button("📄 Word corregido", word_out, "Corregido.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                use_container_width=True)
-            excel_out = exportar_excel(texto, None, archivo_bytes=st.session_state.archivo_bytes, archivo_tipo=tipo, cambios=todos_cambios)
-            st.download_button("📊 Excel corregido", excel_out, "Corregido.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True)
-            txt_para_pdf = st.session_state.texto_corregido if st.session_state.texto_corregido else texto
-            pdf_c = exportar_pdf(txt_para_pdf, st.session_state.resumen_data)
-            st.download_button("📕 PDF corregido", pdf_c, "Corregido.pdf",
-                mime="application/pdf", use_container_width=True)
+            fb = st.session_state.cambios_aplicados
+
+            if tipo == "docx":
+                st.download_button("📄 Word corregido (original)", fb, "Corregido.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    use_container_width=True)
+                excel_conv = exportar_excel(texto, None, archivo_bytes=st.session_state.archivo_bytes, archivo_tipo=tipo, cambios=todos_cambios)
+                st.download_button("📊 Convertir a Excel", excel_conv, "Corregido.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True)
+            elif tipo == "xlsx":
+                st.download_button("📊 Excel corregido (original)", fb, "Corregido.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True)
+                word_conv = exportar_word(texto, None, archivo_bytes=st.session_state.archivo_bytes, archivo_tipo=tipo, cambios=todos_cambios)
+                st.download_button("📄 Convertir a Word", word_conv, "Corregido.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    use_container_width=True)
+            elif tipo == "pdf":
+                if PYMUPDF_OK:
+                    st.download_button("📕 PDF corregido (original)", fb, "Corregido.pdf",
+                        mime="application/pdf", use_container_width=True)
+                else:
+                    st.markdown('<div class="warn-box">⚠️ Para editar PDFs instala pymupdf en requirements.txt</div>', unsafe_allow_html=True)
+                txt_corr = st.session_state.texto_corregido if st.session_state.texto_corregido else texto
+                word_conv = exportar_word(txt_corr, None)
+                st.download_button("📄 Convertir a Word", word_conv, "Corregido.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    use_container_width=True)
 
     # PANTALLA 3 — CHAT
     # ═══════════════════════════════════════
