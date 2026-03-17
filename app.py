@@ -1,5 +1,4 @@
-import os, json, ast, re, warnings
-warnings.filterwarnings("ignore", category=DeprecationWarning)
+import os, json, ast, re
 import streamlit as st
 import google.generativeai as genai
 from docx import Document
@@ -11,11 +10,6 @@ import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 import PyPDF2
 from fpdf import FPDF
-try:
-    import fitz  # pymupdf
-    PYMUPDF_OK = True
-except ImportError:
-    PYMUPDF_OK = False
 from io import BytesIO
 from datetime import datetime
 import pytz
@@ -31,98 +25,553 @@ st.set_page_config(
 )
 
 # ==========================================
-# ESTILOS CSS (cacheados para no regenerar en cada ciclo)
+# ESTILOS CSS
 # ==========================================
-@st.cache_data(show_spinner=False)
-def _get_all_css(tema_key="verde"):
-    _TEMAS_LOCAL = {
-        "oscuro": {"bg1":"#0a0e1a","bg2":"#0d1525","card":"#111827","card2":"#162032","borde":"#1e3a5f","borde2":"#2a4a6b","acento1":"#3b82f6","acento2":"#60a5fa","titulo_grad":"linear-gradient(135deg,#fbbf24,#f59e0b,#fde68a,#f59e0b)","texto":"#e2e8f0","texto2":"#93c5fd","texto3":"#4b6080"},
-        "azul":   {"bg1":"#020818","bg2":"#030d24","card":"#041230","card2":"#061840","borde":"#0c3a7a","borde2":"#1050aa","acento1":"#38bdf8","acento2":"#7dd3fc","titulo_grad":"linear-gradient(135deg,#38bdf8,#7dd3fc,#bae6fd)","texto":"#e0f2fe","texto2":"#7dd3fc","texto3":"#1e5a8a"},
-        "verde":  {"bg1":"#010c06","bg2":"#021008","card":"#041208","card2":"#051a0c","borde":"#0a3d1a","borde2":"#0f5225","acento1":"#10b981","acento2":"#34d399","titulo_grad":"linear-gradient(135deg,#10b981,#34d399,#6ee7b7,#10b981)","texto":"#d1fae5","texto2":"#34d399","texto3":"#065f46"},
-        "rosa":   {"bg1":"#120008","bg2":"#1a000f","card":"#1a000f","card2":"#280018","borde":"#7c0040","borde2":"#9d0050","acento1":"#f472b6","acento2":"#f9a8d4","titulo_grad":"linear-gradient(135deg,#f472b6,#f9a8d4,#fce7f3)","texto":"#fce7f3","texto2":"#f9a8d4","texto3":"#7c0040"},
-        "ambar":  {"bg1":"#0f0800","bg2":"#180d00","card":"#1a0e00","card2":"#251500","borde":"#78350f","borde2":"#92400e","acento1":"#f59e0b","acento2":"#fbbf24","titulo_grad":"linear-gradient(135deg,#fbbf24,#fde68a,#f59e0b)","texto":"#fef3c7","texto2":"#fbbf24","texto3":"#78350f"},
-    }
-    t = _TEMAS_LOCAL.get(tema_key, _TEMAS_LOCAL["verde"])
-    return f"""<style>
+st.markdown("""
+<style>
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
-html,body,[class*="css"]{{font-family:'Outfit',sans-serif!important;-webkit-tap-highlight-color:transparent}}
-.stApp{{background:linear-gradient(160deg,{t['bg1']} 0%,{t['bg2']} 50%,{t['bg1']} 100%)!important;min-height:100vh}}
-.main .block-container{{padding:1rem 1rem 4rem 1rem!important;max-width:480px!important;margin:0 auto!important;background:transparent!important}}
-#MainMenu,footer,header{{visibility:hidden}}[data-testid="stToolbar"]{{display:none}}
-.oro-header{{text-align:center;padding:1.5rem 0 0.5rem}}
-.oro-logo{{font-size:3rem;line-height:1;filter:drop-shadow(0 0 20px rgba(251,191,36,0.5));animation:pulse-glow 3s ease-in-out infinite}}
-@keyframes pulse-glow{{0%,100%{{filter:drop-shadow(0 0 15px rgba(251,191,36,0.4))}}50%{{filter:drop-shadow(0 0 30px rgba(251,191,36,0.8))}}}}
-.oro-title{{font-size:1.9rem;font-weight:800;background:{t['titulo_grad']}!important;-webkit-background-clip:text!important;-webkit-text-fill-color:transparent!important;background-clip:text!important;letter-spacing:-0.02em;margin:.2rem 0 .1rem}}
-.oro-subtitle{{color:#4b6080;font-size:.82rem;font-weight:400;letter-spacing:.03em}}
-[data-testid="stFileUploader"]{{background:transparent!important;border:none!important}}
-[data-testid="stFileUploader"]>div{{background:linear-gradient(135deg,{t['card']},{t['card2']})!important;border:2px dashed {t['borde']}!important;border-radius:20px!important;padding:1.5rem!important}}
-[data-testid="stFileUploader"] label{{color:{t['acento2']}!important;font-weight:600!important;font-size:1rem!important}}
-.file-badge{{display:flex;align-items:center;gap:.8rem;background:{t['card']}!important;border:1px solid {t['borde']}!important;border-radius:16px;padding:1rem 1.2rem;margin:.8rem 0}}
-.file-icon{{font-size:2rem}}.file-info-name{{color:{t['texto']}!important;font-weight:600;font-size:.9rem;word-break:break-all}}
-.file-info-stats{{color:{t['texto3']}!important;font-size:.75rem;margin-top:.2rem}}
-.summary-card{{background:{t['card2']}!important;border:1px solid {t['borde2']}!important;border-left:4px solid {t['acento1']}!important;border-radius:18px;padding:1.2rem;margin:.8rem 0;color:{t['texto2']}!important;line-height:1.7;font-size:.9rem}}
-.summary-card-title{{color:{t['acento2']}!important;font-size:1rem;font-weight:700;margin-bottom:.6rem}}
-.metrics-grid{{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin:.8rem 0}}
-.metric-pill{{background:{t['card']}!important;border:1px solid {t['borde']}!important;border-radius:14px;padding:.8rem 1rem;text-align:center}}
-.metric-pill-label{{color:{t['texto3']}!important;font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em}}
-.metric-pill-value{{color:{t['texto']}!important;font-size:1.2rem;font-weight:800;margin-top:.2rem;font-family:'JetBrains Mono',monospace}}
-.tags-wrap{{display:flex;flex-wrap:wrap;gap:.4rem;margin:.6rem 0}}
-.tag{{background:{t['card']}!important;color:{t['acento2']}!important;border:1px solid {t['borde']}!important;border-radius:20px;padding:.35rem .8rem;font-size:.75rem;font-weight:500}}
-.hallazgo-card{{background:{t['card']}!important;border:1px solid #14532d;border-left:4px solid {t['acento1']}!important;border-radius:14px;padding:1rem 1.1rem;color:{t['texto2']}!important;font-size:.85rem;margin:.8rem 0;line-height:1.6}}
-.stButton>button{{background:{t['card']}!important;color:{t['texto3']}!important;border:1px solid {t['borde']}!important;border-radius:14px!important;font-weight:600!important;font-size:.82rem!important;min-height:3.2rem!important;width:100%!important;transition:all .15s!important;font-family:'Outfit',sans-serif!important}}
-.stButton>button:hover{{border-color:{t['acento1']}!important;color:{t['acento2']}!important}}
-.stButton>button:active{{transform:scale(.96)!important}}
-.nav-tab-activo>button{{background:linear-gradient(135deg,#065f46,#10b981)!important;color:white!important;border:none!important;font-weight:700!important;box-shadow:0 4px 15px rgba(16,185,129,.3)!important}}
-.nav-tab-inactivo>button{{background:{t['card']}!important;color:#2d6a4f!important;border:1.5px solid #0a3d1a!important}}
-.nav-tab-activo>button,.nav-tab-inactivo>button{{height:3rem!important;border-radius:12px!important;font-size:.85rem!important;width:100%!important}}
-[data-testid="stDownloadButton"]>button{{background:linear-gradient(135deg,#065f46,#059669)!important;color:white!important;border:none!important;border-radius:14px!important;font-weight:700!important;height:3rem!important;width:100%!important}}
-.section-title{{color:{t['texto']}!important;font-size:1.05rem;font-weight:700;margin:1.2rem 0 .5rem;display:flex;align-items:center;gap:.5rem}}
-.info-box{{background:#052e16;border:1px solid #15803d;border-radius:12px;padding:.9rem 1rem;color:#4ade80;font-size:.88rem;margin:.6rem 0}}
-.warn-box{{background:#1c1003;border:1px solid #b45309;border-radius:12px;padding:.9rem 1rem;color:#fbbf24;font-size:.88rem;margin:.6rem 0}}
-.cambio-item{{background:{t['card']}!important;border:1px solid {t['borde']}!important;border-radius:10px;padding:.6rem .9rem;margin:.3rem 0;font-size:.82rem;font-family:'JetBrains Mono',monospace;display:flex;align-items:center;gap:.5rem}}
-.cambio-num{{color:#4b6080;font-size:.7rem;min-width:1.2rem}}.cambio-arrow{{color:#f59e0b}}
-[data-testid="stExpander"]{{background:{t['card']}!important;border:1px solid {t['borde']}!important;border-radius:14px!important}}
-[data-testid="stChatInput"] textarea{{background:{t['card']}!important;border:2px solid {t['borde']}!important;border-radius:14px!important;color:{t['texto']}!important;font-family:'Outfit',sans-serif!important;font-size:.95rem!important}}
-.oro-divider{{height:1px;background:linear-gradient(90deg,transparent,{t['borde']},transparent);margin:1.2rem 0}}
-.empty-state{{text-align:center;padding:3rem 1rem}}
-.empty-icon{{font-size:4rem;margin-bottom:1rem;opacity:.5}}.empty-title{{color:#374151;font-size:1rem;font-weight:600}}
-.empty-hint{{color:#1f2937;font-size:.8rem;margin-top:.4rem}}
-.format-badges{{display:flex;justify-content:center;gap:.5rem;margin-top:1rem}}
-.format-badge{{background:#111827;border:1px solid #1f2937;border-radius:8px;padding:.3rem .7rem;color:#374151;font-size:.75rem;font-family:'JetBrains Mono',monospace}}
-.oro-footer{{text-align:center;font-size:.72rem;color:#1f2937;padding:.5rem 0}}
-[data-testid="stSidebar"]{{background:{t['bg1']}!important}}
-</style>"""
 
+/* ── RESET & BASE ── */
+html, body, [class*="css"] {
+    font-family: 'Outfit', sans-serif !important;
+    -webkit-tap-highlight-color: transparent;
+}
 
+/* ── FONDO PRINCIPAL ── */
+.stApp {
+    background: linear-gradient(160deg, #0a0e1a 0%, #0d1525 50%, #0a1020 100%);
+    min-height: 100vh;
+}
+.main .block-container {
+    padding: 1rem 1rem 4rem 1rem !important;
+    max-width: 480px !important;
+    margin: 0 auto !important;
+}
 
+/* ── OCULTAR elementos de escritorio innecesarios ── */
+#MainMenu, footer, header { visibility: hidden; }
+[data-testid="stToolbar"] { display: none; }
 
-# ==========================================
-# SESSION STATE
-# ==========================================
-for key, val in {
-    "texto_extraido": "",
-    "nombre_archivo": "",
-    "archivo_bytes": None,
-    "resumen_data": None,
-    "historial_chat": [],
-    "cambios_aplicados": None,
-    "archivo_tipo": "",
-    "lista_cambios": [],
-    "texto_modificado": "",
-    "generando_resumen": False,
-    "resumen_error": False,
-    "tab_activa": "resumen",
-    "tema": "verde",
-    "preview_cambio": None,
-    "edicion_counter": 0,
-    "texto_corregido": "",
-}.items():
-    if key not in st.session_state:
-        st.session_state[key] = val
+/* ── HEADER ── */
+.oro-header {
+    text-align: center;
+    padding: 1.5rem 0 0.5rem 0;
+    position: relative;
+}
+.oro-logo {
+    font-size: 3rem;
+    line-height: 1;
+    filter: drop-shadow(0 0 20px rgba(251,191,36,0.5));
+    animation: pulse-glow 3s ease-in-out infinite;
+}
+@keyframes pulse-glow {
+    0%,100% { filter: drop-shadow(0 0 15px rgba(251,191,36,0.4)); }
+    50%      { filter: drop-shadow(0 0 30px rgba(251,191,36,0.8)); }
+}
+.oro-title {
+    font-size: 1.9rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 40%, #fde68a 70%, #f59e0b 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -0.02em;
+    margin: 0.2rem 0 0.1rem 0;
+}
+.oro-subtitle {
+    color: #4b6080;
+    font-size: 0.82rem;
+    font-weight: 400;
+    letter-spacing: 0.03em;
+}
+
+/* ── UPLOAD ZONE ── */
+.upload-zone {
+    background: linear-gradient(135deg, #111827, #162032);
+    border: 2px dashed #2a4a6b;
+    border-radius: 20px;
+    padding: 2rem 1rem;
+    text-align: center;
+    margin: 1rem 0;
+    transition: border-color 0.3s;
+}
+.upload-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+.upload-text { color: #60a5fa; font-weight: 600; font-size: 1rem; }
+.upload-hint { color: #374151; font-size: 0.78rem; margin-top: 0.3rem; }
+
+[data-testid="stFileUploader"] {
+    background: transparent !important;
+    border: none !important;
+}
+[data-testid="stFileUploader"] > div {
+    background: linear-gradient(135deg, #0f1927, #162032) !important;
+    border: 2px dashed #1e3a5f !important;
+    border-radius: 20px !important;
+    padding: 1.5rem !important;
+}
+[data-testid="stFileUploader"] label {
+    color: #60a5fa !important;
+    font-weight: 600 !important;
+    font-size: 1rem !important;
+}
+
+/* ── FILE BADGE ── */
+.file-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    background: linear-gradient(135deg, #0f2037, #132840);
+    border: 1px solid #1e4a7a;
+    border-radius: 16px;
+    padding: 1rem 1.2rem;
+    margin: 0.8rem 0;
+}
+.file-icon { font-size: 2rem; }
+.file-info-name { color: #93c5fd; font-weight: 600; font-size: 0.9rem; word-break: break-all; }
+.file-info-stats { color: #4b6080; font-size: 0.75rem; margin-top: 0.2rem; }
+
+/* ── NAVEGACIÓN TIPO APP MÓVIL ── */
+.nav-bar {
+    display: flex;
+    gap: 0.4rem;
+    background: #0d1525;
+    border: 1px solid #1e3a5f;
+    border-radius: 16px;
+    padding: 0.4rem;
+    margin: 1rem 0;
+}
+.nav-btn {
+    flex: 1;
+    text-align: center;
+    padding: 0.6rem 0.2rem;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.65rem;
+    color: #4b6080;
+    font-weight: 500;
+}
+.nav-btn .nav-icon { font-size: 1.3rem; display: block; margin-bottom: 0.2rem; }
+.nav-btn.active {
+    background: linear-gradient(135deg, #1e40af, #2563eb);
+    color: white;
+    box-shadow: 0 4px 15px rgba(37,99,235,0.35);
+}
+
+/* ── SECCIÓN CONTENT ── */
+.section-title {
+    color: #e2e8f0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin: 1.2rem 0 0.5rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.section-hint {
+    color: #374151;
+    font-size: 0.78rem;
+    margin-bottom: 1rem;
+    line-height: 1.5;
+}
+
+/* ── CARD RESUMEN ── */
+.summary-card {
+    background: linear-gradient(135deg, #0f1e33, #132840);
+    border: 1px solid #1e4a7a;
+    border-left: 4px solid #3b82f6;
+    border-radius: 18px;
+    padding: 1.2rem;
+    margin: 0.8rem 0;
+    color: #bfdbfe;
+    line-height: 1.7;
+    font-size: 0.9rem;
+}
+.summary-card-title {
+    color: #60a5fa;
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 0.6rem;
+}
+
+/* ── METRIC PILL ── */
+.metrics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem;
+    margin: 0.8rem 0;
+}
+.metric-pill {
+    background: linear-gradient(135deg, #111827, #162032);
+    border: 1px solid #1e3a5f;
+    border-radius: 14px;
+    padding: 0.8rem 1rem;
+    text-align: center;
+}
+.metric-pill-label {
+    color: #4b6080;
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.metric-pill-value {
+    color: #e2e8f0;
+    font-size: 1.2rem;
+    font-weight: 800;
+    margin-top: 0.2rem;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* ── TAGS ── */
+.tags-wrap { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.6rem 0; }
+.tag {
+    background: #0f2037;
+    color: #60a5fa;
+    border: 1px solid #1e4a7a;
+    border-radius: 20px;
+    padding: 0.35rem 0.8rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+/* ── HALLAZGO ── */
+.hallazgo-card {
+    background: #0a1f0e;
+    border: 1px solid #14532d;
+    border-left: 4px solid #22c55e;
+    border-radius: 14px;
+    padding: 1rem 1.1rem;
+    color: #86efac;
+    font-size: 0.85rem;
+    margin: 0.8rem 0;
+    line-height: 1.6;
+}
+
+/* ── BOTONES GRANDES TÁCTILES ── */
+.stButton > button {
+    background: linear-gradient(135deg, #0d1525, #111c2e) !important;
+    color: #4b6080 !important;
+    border: 1px solid #1e3a5f !important;
+    border-radius: 14px !important;
+    font-weight: 600 !important;
+    font-size: 0.82rem !important;
+    min-height: 3.8rem !important;
+    width: 100% !important;
+    transition: all 0.15s !important;
+    letter-spacing: 0.01em !important;
+    font-family: 'Outfit', sans-serif !important;
+    line-height: 1.3 !important;
+    white-space: pre-line !important;
+}
+.stButton > button:hover {
+    background: linear-gradient(135deg, #132840, #1a3550) !important;
+    color: #93c5fd !important;
+    border-color: #2563eb !important;
+}
+.stButton > button:active {
+    transform: scale(0.96) !important;
+}
+/* Botón acción principal (generar, confirmar, etc.) */
+div[data-testid="stVerticalBlock"] > div:has(> div[data-testid="stButton"]) button[kind="primary"],
+.btn-primary > button {
+    background: linear-gradient(135deg, #1d4ed8, #2563eb) !important;
+    color: white !important;
+    border: none !important;
+}
+
+/* ── BOTONES DESCARGA ── */
+[data-testid="stDownloadButton"] > button {
+    background: linear-gradient(135deg, #065f46, #059669) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 14px !important;
+    font-weight: 700 !important;
+    font-size: 0.88rem !important;
+    height: 3rem !important;
+    width: 100% !important;
+    font-family: 'Outfit', sans-serif !important;
+}
+[data-testid="stDownloadButton"] > button:active {
+    transform: scale(0.97) !important;
+}
+
+/* ── DESCARGA GRID ── */
+.download-grid { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.8rem; }
+
+/* ── INPUT TEXTO ── */
+.stTextInput > div > div > input {
+    background: #0f1927 !important;
+    border: 2px solid #1e3a5f !important;
+    border-radius: 14px !important;
+    color: #e2e8f0 !important;
+    font-size: 1rem !important;
+    padding: 0.8rem 1rem !important;
+    font-family: 'Outfit', sans-serif !important;
+    height: 3.2rem !important;
+}
+.stTextInput > div > div > input:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.15) !important;
+}
+
+/* ── CHAT ── */
+[data-testid="stChatInput"] textarea {
+    background: #0f1927 !important;
+    border: 2px solid #1e3a5f !important;
+    border-radius: 14px !important;
+    color: #e2e8f0 !important;
+    font-family: 'Outfit', sans-serif !important;
+    font-size: 0.95rem !important;
+}
+[data-testid="stChatMessageContent"] {
+    font-size: 0.9rem !important;
+}
+
+/* ── INFO / WARN BOXES ── */
+.info-box {
+    background: #052e16;
+    border: 1px solid #15803d;
+    border-radius: 12px;
+    padding: 0.9rem 1rem;
+    color: #4ade80;
+    font-size: 0.88rem;
+    margin: 0.6rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.warn-box {
+    background: #1c1003;
+    border: 1px solid #b45309;
+    border-radius: 12px;
+    padding: 0.9rem 1rem;
+    color: #fbbf24;
+    font-size: 0.88rem;
+    margin: 0.6rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* ── CAMBIOS LISTA ── */
+.cambio-item {
+    background: #0d1525;
+    border: 1px solid #1e3a5f;
+    border-radius: 10px;
+    padding: 0.6rem 0.9rem;
+    margin: 0.3rem 0;
+    font-size: 0.82rem;
+    color: #93c5fd;
+    font-family: 'JetBrains Mono', monospace;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.cambio-num { color: #4b6080; font-size: 0.7rem; min-width: 1.2rem; }
+.cambio-arrow { color: #f59e0b; }
+
+/* ── CALIDAD BADGE ── */
+.calidad-badge {
+    text-align: center;
+    padding: 1.2rem;
+    margin: 0.8rem 0;
+}
+.calidad-pill {
+    display: inline-block;
+    padding: 0.6rem 2rem;
+    border-radius: 30px;
+    font-weight: 800;
+    font-size: 1rem;
+    letter-spacing: 0.03em;
+}
+.anomalia-item {
+    background: #1c0f03;
+    border: 1px solid #92400e;
+    border-radius: 10px;
+    padding: 0.7rem 1rem;
+    color: #fcd34d;
+    font-size: 0.84rem;
+    margin: 0.4rem 0;
+    display: flex;
+    gap: 0.5rem;
+    line-height: 1.5;
+}
+
+/* ── TABS OCULTAR estilo nativo, usar nuestro nav ── */
+[data-testid="stTabs"] [role="tablist"] { display: none !important; }
+[data-testid="stTabPanel"] { padding-top: 0 !important; }
+
+/* ── EXPANDER ── */
+[data-testid="stExpander"] {
+    background: #0d1525 !important;
+    border: 1px solid #1e3a5f !important;
+    border-radius: 14px !important;
+}
+
+/* ── SPINNER ── */
+[data-testid="stSpinner"] { color: #60a5fa !important; }
+
+/* ── DIVIDER ── */
+.oro-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #1e3a5f, transparent);
+    margin: 1.2rem 0;
+}
+
+/* ── ESTADO VACÍO ── */
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+}
+.empty-icon { font-size: 4rem; margin-bottom: 1rem; opacity: 0.5; }
+.empty-title { color: #374151; font-size: 1rem; font-weight: 600; }
+.empty-hint { color: #1f2937; font-size: 0.8rem; margin-top: 0.4rem; }
+.format-badges { display: flex; justify-content: center; gap: 0.5rem; margin-top: 1rem; }
+.format-badge {
+    background: #111827;
+    border: 1px solid #1f2937;
+    border-radius: 8px;
+    padding: 0.3rem 0.7rem;
+    color: #374151;
+    font-size: 0.75rem;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* ── FOOTER ── */
+.oro-footer {
+    text-align: center;
+    font-size: 0.72rem;
+    color: #1f2937;
+    padding: 1.5rem 0 0.5rem 0;
+    border-top: 1px solid #111827;
+    margin-top: 2rem;
+}
+
+/* ── SELECTBOX SIDEBAR ── */
+[data-testid="stSidebar"] {
+    background: #080e1a !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
 
 # ── CSS dinámico según tema ──
+_TEMAS = {
+    "oscuro": {
+        "bg1": "#0a0e1a", "bg2": "#0d1525", "bg3": "#111827",
+        "card": "#111827", "card2": "#162032",
+        "borde": "#1e3a5f", "borde2": "#2a4a6b",
+        "acento1": "#3b82f6", "acento2": "#60a5fa",
+        "acento_grad": "linear-gradient(135deg,#1d4ed8,#2563eb)",
+        "titulo_grad": "linear-gradient(135deg,#fbbf24,#f59e0b,#fde68a,#f59e0b)",
+        "texto": "#e2e8f0", "texto2": "#93c5fd", "texto3": "#4b6080",
+    },
+    "azul": {
+        "bg1": "#020818", "bg2": "#030d24", "bg3": "#041230",
+        "card": "#041230", "card2": "#061840",
+        "borde": "#0c3a7a", "borde2": "#1050aa",
+        "acento1": "#38bdf8", "acento2": "#7dd3fc",
+        "acento_grad": "linear-gradient(135deg,#0369a1,#0ea5e9)",
+        "titulo_grad": "linear-gradient(135deg,#38bdf8,#7dd3fc,#bae6fd)",
+        "texto": "#e0f2fe", "texto2": "#7dd3fc", "texto3": "#1e5a8a",
+    },
+    "verde": {
+        "bg1": "#010c06", "bg2": "#021008", "bg3": "#03160a",
+        "card": "#041208", "card2": "#051a0c",
+        "borde": "#0a3d1a", "borde2": "#0f5225",
+        "acento1": "#10b981", "acento2": "#34d399",
+        "acento_grad": "linear-gradient(135deg,#065f46,#10b981)",
+        "titulo_grad": "linear-gradient(135deg,#10b981,#34d399,#6ee7b7,#10b981)",
+        "texto": "#d1fae5", "texto2": "#34d399", "texto3": "#065f46",
+    },
+    "rosa": {
+        "bg1": "#120008", "bg2": "#1a000f", "bg3": "#220015",
+        "card": "#1a000f", "card2": "#280018",
+        "borde": "#7c0040", "borde2": "#9d0050",
+        "acento1": "#f472b6", "acento2": "#f9a8d4",
+        "acento_grad": "linear-gradient(135deg,#be185d,#ec4899)",
+        "titulo_grad": "linear-gradient(135deg,#f472b6,#f9a8d4,#fce7f3)",
+        "texto": "#fce7f3", "texto2": "#f9a8d4", "texto3": "#7c0040",
+    },
+    "ambar": {
+        "bg1": "#0f0800", "bg2": "#180d00", "bg3": "#1f1100",
+        "card": "#1a0e00", "card2": "#251500",
+        "borde": "#78350f", "borde2": "#92400e",
+        "acento1": "#f59e0b", "acento2": "#fbbf24",
+        "acento_grad": "linear-gradient(135deg,#b45309,#f59e0b)",
+        "titulo_grad": "linear-gradient(135deg,#fbbf24,#fde68a,#f59e0b)",
+        "texto": "#fef3c7", "texto2": "#fbbf24", "texto3": "#78350f",
+    },
+}
 
-st.markdown(_get_all_css(st.session_state.get("tema","verde")), unsafe_allow_html=True)
+_t = _TEMAS.get(st.session_state.get("tema", "oscuro"), _TEMAS["oscuro"])
+st.markdown(f"""
+<style>
+.stApp {{
+    background: linear-gradient(160deg, {_t['bg1']} 0%, {_t['bg2']} 50%, {_t['bg1']} 100%) !important;
+}}
+.main .block-container {{ background: transparent !important; }}
+.oro-title {{
+    background: {_t['titulo_grad']} !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+}}
+.file-badge, .metric-pill, .cambio-item {{
+    background: {_t['card']} !important;
+    border-color: {_t['borde']} !important;
+}}
+.summary-card {{
+    background: {_t['card2']} !important;
+    border-color: {_t['borde2']} !important;
+    border-left-color: {_t['acento1']} !important;
+}}
+.tag {{
+    background: {_t['card']} !important;
+    color: {_t['acento2']} !important;
+    border-color: {_t['borde']} !important;
+}}
+.hallazgo-card {{
+    background: {_t['card']} !important;
+    border-left-color: {_t['acento1']} !important;
+    color: {_t['texto2']} !important;
+}}
+.metric-pill-value {{ color: {_t['texto']} !important; }}
+.metric-pill-label, .file-info-stats, .section-hint {{ color: {_t['texto3']} !important; }}
+.section-title, .file-info-name {{ color: {_t['texto']} !important; }}
+.summary-card-title {{ color: {_t['acento2']} !important; }}
+.summary-card {{ color: {_t['texto2']} !important; }}
+.oro-divider {{ background: linear-gradient(90deg, transparent, {_t['borde']}, transparent) !important; }}
+[data-testid="stFileUploader"] > div {{
+    border-color: {_t['borde']} !important;
+    background: {_t['card']} !important;
+}}
+[data-testid="stSidebar"] {{ background: {_t['bg1']} !important; }}
+.stButton > button {{
+    background: {_t['card']} !important;
+    border-color: {_t['borde']} !important;
+    color: {_t['texto3']} !important;
+}}
+.stButton > button:hover {{
+    border-color: {_t['acento1']} !important;
+    color: {_t['acento2']} !important;
+}}
+.stTextInput > div > div > input {{
+    background: {_t['card']} !important;
+    border-color: {_t['borde']} !important;
+    color: {_t['texto']} !important;
+}}
+.stTextInput > div > div > input:focus {{
+    border-color: {_t['acento1']} !important;
+}}
+[data-testid="stDownloadButton"] > button {{
+    background: linear-gradient(135deg,#065f46,#059669) !important;
+    color: white !important;
+    border: none !important;
+}}
+</style>
+""", unsafe_allow_html=True)
 
 # ==========================================
 # CONEXIÓN GEMINI
@@ -163,6 +612,29 @@ def llamar_ia(prompt, es_json=False):
 with st.sidebar:
     st.caption("Oro Asistente v2")
 
+# ==========================================
+# SESSION STATE
+# ==========================================
+for key, val in {
+    "texto_extraido": "",
+    "nombre_archivo": "",
+    "archivo_bytes": None,
+    "resumen_data": None,
+    "historial_chat": [],
+    "cambios_aplicados": None,
+    "archivo_tipo": "",
+    "lista_cambios": [],
+    "texto_modificado": "",
+    "generando_resumen": False,
+    "resumen_error": False,
+    "tab_activa": "resumen",
+    "tema": "verde",
+    "preview_cambio": None,
+    "edicion_counter": 0,
+    "texto_corregido": "",
+}.items():
+    if key not in st.session_state:
+        st.session_state[key] = val
 
 # ==========================================
 # HEADER
@@ -300,21 +772,12 @@ def preguntar_al_documento(pregunta, texto):
 
 def detectar_anomalias(texto):
     prompt = (
-        "Analiza este documento en detalle. Detecta todos los problemas que encuentres.\n"
-        "Clasifica cada problema por nivel de gravedad:\n"
-        "- CRITICO: errores graves que cambian el significado o hacen el documento inválido\n"
-        "- ALTO: errores importantes como datos incorrectos, incoherencias lógicas\n"
-        "- MEDIO: errores ortográficos, de formato, datos duplicados\n"
-        "- LEVE: sugerencias de mejora, redacción mejorable\n\n"
-        "Devuelve SOLO este JSON (sin texto extra):\n"
-        '{"nivel_general": "Excelente/Bueno/Regular/Deficiente",'
-        '"puntaje": 85,'
-        '"criticos": ["descripción del problema"],'
-        '"altos": ["descripción del problema"],'
-        '"medios": ["descripción del problema"],'
-        '"leves": ["descripción del problema"],'
-        '"recomendacion": "recomendación principal en una oración"}\n\n'
-        f"DOCUMENTO:\n{texto[:12000]}"
+        "Analiza este documento y detecta posibles inconsistencias, "
+        "datos duplicados, errores o anomalías. Sé breve y directo.\n"
+        "Devuelve SOLO JSON:\n"
+        '{"anomalias": ["anomalía 1", "anomalía 2"], "nivel_calidad": "Alto/Medio/Bajo", '
+        '"recomendacion": "texto breve"}\n\n'
+        f"DOCUMENTO:\n{texto[:10000]}"
     )
     resp = llamar_ia(prompt)
     if resp:
@@ -675,8 +1138,8 @@ def pdf_seccion_header(pdf, titulo, r, g, b):
     """Dibuja un encabezado de sección con fondo de color."""
     pdf.set_fill_color(r, g, b)
     pdf.set_text_color(255, 255, 255)
-    pdf.set_font("Helvetica", 'B', 11)
-    pdf.cell(190, 8, safe_text(titulo), border=0, new_x="LMARGIN", new_y="NEXT", fill=True)
+    pdf.set_font("Arial", 'B', 11)
+    pdf.cell(190, 8, safe_text(titulo), border=0, ln=1, fill=True)
     pdf.ln(2)
     pdf.set_text_color(30, 30, 30)
 
@@ -691,14 +1154,14 @@ def exportar_pdf(texto, resumen_data=None):
     pdf.set_fill_color(30, 58, 95)
     pdf.rect(0, 0, 210, 32, 'F')
     pdf.set_text_color(255, 255, 255)
-    pdf.set_font("Helvetica", 'B', 16)
+    pdf.set_font("Arial", 'B', 16)
     pdf.set_xy(10, 8)
-    pdf.cell(190, 10, "INFORME EJECUTIVO - ORO ASISTENTE", new_x="LMARGIN", new_y="NEXT", align='C')
+    pdf.cell(190, 10, "INFORME EJECUTIVO - ORO ASISTENTE", ln=1, align='C')
     zona = pytz.timezone('America/Caracas')
     fecha = datetime.now(zona).strftime('%d/%m/%Y %I:%M %p')
-    pdf.set_font("Helvetica", '', 9)
+    pdf.set_font("Arial", '', 9)
     pdf.set_xy(10, 20)
-    pdf.cell(190, 8, safe_text(f"Generado: {fecha}"), new_x="LMARGIN", new_y="NEXT", align='C')
+    pdf.cell(190, 8, safe_text(f"Generado: {fecha}"), ln=1, align='C')
     pdf.set_xy(10, 35)
     pdf.set_text_color(30, 30, 30)
 
@@ -708,15 +1171,15 @@ def exportar_pdf(texto, resumen_data=None):
         if titulo_doc:
             pdf.set_fill_color(37, 99, 235)
             pdf.set_text_color(255, 255, 255)
-            pdf.set_font("Helvetica", 'B', 12)
-            pdf.cell(190, 10, safe_text(titulo_doc[:90]), border=0, new_x="LMARGIN", new_y="NEXT", align='C', fill=True)
+            pdf.set_font("Arial", 'B', 12)
+            pdf.cell(190, 10, safe_text(titulo_doc[:90]), border=0, ln=1, align='C', fill=True)
             pdf.ln(3)
             pdf.set_text_color(30, 30, 30)
 
         # Resumen ejecutivo
         res_ej = resumen_data.get("resumen_ejecutivo", "")
         if res_ej:
-            pdf.set_font("Helvetica", 'I', 10)
+            pdf.set_font("Arial", 'I', 10)
             pdf.multi_cell(190, 6, safe_text(res_ej))
             pdf.ln(4)
 
@@ -728,10 +1191,10 @@ def exportar_pdf(texto, resumen_data=None):
             for k, v in metricas.items():
                 r_bg, g_bg, b_bg = (245, 247, 250) if toggle else (255, 255, 255)
                 pdf.set_fill_color(r_bg, g_bg, b_bg)
-                pdf.set_font("Helvetica", 'B', 10)
+                pdf.set_font("Arial", 'B', 10)
                 pdf.cell(85, 8, safe_text(f"  {k}"), border=0, fill=True)
-                pdf.set_font("Helvetica", '', 10)
-                pdf.cell(105, 8, safe_text(str(v)), border=0, new_x="LMARGIN", new_y="NEXT", fill=True)
+                pdf.set_font("Arial", '', 10)
+                pdf.cell(105, 8, safe_text(str(v)), border=0, ln=1, fill=True)
                 toggle = not toggle
             pdf.ln(4)
 
@@ -739,7 +1202,7 @@ def exportar_pdf(texto, resumen_data=None):
         puntos = resumen_data.get("puntos_clave", [])
         if puntos:
             pdf_seccion_header(pdf, "  PUNTOS CLAVE", 30, 64, 175)
-            pdf.set_font("Helvetica", '', 10)
+            pdf.set_font("Arial", '', 10)
             for i, punto in enumerate(puntos, 1):
                 pdf.multi_cell(190, 7, safe_text(f"  {i}. {punto}"))
             pdf.ln(4)
@@ -748,7 +1211,7 @@ def exportar_pdf(texto, resumen_data=None):
         hallazgo = resumen_data.get("hallazgo_destacado", "")
         if hallazgo:
             pdf_seccion_header(pdf, "  HALLAZGO DESTACADO", 180, 120, 10)
-            pdf.set_font("Helvetica", 'I', 10)
+            pdf.set_font("Arial", 'I', 10)
             pdf.multi_cell(190, 7, safe_text(f"  {hallazgo}"))
             pdf.ln(4)
 
@@ -756,16 +1219,16 @@ def exportar_pdf(texto, resumen_data=None):
 
     # ---- Contenido del documento ----
     pdf_seccion_header(pdf, "  CONTENIDO DEL DOCUMENTO", 30, 58, 95)
-    pdf.set_font("Helvetica", '', 9)
+    pdf.set_font("Arial", '', 9)
     for linea in texto.split('\n'):
         linea = linea.strip()
         if linea:
             pdf.multi_cell(190, 5, safe_text(linea))
 
-    raw = pdf.output()
+    raw = pdf.output(dest='S')
     if isinstance(raw, (bytes, bytearray)):
         return bytes(raw)
-    return raw.encode('latin-1') if isinstance(raw, str) else bytes(raw)
+    return raw.encode('latin-1')
 
 
 # ==========================================
@@ -838,108 +1301,6 @@ def reemplazar_xlsx_preservando_formato(archivo_bytes, cambios):
 
 
 
-def reemplazar_pdf_original(archivo_bytes, cambios):
-    """
-    Edita el PDF original preservando formato exacto (fuente, tamaño, bold, color).
-    Usa redact de pymupdf para borrar y reinsertar con los mismos atributos.
-    """
-    if not PYMUPDF_OK:
-        return archivo_bytes, 0
-
-    doc = fitz.open(stream=archivo_bytes, filetype="pdf")
-    conteo = 0
-
-    for c in cambios:
-        buscar   = str(c["buscar"]).strip()
-        reemplazar = str(c["reemplazar"]).strip()
-        if not buscar or buscar.lower() == reemplazar.lower():
-            continue
-
-        for pagina in doc:
-            instancias = pagina.search_for(buscar, quads=False)
-            if not instancias:
-                continue
-
-            # Extraer dict completo de la página para leer atributos de span
-            bloques_dict = pagina.get_text("dict")["blocks"]
-
-            for rect in instancias:
-                # ── Buscar el span que contiene el texto ──
-                font_size  = 11.0
-                font_name  = "helv"
-                color      = (0.0, 0.0, 0.0)
-                bold       = False
-                italic     = False
-                # Color de fondo del área (para el redact)
-                bg_color   = None
-
-                for bloque in bloques_dict:
-                    for linea in bloque.get("lines", []):
-                        for span in linea.get("spans", []):
-                            if buscar.lower() in span["text"].lower():
-                                font_size = span.get("size", 11.0)
-                                font_name = span.get("font", "helv")
-                                ci = span.get("color", 0)
-                                color = (
-                                    ((ci >> 16) & 0xFF) / 255,
-                                    ((ci >> 8)  & 0xFF) / 255,
-                                    (ci & 0xFF) / 255,
-                                )
-                                flags = span.get("flags", 0)
-                                bold   = bool(flags & 2**4)
-                                italic = bool(flags & 2**1)
-                                # Color de fondo del span si lo tiene
-                                origin = span.get("origin", rect.tl)
-                                break
-
-                # ── Determinar fuente compatible ──
-                fn_lower = font_name.lower()
-                if "bold" in fn_lower and "italic" in fn_lower:
-                    use_font = "Times-BoldItalic"
-                elif "bold" in fn_lower or bold:
-                    use_font = "Helvetica-Bold"
-                elif "italic" in fn_lower or italic:
-                    use_font = "Helvetica-Oblique"
-                elif "times" in fn_lower or "serif" in fn_lower:
-                    use_font = "Times-Roman"
-                elif "courier" in fn_lower or "mono" in fn_lower:
-                    use_font = "Courier"
-                else:
-                    use_font = "Helvetica"
-
-                # ── 1. Redact: borra el texto original con el fondo correcto ──
-                # Detectar color de fondo real del área
-                try:
-                    pix = pagina.get_pixmap(clip=rect, dpi=72)
-                    # Pixel central del área
-                    cx = pix.width  // 2
-                    cy = pix.height // 2
-                    sample = pix.pixel(cx, cy)
-                    bg = (sample[0]/255, sample[1]/255, sample[2]/255)
-                except Exception:
-                    bg = (1.0, 1.0, 1.0)
-
-                pagina.add_redact_annot(rect, fill=bg)
-                pagina.apply_redactions()
-
-                # ── 2. Reinsertar texto nuevo con los mismos atributos ──
-                # Calcular posición Y: baseline es bottom del rect menos pequeño margen
-                baseline_y = rect.y1 - 1.5
-                pagina.insert_text(
-                    fitz.Point(rect.x0, baseline_y),
-                    reemplazar,
-                    fontname=use_font,
-                    fontsize=font_size,
-                    color=color,
-                )
-                conteo += 1
-
-    buf = BytesIO()
-    doc.save(buf)
-    doc.close()
-    return buf.getvalue(), conteo
-
-
 # ==========================================
 # SUBIDA DE ARCHIVO
 # ==========================================
@@ -984,375 +1345,406 @@ archivo = st.file_uploader(
 )
 
 if archivo and archivo.name != st.session_state.nombre_archivo:
-    with st.spinner("📖 Cargando archivo..."):
+    with st.spinner("📖 Leyendo archivo..."):
         contenido = archivo.read()
-        st.session_state.archivo_bytes     = contenido
-        st.session_state.nombre_archivo    = archivo.name
-        st.session_state.archivo_tipo      = archivo.name.split(".")[-1].lower()
-        st.session_state.resumen_data      = None
-        st.session_state.historial_chat    = []
-        st.session_state.lista_cambios     = []
+        st.session_state.archivo_bytes = contenido
+        st.session_state.nombre_archivo = archivo.name
+        st.session_state.archivo_tipo = archivo.name.split('.')[-1].lower()
+        st.session_state.resumen_data = None
+        st.session_state.historial_chat = []
+        st.session_state.lista_cambios = []
         st.session_state.cambios_aplicados = None
-        st.session_state.texto_corregido   = ""
-        st.session_state.preview_cambio    = None
-        st.session_state.resumen_error     = False
-        st.session_state.generando_resumen = False
+        st.session_state.texto_corregido = ""
+        st.session_state.preview_cambio = None
         texto = ""
         try:
             if archivo.name.endswith(".docx"):
                 doc = Document(BytesIO(contenido))
-                partes = [p.text for p in doc.paragraphs if p.text.strip()]
+                texto = "\n".join([p.text for p in doc.paragraphs if p.text.strip()])
                 for t in doc.tables:
                     for row in t.rows:
-                        celdas = list(dict.fromkeys([c.text.strip() for c in row.cells]))
-                        if any(celdas):
-                            partes.append(" | ".join(celdas))
-                texto = "\n".join(partes)
+                        texto += " | ".join([c.text.strip() for c in row.cells]) + "\n"
             elif archivo.name.endswith(".xlsx"):
-                wb = openpyxl.load_workbook(BytesIO(contenido), data_only=True, read_only=True)
+                wb = openpyxl.load_workbook(BytesIO(contenido), data_only=True)
                 for s in wb.worksheets:
                     for r in s.iter_rows(values_only=True):
-                        linea = " | ".join([str(c) for c in r if c is not None and str(c).strip()])
+                        linea = " | ".join([str(c) for c in r if c is not None])
                         if linea.strip():
                             texto += linea + "\n"
-                wb.close()
             elif archivo.name.endswith(".pdf"):
                 reader = PyPDF2.PdfReader(BytesIO(contenido))
                 for p in reader.pages:
                     t = p.extract_text()
                     if t:
                         texto += t + "\n"
-            st.session_state.texto_extraido    = texto
-            st.session_state.generando_resumen = False
-            # NO auto-generar resumen — el usuario lo pide cuando quiera
+            st.session_state.texto_extraido = texto
+            st.session_state.generando_resumen = True
+            st.session_state.resumen_error = False
         except Exception as e:
             st.error(f"Error leyendo el archivo: {e}")
-
-
-
-
 
 # ==========================================
 # PANEL PRINCIPAL
 # ==========================================
-if not st.session_state.get("texto_extraido") and st.session_state.get("generando_resumen"):
-    st.session_state.generando_resumen = False
-
 if st.session_state.texto_extraido:
     texto = st.session_state.texto_extraido
-    tipo  = st.session_state.archivo_tipo
-    texto_activo = st.session_state.texto_corregido if st.session_state.texto_corregido else texto
+    tipo = st.session_state.archivo_tipo
 
-    # ── File badge ──
-    palabras  = len(texto.split())
-    ext_icons = {"docx":"📄","xlsx":"📊","pdf":"📕"}
-    ext_icon  = ext_icons.get(tipo,"📎")
-    cambios_n = len(st.session_state.lista_cambios)
-    badge_extra = f' &nbsp;·&nbsp; ✏️ <strong style="color:#10b981">{cambios_n} cambio(s)</strong>' if cambios_n else ""
+    # ── File Badge ──
+    palabras = len(texto.split())
+    lineas = len([l for l in texto.split('\n') if l.strip()])
+    ext_icons = {"docx": "📄", "xlsx": "📊", "pdf": "📕"}
+    ext_icon = ext_icons.get(tipo, "📎")
     st.markdown(f"""
     <div class="file-badge">
         <div class="file-icon">{ext_icon}</div>
         <div>
             <div class="file-info-name">{st.session_state.nombre_archivo}</div>
-            <div class="file-info-stats">📝 {palabras:,} palabras{badge_extra}</div>
+            <div class="file-info-stats">📝 {palabras:,} palabras &nbsp;·&nbsp; 📋 {lineas:,} líneas</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # ── Navegación 3 tabs ──
-    _nav_defs = [
-        ("resumen",   "📊 Resumen"),
-        ("asistente", "✍️ Asistente"),
-        ("evaluar",   "🔍 Evaluar"),
-    ]
-    _activa = st.session_state.get("tab_activa", "resumen")
-    if _activa not in ("resumen","asistente","evaluar"):
-        _activa = "resumen"
+    # ── Navegación con botones táctiles ──
+    st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
 
-    _cols = st.columns(3)
-    for _i, (_key, _label) in enumerate(_nav_defs):
-        with _cols[_i]:
-            _clase = "nav-tab-activo" if _activa == _key else "nav-tab-inactivo"
-            st.markdown(f'<div class="{_clase}">', unsafe_allow_html=True)
-            if st.button(_label, key=f"navbtn_{_key}", use_container_width=True):
-                st.session_state.tab_activa = _key
+    tabs_def = [
+        ("resumen",  "📊", "Resumen"),
+        ("editar",   "✍️", "Editar"),
+        ("chat",     "💬", "Chat"),
+        ("calidad",  "🔍", "Calidad"),
+    ]
+    tab_activa = st.session_state.tab_activa
+    cols_nav = st.columns(4)
+    for i, (key, ico, label) in enumerate(tabs_def):
+        with cols_nav[i]:
+            activo = tab_activa == key
+            btn_style = (
+                "background:linear-gradient(135deg,#1d4ed8,#2563eb);color:white;border:none;"
+                if activo else
+                "background:#0d1525;color:#4b6080;border:1px solid #1e3a5f;"
+            )
+            if st.button(
+                f"{ico}\n{label}",
+                key=f"nav_{key}",
+                use_container_width=True,
+                help=label,
+            ):
+                st.session_state.tab_activa = key
                 st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
-    nav = _activa
+    nav = st.session_state.tab_activa
 
-    # ══════════════════════════════════════════
-    # TAB 1 — RESUMEN
-    # ══════════════════════════════════════════
+    # ═══════════════════════════════════════
+    # PANTALLA 1 — RESUMEN
+    # ═══════════════════════════════════════
     if nav == "resumen":
+        st.markdown('<div class="section-title">📊 Análisis del documento</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-hint">La IA analiza el contenido y te da un resumen claro y profesional.</div>', unsafe_allow_html=True)
 
         if st.session_state.generando_resumen:
-            with st.spinner("🧠 Analizando documento..."):
-                txt_r = st.session_state.texto_corregido if st.session_state.texto_corregido else texto
-                data_nueva = solicitar_resumen_estructurado(txt_r)
+            st.markdown("""
+            <div style="text-align:center;padding:2rem 0;">
+                <div style="font-size:2.5rem;animation:pulse-glow 1.5s infinite">🧠</div>
+                <div style="color:#60a5fa;font-weight:600;margin-top:0.8rem;font-size:1rem">Analizando documento...</div>
+                <div style="color:#374151;font-size:0.8rem;margin-top:0.3rem">Esto puede tomar unos segundos</div>
+            </div>
+            """, unsafe_allow_html=True)
+            texto_para_resumen = st.session_state.texto_corregido if st.session_state.texto_corregido else texto
+            data = solicitar_resumen_estructurado(texto_para_resumen)
             st.session_state.generando_resumen = False
-            if data_nueva:
-                st.session_state.resumen_data  = data_nueva
-                st.session_state.resumen_error = False
+            if data:
+                st.session_state.resumen_data = data
             else:
                 st.session_state.resumen_error = True
             st.rerun()
 
+        # Botón solo visible si ya hay resumen (para regenerar)
+        if st.session_state.resumen_data:
+            if st.button("🔄 Regenerar Resumen", use_container_width=True):
+                st.session_state.generando_resumen = True
+                st.rerun()
+
+        # Mostrar error si la IA falló
         if st.session_state.get("resumen_error"):
-            st.markdown('<div class="warn-box">⚠️ No se pudo generar el resumen. Intenta de nuevo.</div>', unsafe_allow_html=True)
-            if st.button("🔄 Reintentar", use_container_width=True):
+            st.markdown('''
+            <div style="text-align:center;padding:2rem 0;">
+                <div style="font-size:2.5rem">⚠️</div>
+                <div style="color:#fbbf24;font-weight:600;margin-top:0.6rem">No se pudo generar el resumen</div>
+                <div style="color:#4b6080;font-size:0.8rem;margin-top:0.3rem">Puede ser un problema temporal con la IA</div>
+            </div>
+            ''', unsafe_allow_html=True)
+            if st.button("🔄 Intentar de nuevo", use_container_width=True):
                 st.session_state.resumen_error = False
                 st.session_state.generando_resumen = True
                 st.rerun()
 
         data = st.session_state.resumen_data
-
-        if not data and not st.session_state.generando_resumen and not st.session_state.get("resumen_error"):
-            st.markdown("""
-            <div style="text-align:center;padding:2rem 0 1rem">
-                <div style="font-size:3rem">🧠</div>
-                <div style="color:#34d399;font-weight:700;font-size:1rem;margin-top:0.5rem">Listo para analizar</div>
-                <div style="color:#065f46;font-size:0.78rem;margin-top:0.2rem">Toca el botón para generar el resumen</div>
-            </div>
-            """, unsafe_allow_html=True)
-            if st.button("⚡ Analizar documento", use_container_width=True):
-                st.session_state.generando_resumen = True
-                st.rerun()
-
         if data:
-            emoji = data.get("emoji_categoria","📋")
-            titulo_doc = data.get("titulo","Documento analizado")
+            emoji = data.get("emoji_categoria", "📋")
+            titulo_doc = data.get("titulo", "Documento analizado")
+
             st.markdown(f"""
             <div class="summary-card">
                 <div class="summary-card-title">{emoji} {titulo_doc}</div>
-                {data.get("resumen_ejecutivo","")}
+                {data.get("resumen_ejecutivo", "")}
             </div>
             """, unsafe_allow_html=True)
 
-            metricas = data.get("metricas",{})
+            # Métricas en grid 2 columnas
+            metricas = data.get("metricas", {})
             if metricas:
-                pills = '<div class="metrics-grid">'
-                for k,v in list(metricas.items())[:4]:
-                    pills += f'<div class="metric-pill"><div class="metric-pill-label">{k}</div><div class="metric-pill-value">{v}</div></div>'
-                pills += '</div>'
-                st.markdown(pills, unsafe_allow_html=True)
+                items = list(metricas.items())
+                pills_html = '<div class="metrics-grid">'
+                for k, v in items[:4]:
+                    pills_html += f'<div class="metric-pill"><div class="metric-pill-label">{k}</div><div class="metric-pill-value">{v}</div></div>'
+                pills_html += '</div>'
+                st.markdown(pills_html, unsafe_allow_html=True)
 
-            puntos = data.get("puntos_clave",[])
+            # Puntos clave
+            puntos = data.get("puntos_clave", [])
             if puntos:
-                tags = '<div class="tags-wrap">'+"".join([f'<span class="tag">✓ {p}</span>' for p in puntos])+'</div>'
-                st.markdown(tags, unsafe_allow_html=True)
+                tags_html = '<div class="tags-wrap">' + "".join([f'<span class="tag">✓ {p}</span>' for p in puntos]) + '</div>'
+                st.markdown(tags_html, unsafe_allow_html=True)
 
-            hallazgo = data.get("hallazgo_destacado","")
+            # Hallazgo
+            hallazgo = data.get("hallazgo_destacado", "")
             if hallazgo:
                 st.markdown(f'<div class="hallazgo-card">💡 <strong>Hallazgo:</strong> {hallazgo}</div>', unsafe_allow_html=True)
 
-            # Exportar
+            # Exportar — UNA columna en móvil
             st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
             st.markdown('<div class="section-title">📥 Exportar informe</div>', unsafe_allow_html=True)
-            ab = st.session_state.archivo_bytes
-            ca = st.session_state.lista_cambios
-            c1,c2,c3 = st.columns(3)
-            with c1:
-                st.download_button("📄 Word",
-                    exportar_word(texto_activo, data, archivo_bytes=ab, archivo_tipo=tipo, cambios=ca),
-                    "Informe.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    use_container_width=True)
-            with c2:
-                st.download_button("📊 Excel",
-                    exportar_excel(texto_activo, data, archivo_bytes=ab, archivo_tipo=tipo, cambios=ca),
-                    "Informe.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True)
-            with c3:
-                st.download_button("📕 PDF",
-                    exportar_pdf(texto_activo, data),
-                    "Informe.pdf", mime="application/pdf", use_container_width=True)
 
-            if st.button("🔄 Regenerar resumen", use_container_width=True):
-                st.session_state.generando_resumen = True
-                st.session_state.resumen_data = None
-                st.rerun()
+            word_bytes = exportar_word(texto, data, archivo_bytes=st.session_state.archivo_bytes, archivo_tipo=tipo, cambios=st.session_state.lista_cambios)
+            st.download_button("📄 Descargar Word", word_bytes, "Informe_Oro.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                use_container_width=True)
 
-    # ══════════════════════════════════════════
-    # TAB 2 — ASISTENTE (chat + edición)
-    # ══════════════════════════════════════════
-    elif nav == "asistente":
+            excel_bytes = exportar_excel(texto, data, archivo_bytes=st.session_state.archivo_bytes, archivo_tipo=tipo, cambios=st.session_state.lista_cambios)
+            st.download_button("📊 Descargar Excel", excel_bytes, "Informe_Oro.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True)
 
-        # Historial
-        for msg in st.session_state.historial_chat:
-            with st.chat_message("user" if msg["rol"]=="Usuario" else "assistant"):
-                st.write(msg["texto"])
+            pdf_bytes = exportar_pdf(texto, data)
+            st.download_button("📕 Descargar PDF", pdf_bytes, "Informe_Oro.pdf",
+                mime="application/pdf", use_container_width=True)
 
-        # Preview pendiente
+
+    # ═══════════════════════════════════════
+    # ═══════════════════════════════════════
+    # PANTALLA 2 — EDICIÓN
+    # ═══════════════════════════════════════
+    elif nav == "editar":
+        st.markdown('<div class="section-title">✍️ Corregir palabras</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-hint">Escribe qué quieres cambiar en lenguaje natural. Puedes agregar datos, reemplazar palabras o corregir errores.</div>', unsafe_allow_html=True)
+
+        instruccion = st.text_input(
+            "Instrucción",
+            placeholder="Ej: cambia atletismo por BEISBOL  /  agrega el número 04241234567 a Juan Pérez",
+            label_visibility="collapsed",
+            key=f"input_edicion_{st.session_state.edicion_counter}"
+        )
+
+        if instruccion:
+            with st.spinner("🔍 Procesando..."):
+                nuevos_cambios = solicitar_cambios(instruccion, texto)
+            if nuevos_cambios:
+                st.session_state.preview_cambio = nuevos_cambios
+            else:
+                st.markdown('<div class="warn-box">⚠️ No entendí la instrucción. Prueba: cambia X por Y</div>', unsafe_allow_html=True)
+
+        # ── PREVIEW antes de confirmar ──
         if st.session_state.preview_cambio:
             preview = st.session_state.preview_cambio
             st.markdown('<div class="section-title">👁 Vista previa</div>', unsafe_allow_html=True)
-            for c in preview:
-                bq = c["buscar"][:50]+("..." if len(c["buscar"])>50 else "")
-                rq = c["reemplazar"][:50]+("..." if len(c["reemplazar"])>50 else "")
-                idx = texto_activo.lower().find(c["buscar"].lower())
-                if idx != -1:
-                    ini=max(0,idx-30); fin=min(len(texto_activo),idx+len(c["buscar"])+30)
-                    ca2=texto_activo[ini:idx]; cd=texto_activo[idx+len(c["buscar"]):fin]
-                    st.markdown(
-                        f'<div style="background:#021008;border:1px solid #0a3d1a;border-radius:12px;padding:0.9rem;margin:0.4rem 0;font-size:0.8rem">'
-                        f'<div style="color:#6b7280;font-size:0.65rem;text-transform:uppercase">Antes</div>'
-                        f'<div style="color:#fca5a5;font-family:monospace;word-break:break-all">...{ca2}<mark style="background:#7f1d1d;color:#fca5a5;border-radius:3px;padding:0 3px">{bq}</mark>{cd}...</div>'
-                        f'<div style="color:#6b7280;font-size:0.65rem;text-transform:uppercase;margin-top:0.4rem">Después</div>'
-                        f'<div style="color:#86efac;font-family:monospace;word-break:break-all">...{ca2}<mark style="background:#14532d;color:#86efac;border-radius:3px;padding:0 3px">{rq}</mark>{cd}...</div>'
-                        f'</div>', unsafe_allow_html=True)
-                else:
-                    st.markdown(f'<div class="warn-box">⚠️ "{bq}" no encontrado en el documento</div>', unsafe_allow_html=True)
 
-            cs,cn = st.columns(2)
-            with cs:
+            for c in preview:
+                buscar_corto = c["buscar"][:55] + ("..." if len(c["buscar"]) > 55 else "")
+                reemplazar_corto = c["reemplazar"][:55] + ("..." if len(c["reemplazar"]) > 55 else "")
+                idx = texto.lower().find(c["buscar"].lower())
+                if idx != -1:
+                    inicio = max(0, idx - 35)
+                    fin = min(len(texto), idx + len(c["buscar"]) + 35)
+                    ctx_a = texto[inicio:idx]
+                    ctx_d = texto[idx + len(c["buscar"]):fin]
+                    st.markdown(
+                        f'<div style="background:#0d1525;border:1px solid #1e3a5f;border-radius:12px;padding:1rem;margin:0.5rem 0;font-size:0.8rem;">'
+                        f'<div style="color:#6b7280;font-size:0.68rem;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.4rem">ANTES</div>'
+                        f'<div style="color:#fca5a5;font-family:monospace;word-break:break-all">...{ctx_a}'
+                        f'<span style="background:#7f1d1d;padding:.1rem .3rem;border-radius:4px;">{buscar_corto}</span>{ctx_d}...</div>'
+                        f'<div style="color:#6b7280;font-size:0.68rem;text-transform:uppercase;letter-spacing:.05em;margin:.6rem 0 .3rem">DESPUÉS</div>'
+                        f'<div style="color:#86efac;font-family:monospace;word-break:break-all">...{ctx_a}'
+                        f'<span style="background:#14532d;padding:.1rem .3rem;border-radius:4px;">{reemplazar_corto}</span>{ctx_d}...</div>'
+                        f'</div>',
+                        unsafe_allow_html=True
+                    )
+                else:
+                    st.markdown(
+                        f'<div style="background:#0d1525;border:1px solid #7f1d1d;border-radius:12px;padding:.9rem 1rem;margin:.4rem 0;">'
+                        f'<span style="color:#fca5a5;font-family:monospace">{buscar_corto}</span>'
+                        f'<span style="color:#f59e0b;margin:0 .5rem">→</span>'
+                        f'<span style="color:#86efac;font-family:monospace">{reemplazar_corto}</span>'
+                        f'<div style="color:#ef4444;font-size:.73rem;margin-top:.3rem">⚠️ Texto no encontrado en el documento</div>'
+                        f'</div>',
+                        unsafe_allow_html=True
+                    )
+
+            col_si, col_no = st.columns(2)
+            with col_si:
                 if st.button("✅ Confirmar", use_container_width=True):
                     st.session_state.lista_cambios.extend(preview)
                     st.session_state.preview_cambio = None
-                    todos_c = st.session_state.lista_cambios
-                    ab_orig = st.session_state.archivo_bytes
+                    todos_cambios = st.session_state.lista_cambios
+                    archivo_bytes_orig = st.session_state.archivo_bytes
                     if tipo == "docx":
-                        final_bytes, n = reemplazar_docx_preservando_formato(ab_orig, todos_c)
+                        final_bytes, n = reemplazar_docx_preservando_formato(archivo_bytes_orig, todos_cambios)
                     elif tipo == "xlsx":
-                        final_bytes, n = reemplazar_xlsx_preservando_formato(ab_orig, todos_c)
-                    elif tipo == "pdf" and PYMUPDF_OK:
-                        final_bytes, n = reemplazar_pdf_original(ab_orig, todos_c)
+                        final_bytes, n = reemplazar_xlsx_preservando_formato(archivo_bytes_orig, todos_cambios)
                     else:
-                        txt_m=texto_activo; n=0
-                        for c2 in todos_c:
-                            txt_m,cnt=re.compile(re.escape(c2["buscar"]),re.IGNORECASE).subn(c2["reemplazar"],txt_m)
-                            n+=cnt
-                        final_bytes=txt_m.encode()
-                    txt_c=texto_activo
-                    for c2 in todos_c:
-                        txt_c=re.compile(re.escape(c2["buscar"]),re.IGNORECASE).sub(c2["reemplazar"],txt_c)
-                    st.session_state.texto_corregido  = txt_c
-                    st.session_state.cambios_aplicados= final_bytes
-                    st.session_state.resumen_data     = None
-                    st.session_state.generando_resumen= True
-                    st.session_state.edicion_counter += 1
-                    st.session_state.historial_chat.append({"rol":"Asistente","texto":f"✅ Listo — cambié **{preview[0]['buscar']}** → **{preview[0]['reemplazar']}**. ¿Algo más?"})
+                        txt_mod = texto; n = 0
+                        for c in todos_cambios:
+                            txt_mod, cnt = re.compile(re.escape(c["buscar"]), re.IGNORECASE).subn(c["reemplazar"], txt_mod)
+                            n += cnt
+                        final_bytes = txt_mod.encode()
+                    # Actualizar texto corregido para el chat
+                    txt_corr = texto
+                    for c in todos_cambios:
+                        txt_corr = re.compile(re.escape(c["buscar"]), re.IGNORECASE).sub(c["reemplazar"], txt_corr)
+                    st.session_state.texto_corregido = txt_corr
+                    st.session_state.cambios_aplicados = final_bytes
+                    st.session_state.resumen_data = None
+                    st.session_state.generando_resumen = True
+                    st.session_state.edicion_counter += 1  # Resetea el input
                     st.rerun()
-            with cn:
+            with col_no:
                 if st.button("❌ Cancelar", use_container_width=True):
                     st.session_state.preview_cambio = None
                     st.session_state.edicion_counter += 1
                     st.rerun()
 
-        # Historial de cambios
+        # ── Historial de cambios confirmados ──
         if st.session_state.lista_cambios:
-            with st.expander(f"📋 {len(st.session_state.lista_cambios)} cambio(s) aplicado(s)"):
-                for i,c in enumerate(st.session_state.lista_cambios,1):
-                    bs=c["buscar"][:28]+("..." if len(c["buscar"])>28 else "")
-                    rs=c["reemplazar"][:28]+("..." if len(c["reemplazar"])>28 else "")
-                    st.markdown(f'<div class="cambio-item"><span class="cambio-num">{i}.</span><span style="color:#fca5a5">{bs}</span><span class="cambio-arrow">→</span><span style="color:#86efac">{rs}</span></div>', unsafe_allow_html=True)
-                if st.button("🗑️ Limpiar cambios", use_container_width=True):
-                    st.session_state.lista_cambios=[]; st.session_state.cambios_aplicados=None
-                    st.session_state.texto_corregido=""; st.session_state.preview_cambio=None
-                    st.rerun()
+            st.markdown(f'<div class="section-title">📋 Cambios confirmados ({len(st.session_state.lista_cambios)})</div>', unsafe_allow_html=True)
+            for i, c in enumerate(st.session_state.lista_cambios, 1):
+                buscar_s = c["buscar"][:30] + ("..." if len(c["buscar"]) > 30 else "")
+                reemplazar_s = c["reemplazar"][:30] + ("..." if len(c["reemplazar"]) > 30 else "")
+                st.markdown(
+                    f'<div class="cambio-item">'
+                    f'<span class="cambio-num">{i}.</span>'
+                    f'<span style="color:#fca5a5">{buscar_s}</span>'
+                    f'<span class="cambio-arrow">→</span>'
+                    f'<span style="color:#86efac">{reemplazar_s}</span>'
+                    f'</div>',
+                    unsafe_allow_html=True
+                )
+            if st.button("🗑️ Limpiar todos los cambios", use_container_width=True):
+                st.session_state.lista_cambios = []
+                st.session_state.cambios_aplicados = None
+                st.session_state.texto_corregido = ""
+                st.session_state.preview_cambio = None
+                st.rerun()
 
-        # Descargar si hay cambios
+        # ── Descarga ──
         if st.session_state.cambios_aplicados:
             st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
             st.markdown('<div class="section-title">📥 Descargar corregido</div>', unsafe_allow_html=True)
-            fb=st.session_state.cambios_aplicados; todos_c=st.session_state.lista_cambios
-            if tipo=="docx":
-                st.download_button("📄 Word corregido", fb, "Corregido.docx",
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True)
-            elif tipo=="xlsx":
-                st.download_button("📊 Excel corregido", fb, "Corregido.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
-            elif tipo=="pdf" and PYMUPDF_OK:
-                st.download_button("📕 PDF corregido", fb, "Corregido.pdf",
-                    mime="application/pdf", use_container_width=True)
-            wc=exportar_word(st.session_state.texto_corregido or texto, None)
-            st.download_button("📄 Exportar como Word", wc, "Exportado.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True)
+            todos_cambios = st.session_state.lista_cambios
+            word_out = exportar_word(texto, None, archivo_bytes=st.session_state.archivo_bytes, archivo_tipo=tipo, cambios=todos_cambios)
+            st.download_button("📄 Word corregido", word_out, "Corregido.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                use_container_width=True)
+            excel_out = exportar_excel(texto, None, archivo_bytes=st.session_state.archivo_bytes, archivo_tipo=tipo, cambios=todos_cambios)
+            st.download_button("📊 Excel corregido", excel_out, "Corregido.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True)
+            txt_para_pdf = st.session_state.texto_corregido if st.session_state.texto_corregido else texto
+            pdf_c = exportar_pdf(txt_para_pdf, st.session_state.resumen_data)
+            st.download_button("📕 PDF corregido", pdf_c, "Corregido.pdf",
+                mime="application/pdf", use_container_width=True)
 
-        # Estado vacío del chat
-        if not st.session_state.historial_chat and not st.session_state.preview_cambio:
+    # PANTALLA 3 — CHAT
+    # ═══════════════════════════════════════
+    elif nav == "chat":
+        st.markdown('<div class="section-title">💬 Pregunta sobre el documento</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-hint">Hazle cualquier pregunta al asistente sobre el contenido del archivo.</div>', unsafe_allow_html=True)
+
+        for msg in st.session_state.historial_chat:
+            with st.chat_message("user" if msg["rol"] == "Usuario" else "assistant"):
+                st.write(msg["texto"])
+
+        pregunta = st.chat_input("Escribe tu pregunta...")
+        if pregunta:
+            # Usar texto corregido si hay cambios aplicados
+            texto_para_chat = st.session_state.texto_corregido if st.session_state.texto_corregido else texto
+            st.session_state.historial_chat.append({"rol": "Usuario", "texto": pregunta})
+            with st.spinner("🤔 Pensando..."):
+                respuesta = preguntar_al_documento(pregunta, texto_para_chat)
+            st.session_state.historial_chat.append({"rol": "Asistente", "texto": respuesta})
+            st.rerun()
+
+        if not st.session_state.historial_chat:
             st.markdown("""
-            <div style="text-align:center;padding:1.5rem 0 0.5rem">
-                <div style="font-size:2.2rem">💬</div>
-                <div style="color:#10b981;font-weight:700;font-size:0.95rem;margin-top:0.4rem">Conversa sobre el documento</div>
-                <div style="color:#065f46;font-size:0.8rem;margin-top:0.3rem">Edita palabras o haz preguntas en lenguaje natural</div>
-                <div style="display:flex;justify-content:center;gap:0.4rem;flex-wrap:wrap;margin-top:0.8rem">
-                    <span style="background:#021008;border:1px solid #0a3d1a;border-radius:20px;padding:0.2rem 0.7rem;font-size:0.72rem;color:#10b981">cambia X por Y</span>
-                    <span style="background:#021008;border:1px solid #0a3d1a;border-radius:20px;padding:0.2rem 0.7rem;font-size:0.72rem;color:#10b981">¿cuántas personas hay?</span>
-                    <span style="background:#021008;border:1px solid #0a3d1a;border-radius:20px;padding:0.2rem 0.7rem;font-size:0.72rem;color:#10b981">resume en 3 puntos</span>
+            <div style="text-align:center;padding:2rem 0;color:#1e3a5f;">
+                <div style="font-size:2.5rem">💬</div>
+                <div style="color:#374151;font-size:0.85rem;margin-top:0.5rem">
+                    Puedes preguntar cosas como:<br>
+                    <em style="color:#1e3a5f">"¿Cuántos atletas hay en total?"</em><br>
+                    <em style="color:#1e3a5f">"¿Qué municipios aparecen?"</em>
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
-        entrada = st.chat_input("✍️ Escribe un cambio o una pregunta...", key=f"chat_{st.session_state.edicion_counter}")
-        if entrada:
-            st.session_state.historial_chat.append({"rol":"Usuario","texto":entrada})
-            palabras_cambio=["cambia","reemplaza","sustituye","corrige","agrega","añade","borra","elimina","pon","escribe","modifica","quita","actualiza"]
-            es_cambio=any(p in entrada.lower() for p in palabras_cambio)
-            if es_cambio:
-                with st.spinner("🔍 Procesando cambio..."):
-                    nuevos=solicitar_cambios(entrada, texto_activo)
-                if nuevos:
-                    st.session_state.preview_cambio=nuevos
-                    st.session_state.historial_chat.append({"rol":"Asistente","texto":"Encontré el cambio 👆 Revisa la vista previa arriba y confirma."})
-                else:
-                    st.session_state.historial_chat.append({"rol":"Asistente","texto":"No encontré qué cambiar. Intenta: *cambia 'palabra' por 'nueva palabra'*"})
-            else:
-                with st.spinner("🤔 Pensando..."):
-                    resp=preguntar_al_documento(entrada, texto_activo)
-                st.session_state.historial_chat.append({"rol":"Asistente","texto":resp})
-            st.rerun()
+    # ═══════════════════════════════════════
+    # PANTALLA 4 — CALIDAD
+    # ═══════════════════════════════════════
+    elif nav == "calidad":
+        st.markdown('<div class="section-title">🔍 Análisis de calidad</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-hint">Detecta errores, inconsistencias o datos duplicados en el documento.</div>', unsafe_allow_html=True)
 
-    # ══════════════════════════════════════════
-    # TAB 3 — EVALUAR
-    # ══════════════════════════════════════════
-    elif nav == "evaluar":
-        if st.button("🔍 Evaluar documento ahora", use_container_width=True):
-            with st.spinner("Analizando errores e inconsistencias..."):
-                resultado = detectar_anomalias(texto_activo)
+        if st.button("🔎 Analizar Calidad", use_container_width=True):
+            with st.spinner("🔍 Revisando el documento..."):
+                resultado = detectar_anomalias(texto)
+
             if resultado:
-                nivel=resultado.get("nivel_general","Regular")
-                puntaje=resultado.get("puntaje",0)
-                nivel_cfg={"Excelente":("#10b981","#021008","🟢"),"Bueno":("#34d399","#021008","🟢"),"Regular":("#f59e0b","#1c1003","🟡"),"Deficiente":("#ef4444","#1f0707","🔴")}
-                cfg=nivel_cfg.get(nivel,nivel_cfg["Regular"])
+                nivel = resultado.get("nivel_calidad", "?")
+                color_map = {"Alto": ("#22c55e", "#052e16"), "Medio": ("#f59e0b", "#1c1003"), "Bajo": ("#ef4444", "#1f0707")}
+                color_fg, color_bg = color_map.get(nivel, ("#6b7280", "#111827"))
                 st.markdown(f"""
-                <div style="text-align:center;padding:1rem 0 0.5rem">
-                    <div style="font-size:3rem">{cfg[2]}</div>
-                    <div style="color:{cfg[0]};font-size:1.3rem;font-weight:800">{nivel}</div>
-                    <div style="color:#2d6a4f;font-size:0.8rem">Puntaje: <strong style="color:{cfg[0]}">{puntaje}/100</strong></div>
+                <div class="calidad-badge">
+                    <span class="calidad-pill" style="background:{color_bg};color:{color_fg};border:2px solid {color_fg};">
+                        Calidad {nivel}
+                    </span>
                 </div>
                 """, unsafe_allow_html=True)
-                niveles_e=[("criticos","🔴 Crítico","#ef4444","#1f0707","#450a0a"),("altos","🟠 Alto","#f97316","#1c0a03","#431407"),("medios","🟡 Medio","#f59e0b","#1c1003","#451a03"),("leves","🟢 Leve","#22c55e","#052e16","#14532d")]
-                hay=False
-                for key,label,cfg,cbg,cbrd in niveles_e:
-                    items_e=resultado.get(key,[])
-                    if items_e:
-                        hay=True
-                        rows="".join([f'<div style="color:#d1fae5;font-size:0.8rem;padding:0.2rem 0;border-bottom:1px solid {cbrd}">• {it}</div>' for it in items_e])
-                        st.markdown(f'<div style="background:{cbg};border:1px solid {cbrd};border-left:4px solid {cfg};border-radius:12px;padding:0.8rem 1rem;margin:0.5rem 0"><div style="color:{cfg};font-weight:700;font-size:0.85rem;margin-bottom:0.3rem">{label}</div>{rows}</div>', unsafe_allow_html=True)
-                if not hay:
-                    st.markdown('<div class="info-box">✅ ¡Sin problemas detectados! El documento se ve bien 🎉</div>', unsafe_allow_html=True)
-                rec=resultado.get("recomendacion","")
+
+                anomalias = resultado.get("anomalias", [])
+                if anomalias:
+                    st.markdown('<div class="section-title">⚠️ Posibles problemas</div>', unsafe_allow_html=True)
+                    for a in anomalias:
+                        st.markdown(f'<div class="anomalia-item"><span>⚠️</span><span>{a}</span></div>', unsafe_allow_html=True)
+                else:
+                    st.markdown('<div class="info-box">✅ No se detectaron anomalías significativas</div>', unsafe_allow_html=True)
+
+                rec = resultado.get("recomendacion", "")
                 if rec:
                     st.markdown(f'<div class="hallazgo-card">💡 <strong>Recomendación:</strong> {rec}</div>', unsafe_allow_html=True)
             else:
-                st.markdown('<div class="warn-box">⚠️ No se pudo evaluar. Intenta de nuevo.</div>', unsafe_allow_html=True)
+                st.markdown('<div class="warn-box">⚠️ No se pudo analizar el documento</div>', unsafe_allow_html=True)
+
         else:
             st.markdown("""
-            <div style="text-align:center;padding:2rem 0">
-                <div style="font-size:3rem">🔍</div>
-                <div style="color:#34d399;font-weight:700;font-size:0.95rem;margin-top:0.5rem">Evaluación de calidad</div>
-                <div style="color:#065f46;font-size:0.8rem;margin-top:0.3rem;line-height:1.7">
-                    Detecta errores clasificados por nivel:<br>
-                    <span style="color:#ef4444">● Crítico</span> &nbsp;
-                    <span style="color:#f97316">● Alto</span> &nbsp;
-                    <span style="color:#f59e0b">● Medio</span> &nbsp;
-                    <span style="color:#22c55e">● Leve</span>
+            <div style="text-align:center;padding:2rem 0;color:#1e3a5f;">
+                <div style="font-size:2.5rem">🔍</div>
+                <div style="color:#374151;font-size:0.85rem;margin-top:0.5rem">
+                    Toca <strong style="color:#3b82f6">Analizar Calidad</strong><br>para revisar el documento
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
 else:
+    # ── Estado vacío ──
     st.markdown("""
     <div class="empty-state">
         <div class="empty-icon">📂</div>
@@ -1368,5 +1760,4 @@ else:
 
 zona_horaria = pytz.timezone('America/Caracas')
 hora = datetime.now(zona_horaria).strftime('%I:%M %p')
-
-st.markdown(f"<p class='oro-footer'>🏆 Oro Asistente · {hora} VET</p>", unsafe_allow_html=True)
+st.markdown(f"<p class='oro-footer'>🏆 Oro Asistente · {hora} VET · Powered by Gemini</p>", unsafe_allow_html=True)
