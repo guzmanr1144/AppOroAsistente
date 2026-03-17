@@ -1,4 +1,4 @@
-import os, json, ast, re
+}import os, json, ast, re
 import streamlit as st
 import google.generativeai as genai
 from docx import Document
@@ -448,9 +448,57 @@ div[data-testid="stVerticalBlock"] > div:has(> div[data-testid="stButton"]) butt
     text-align: center;
     font-size: 0.72rem;
     color: #1f2937;
-    padding: 1.5rem 0 0.5rem 0;
-    border-top: 1px solid #111827;
-    margin-top: 2rem;
+    padding: 0.5rem 0;
+}
+
+/* ── BARRA NAV FIJA ABAJO ── */
+.nav-bottom-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 9999;
+    background: rgba(2, 16, 8, 0.97);
+    border-top: 1px solid #0a3d1a;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 0.5rem 0.8rem 0.6rem 0.8rem;
+    display: flex;
+    justify-content: space-around;
+    gap: 0.4rem;
+}
+.nav-btn-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0.45rem 0.2rem;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: none;
+    background: transparent;
+    text-decoration: none;
+}
+.nav-btn-item.active {
+    background: linear-gradient(135deg, #065f46, #10b981);
+    box-shadow: 0 2px 12px rgba(16,185,129,0.35);
+}
+.nav-btn-icon { font-size: 1.35rem; line-height: 1; }
+.nav-btn-label {
+    font-size: 0.62rem;
+    font-weight: 600;
+    margin-top: 0.2rem;
+    color: #065f46;
+    font-family: 'Outfit', sans-serif;
+    letter-spacing: 0.02em;
+}
+.nav-btn-item.active .nav-btn-label { color: white; }
+
+/* Espacio para que el contenido no quede bajo la barra */
+.main .block-container {
+    padding-bottom: 5.5rem !important;
 }
 
 /* ── SELECTBOX SIDEBAR ── */
@@ -1308,9 +1356,8 @@ def reemplazar_xlsx_preservando_formato(archivo_bytes, cambios):
 
 def reemplazar_pdf_original(archivo_bytes, cambios):
     """
-    Edita el PDF original reemplazando texto con pymupdf.
-    Preserva layout, imágenes, logos y formato.
-    Devuelve (bytes_nuevo, conteo_cambios).
+    Edita el PDF original preservando formato exacto (fuente, tamaño, bold, color).
+    Usa redact de pymupdf para borrar y reinsertar con los mismos atributos.
     """
     if not PYMUPDF_OK:
         return archivo_bytes, 0
@@ -1319,38 +1366,85 @@ def reemplazar_pdf_original(archivo_bytes, cambios):
     conteo = 0
 
     for c in cambios:
-        buscar = str(c["buscar"]).strip()
+        buscar   = str(c["buscar"]).strip()
         reemplazar = str(c["reemplazar"]).strip()
         if not buscar or buscar.lower() == reemplazar.lower():
             continue
 
         for pagina in doc:
-            # Buscar todas las instancias (case-insensitive)
             instancias = pagina.search_for(buscar, quads=False)
+            if not instancias:
+                continue
+
+            # Extraer dict completo de la página para leer atributos de span
+            bloques_dict = pagina.get_text("dict")["blocks"]
+
             for rect in instancias:
-                # 1. Obtener info del texto original para mantener fuente/tamaño
-                bloques = pagina.get_text("dict", clip=rect)["blocks"]
-                font_size = 11
-                font_name = "helv"
-                color = (0, 0, 0)
-                for bloque in bloques:
+                # ── Buscar el span que contiene el texto ──
+                font_size  = 11.0
+                font_name  = "helv"
+                color      = (0.0, 0.0, 0.0)
+                bold       = False
+                italic     = False
+                # Color de fondo del área (para el redact)
+                bg_color   = None
+
+                for bloque in bloques_dict:
                     for linea in bloque.get("lines", []):
                         for span in linea.get("spans", []):
                             if buscar.lower() in span["text"].lower():
-                                font_size = span["size"]
-                                color_int = span["color"]
-                                r = ((color_int >> 16) & 0xFF) / 255
-                                g = ((color_int >> 8) & 0xFF) / 255
-                                b = (color_int & 0xFF) / 255
-                                color = (r, g, b)
+                                font_size = span.get("size", 11.0)
+                                font_name = span.get("font", "helv")
+                                ci = span.get("color", 0)
+                                color = (
+                                    ((ci >> 16) & 0xFF) / 255,
+                                    ((ci >> 8)  & 0xFF) / 255,
+                                    (ci & 0xFF) / 255,
+                                )
+                                flags = span.get("flags", 0)
+                                bold   = bool(flags & 2**4)
+                                italic = bool(flags & 2**1)
+                                # Color de fondo del span si lo tiene
+                                origin = span.get("origin", rect.tl)
+                                break
 
-                # 2. Tachar el texto original con un rectángulo del mismo color de fondo
-                pagina.draw_rect(rect, color=(1, 1, 1), fill=(1, 1, 1))
+                # ── Determinar fuente compatible ──
+                fn_lower = font_name.lower()
+                if "bold" in fn_lower and "italic" in fn_lower:
+                    use_font = "Times-BoldItalic"
+                elif "bold" in fn_lower or bold:
+                    use_font = "Helvetica-Bold"
+                elif "italic" in fn_lower or italic:
+                    use_font = "Helvetica-Oblique"
+                elif "times" in fn_lower or "serif" in fn_lower:
+                    use_font = "Times-Roman"
+                elif "courier" in fn_lower or "mono" in fn_lower:
+                    use_font = "Courier"
+                else:
+                    use_font = "Helvetica"
 
-                # 3. Escribir el texto nuevo en la misma posición
+                # ── 1. Redact: borra el texto original con el fondo correcto ──
+                # Detectar color de fondo real del área
+                try:
+                    pix = pagina.get_pixmap(clip=rect, dpi=72)
+                    # Pixel central del área
+                    cx = pix.width  // 2
+                    cy = pix.height // 2
+                    sample = pix.pixel(cx, cy)
+                    bg = (sample[0]/255, sample[1]/255, sample[2]/255)
+                except Exception:
+                    bg = (1.0, 1.0, 1.0)
+
+                pagina.add_redact_annot(rect, fill=bg)
+                pagina.apply_redactions()
+
+                # ── 2. Reinsertar texto nuevo con los mismos atributos ──
+                # Calcular posición Y: baseline es bottom del rect menos pequeño margen
+                baseline_y = rect.y1 - 1.5
                 pagina.insert_text(
-                    rect.tl,  # top-left
+                    fitz.Point(rect.x0, baseline_y),
                     reemplazar,
+                    fontname=use_font,
                     fontsize=font_size,
                     color=color,
                 )
@@ -1466,35 +1560,7 @@ if st.session_state.texto_extraido:
     </div>
     """, unsafe_allow_html=True)
 
-    # ── Navegación con botones táctiles ──
-    st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
-
-    tabs_def = [
-        ("resumen",  "📊", "Resumen"),
-        ("editar",   "✍️", "Editar"),
-        ("chat",     "💬", "Chat"),
-        ("calidad",  "🔍", "Calidad"),
-    ]
-    tab_activa = st.session_state.tab_activa
-    cols_nav = st.columns(4)
-    for i, (key, ico, label) in enumerate(tabs_def):
-        with cols_nav[i]:
-            activo = tab_activa == key
-            btn_style = (
-                "background:linear-gradient(135deg,#1d4ed8,#2563eb);color:white;border:none;"
-                if activo else
-                "background:#0d1525;color:#4b6080;border:1px solid #1e3a5f;"
-            )
-            if st.button(
-                f"{ico}\n{label}",
-                key=f"nav_{key}",
-                use_container_width=True,
-                help=label,
-            ):
-                st.session_state.tab_activa = key
-                st.rerun()
-
-    st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
+    # ── Nav viene del session_state, barra está abajo ──
     nav = st.session_state.tab_activa
 
     # ═══════════════════════════════════════
@@ -1853,4 +1919,41 @@ else:
 
 zona_horaria = pytz.timezone('America/Caracas')
 hora = datetime.now(zona_horaria).strftime('%I:%M %p')
-st.markdown(f"<p class='oro-footer'>🏆 Oro Asistente · {hora} VET · Powered by Gemini</p>", unsafe_allow_html=True)
+
+# ── Barra de navegación fija abajo ──
+tabs_nav = [
+    ("resumen", "📊", "Resumen"),
+    ("editar",  "✍️", "Editar"),
+    ("chat",    "💬", "Chat"),
+    ("calidad", "🔍", "Calidad"),
+]
+tab_activa_now = st.session_state.get("tab_activa", "resumen")
+
+# Construir HTML de la barra
+nav_items_html = ""
+for key, ico, label in tabs_nav:
+    clase = "nav-btn-item active" if tab_activa_now == key else "nav-btn-item"
+    nav_items_html += f'''
+    <a class="{clase}" href="?nav={key}" target="_self" style="text-decoration:none;">
+        <span class="nav-btn-icon">{ico}</span>
+        <span class="nav-btn-label">{label}</span>
+    </a>'''
+
+st.markdown(f'''
+<div class="nav-bottom-bar">
+    {nav_items_html}
+</div>
+''', unsafe_allow_html=True)
+
+# Manejar cambio de tab via query params
+try:
+    params = st.query_params
+    if "nav" in params and params["nav"] in [t[0] for t in tabs_nav]:
+        if params["nav"] != st.session_state.tab_activa:
+            st.session_state.tab_activa = params["nav"]
+            st.query_params.clear()
+            st.rerun()
+except Exception:
+    pass
+
+st.markdown(f"<p class='oro-footer'>🏆 Oro Asistente · {hora} VET</p>", unsafe_allow_html=True)
