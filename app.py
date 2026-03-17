@@ -1,4 +1,5 @@
-import os, json, ast, re
+import os, json, ast, re, warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 import streamlit as st
 import google.generativeai as genai
 from docx import Document
@@ -1200,8 +1201,8 @@ def pdf_seccion_header(pdf, titulo, r, g, b):
     """Dibuja un encabezado de sección con fondo de color."""
     pdf.set_fill_color(r, g, b)
     pdf.set_text_color(255, 255, 255)
-    pdf.set_font("Arial", 'B', 11)
-    pdf.cell(190, 8, safe_text(titulo), border=0, ln=1, fill=True)
+    pdf.set_font("Helvetica", 'B', 11)
+    pdf.cell(190, 8, safe_text(titulo), border=0, new_x="LMARGIN", new_y="NEXT", fill=True)
     pdf.ln(2)
     pdf.set_text_color(30, 30, 30)
 
@@ -1216,14 +1217,14 @@ def exportar_pdf(texto, resumen_data=None):
     pdf.set_fill_color(30, 58, 95)
     pdf.rect(0, 0, 210, 32, 'F')
     pdf.set_text_color(255, 255, 255)
-    pdf.set_font("Arial", 'B', 16)
+    pdf.set_font("Helvetica", 'B', 16)
     pdf.set_xy(10, 8)
-    pdf.cell(190, 10, "INFORME EJECUTIVO - ORO ASISTENTE", ln=1, align='C')
+    pdf.cell(190, 10, "INFORME EJECUTIVO - ORO ASISTENTE", new_x="LMARGIN", new_y="NEXT", align='C')
     zona = pytz.timezone('America/Caracas')
     fecha = datetime.now(zona).strftime('%d/%m/%Y %I:%M %p')
-    pdf.set_font("Arial", '', 9)
+    pdf.set_font("Helvetica", '', 9)
     pdf.set_xy(10, 20)
-    pdf.cell(190, 8, safe_text(f"Generado: {fecha}"), ln=1, align='C')
+    pdf.cell(190, 8, safe_text(f"Generado: {fecha}"), new_x="LMARGIN", new_y="NEXT", align='C')
     pdf.set_xy(10, 35)
     pdf.set_text_color(30, 30, 30)
 
@@ -1233,15 +1234,15 @@ def exportar_pdf(texto, resumen_data=None):
         if titulo_doc:
             pdf.set_fill_color(37, 99, 235)
             pdf.set_text_color(255, 255, 255)
-            pdf.set_font("Arial", 'B', 12)
-            pdf.cell(190, 10, safe_text(titulo_doc[:90]), border=0, ln=1, align='C', fill=True)
+            pdf.set_font("Helvetica", 'B', 12)
+            pdf.cell(190, 10, safe_text(titulo_doc[:90]), border=0, new_x="LMARGIN", new_y="NEXT", align='C', fill=True)
             pdf.ln(3)
             pdf.set_text_color(30, 30, 30)
 
         # Resumen ejecutivo
         res_ej = resumen_data.get("resumen_ejecutivo", "")
         if res_ej:
-            pdf.set_font("Arial", 'I', 10)
+            pdf.set_font("Helvetica", 'I', 10)
             pdf.multi_cell(190, 6, safe_text(res_ej))
             pdf.ln(4)
 
@@ -1253,10 +1254,10 @@ def exportar_pdf(texto, resumen_data=None):
             for k, v in metricas.items():
                 r_bg, g_bg, b_bg = (245, 247, 250) if toggle else (255, 255, 255)
                 pdf.set_fill_color(r_bg, g_bg, b_bg)
-                pdf.set_font("Arial", 'B', 10)
+                pdf.set_font("Helvetica", 'B', 10)
                 pdf.cell(85, 8, safe_text(f"  {k}"), border=0, fill=True)
-                pdf.set_font("Arial", '', 10)
-                pdf.cell(105, 8, safe_text(str(v)), border=0, ln=1, fill=True)
+                pdf.set_font("Helvetica", '', 10)
+                pdf.cell(105, 8, safe_text(str(v)), border=0, new_x="LMARGIN", new_y="NEXT", fill=True)
                 toggle = not toggle
             pdf.ln(4)
 
@@ -1264,7 +1265,7 @@ def exportar_pdf(texto, resumen_data=None):
         puntos = resumen_data.get("puntos_clave", [])
         if puntos:
             pdf_seccion_header(pdf, "  PUNTOS CLAVE", 30, 64, 175)
-            pdf.set_font("Arial", '', 10)
+            pdf.set_font("Helvetica", '', 10)
             for i, punto in enumerate(puntos, 1):
                 pdf.multi_cell(190, 7, safe_text(f"  {i}. {punto}"))
             pdf.ln(4)
@@ -1273,7 +1274,7 @@ def exportar_pdf(texto, resumen_data=None):
         hallazgo = resumen_data.get("hallazgo_destacado", "")
         if hallazgo:
             pdf_seccion_header(pdf, "  HALLAZGO DESTACADO", 180, 120, 10)
-            pdf.set_font("Arial", 'I', 10)
+            pdf.set_font("Helvetica", 'I', 10)
             pdf.multi_cell(190, 7, safe_text(f"  {hallazgo}"))
             pdf.ln(4)
 
@@ -1281,16 +1282,16 @@ def exportar_pdf(texto, resumen_data=None):
 
     # ---- Contenido del documento ----
     pdf_seccion_header(pdf, "  CONTENIDO DEL DOCUMENTO", 30, 58, 95)
-    pdf.set_font("Arial", '', 9)
+    pdf.set_font("Helvetica", '', 9)
     for linea in texto.split('\n'):
         linea = linea.strip()
         if linea:
             pdf.multi_cell(190, 5, safe_text(linea))
 
-    raw = pdf.output(dest='S')
+    raw = pdf.output()
     if isinstance(raw, (bytes, bytearray)):
         return bytes(raw)
-    return raw.encode('latin-1')
+    return raw.encode('latin-1') if isinstance(raw, str) else bytes(raw)
 
 
 # ==========================================
