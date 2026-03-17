@@ -678,7 +678,6 @@ for key, val in {
     "lista_cambios": [],
     "texto_modificado": "",
     "generando_resumen": False,
-    "extrayendo_texto": False,
     "resumen_error": False,
     "tab_activa": "resumen",
     "tema": "verde",
@@ -1509,32 +1508,23 @@ archivo = st.file_uploader(
 )
 
 if archivo and archivo.name != st.session_state.nombre_archivo:
-    # Paso 1 — leer bytes inmediatamente (rápido)
-    contenido = archivo.read()
-    st.session_state.archivo_bytes  = contenido
-    st.session_state.nombre_archivo = archivo.name
-    st.session_state.archivo_tipo   = archivo.name.split(".")[-1].lower()
-    st.session_state.resumen_data   = None
-    st.session_state.historial_chat = []
-    st.session_state.lista_cambios  = []
-    st.session_state.cambios_aplicados = None
-    st.session_state.texto_corregido   = ""
-    st.session_state.preview_cambio    = None
-    st.session_state.texto_extraido    = ""
-    st.session_state.resumen_error     = False
-    st.session_state.extrayendo_texto  = True   # flag para extraer en siguiente ciclo
-    st.rerun()
-
-if st.session_state.get("extrayendo_texto") and st.session_state.archivo_bytes:
-    # Paso 2 — extraer texto (puede tardar, mostramos spinner)
     with st.spinner("📖 Cargando archivo..."):
-        contenido = st.session_state.archivo_bytes
-        nombre    = st.session_state.nombre_archivo
+        contenido = archivo.read()
+        st.session_state.archivo_bytes     = contenido
+        st.session_state.nombre_archivo    = archivo.name
+        st.session_state.archivo_tipo      = archivo.name.split(".")[-1].lower()
+        st.session_state.resumen_data      = None
+        st.session_state.historial_chat    = []
+        st.session_state.lista_cambios     = []
+        st.session_state.cambios_aplicados = None
+        st.session_state.texto_corregido   = ""
+        st.session_state.preview_cambio    = None
+        st.session_state.resumen_error     = False
+        st.session_state.generando_resumen = False
         texto = ""
         try:
-            if nombre.endswith(".docx"):
+            if archivo.name.endswith(".docx"):
                 doc = Document(BytesIO(contenido))
-                # Solo texto plano, sin metadatos ni estilos
                 partes = [p.text for p in doc.paragraphs if p.text.strip()]
                 for t in doc.tables:
                     for row in t.rows:
@@ -1542,8 +1532,7 @@ if st.session_state.get("extrayendo_texto") and st.session_state.archivo_bytes:
                         if any(celdas):
                             partes.append(" | ".join(celdas))
                 texto = "\n".join(partes)
-            elif nombre.endswith(".xlsx"):
-                # read_only=True es mucho más rápido — no carga estilos
+            elif archivo.name.endswith(".xlsx"):
                 wb = openpyxl.load_workbook(BytesIO(contenido), data_only=True, read_only=True)
                 for s in wb.worksheets:
                     for r in s.iter_rows(values_only=True):
@@ -1551,27 +1540,24 @@ if st.session_state.get("extrayendo_texto") and st.session_state.archivo_bytes:
                         if linea.strip():
                             texto += linea + "\n"
                 wb.close()
-            elif nombre.endswith(".pdf"):
+            elif archivo.name.endswith(".pdf"):
                 reader = PyPDF2.PdfReader(BytesIO(contenido))
                 for p in reader.pages:
                     t = p.extract_text()
                     if t:
                         texto += t + "\n"
-            st.session_state.texto_extraido   = texto
-            st.session_state.extrayendo_texto = False
-            st.session_state.generando_resumen = True
+            st.session_state.texto_extraido    = texto
+            st.session_state.generando_resumen = False
         except Exception as e:
-            st.session_state.extrayendo_texto = False
             st.error(f"Error leyendo el archivo: {e}")
-    st.rerun()
 
 
 
 # ==========================================
 # PANEL PRINCIPAL
 # ==========================================
-# Seguridad: si no hay texto pero generando_resumen está activo, resetear
-if not st.session_state.texto_extraido and st.session_state.generando_resumen:
+# Seguridad anti-loop: si no hay texto, nunca generar resumen
+if not st.session_state.get("texto_extraido") and st.session_state.get("generando_resumen"):
     st.session_state.generando_resumen = False
 
 if st.session_state.texto_extraido:
@@ -1596,39 +1582,57 @@ if st.session_state.texto_extraido:
     """, unsafe_allow_html=True)
 
     # ══════════════════════════════════════
-    # RESUMEN — siempre visible arriba
+    # RESUMEN
     # ══════════════════════════════════════
-    if st.session_state.generando_resumen:
-        texto_para_resumen = st.session_state.texto_corregido if st.session_state.texto_corregido else texto
-        if not texto_para_resumen.strip():
-            # No hay texto, cancelar para evitar loop
-            st.session_state.generando_resumen = False
-        else:
-            st.markdown("""
-            <div style="text-align:center;padding:2rem 0;">
-                <div style="font-size:2.8rem;animation:pulse-glow 1.2s ease-in-out infinite">🧠</div>
-                <div style="color:#34d399;font-weight:700;font-size:1rem;margin-top:0.7rem">Analizando tu documento...</div>
-                <div style="color:#065f46;font-size:0.78rem;margin-top:0.3rem">Esto puede tomar unos segundos ⏳</div>
+    # Si no hay resumen aún, mostrar botón prominente
+    if not st.session_state.resumen_data and not st.session_state.generando_resumen:
+        st.markdown("""
+        <div style="text-align:center;padding:1.5rem 0 0.5rem">
+            <div style="font-size:2.5rem">🧠</div>
+            <div style="color:#34d399;font-weight:700;font-size:1rem;margin-top:0.5rem">
+                Listo para analizar
             </div>
-            """, unsafe_allow_html=True)
-            data = solicitar_resumen_estructurado(texto_para_resumen)
-            st.session_state.generando_resumen = False
-            if data:
-                st.session_state.resumen_data = data
-            else:
-                st.session_state.resumen_error = True
+            <div style="color:#065f46;font-size:0.78rem;margin-top:0.2rem">
+                Toca el botón para generar el resumen inteligente
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("⚡ Analizar documento", use_container_width=True):
+            st.session_state.generando_resumen = True
             st.rerun()
+
+    # Procesando — llamar a IA solo cuando el usuario lo pidió
+    if st.session_state.generando_resumen:
+        st.markdown("""
+        <div style="text-align:center;padding:2rem 0;">
+            <div style="font-size:2.8rem;animation:pulse-glow 1.2s ease-in-out infinite">🧠</div>
+            <div style="color:#34d399;font-weight:700;font-size:1rem;margin-top:0.7rem">
+                Analizando tu documento...
+            </div>
+            <div style="color:#065f46;font-size:0.78rem;margin-top:0.3rem">Esto puede tomar unos segundos ⏳</div>
+        </div>
+        """, unsafe_allow_html=True)
+        texto_para_resumen = st.session_state.texto_corregido if st.session_state.texto_corregido else texto
+        data_nueva = solicitar_resumen_estructurado(texto_para_resumen)
+        st.session_state.generando_resumen = False
+        if data_nueva:
+            st.session_state.resumen_data  = data_nueva
+            st.session_state.resumen_error = False
+        else:
+            st.session_state.resumen_error = True
+        st.rerun()
 
     if st.session_state.get("resumen_error"):
         st.markdown("""
-        <div style="text-align:center;padding:1.5rem;background:#1c0003;border:1px solid #7f1d1d;border-radius:14px;margin:0.8rem 0">
-            <div style="font-size:2rem">⚠️</div>
-            <div style="color:#fca5a5;font-weight:600;margin-top:0.4rem">No se pudo generar el resumen</div>
-            <div style="color:#4b6080;font-size:0.78rem;margin-top:0.2rem">Problema temporal con la IA</div>
+        <div style="text-align:center;padding:1.2rem;background:#1c0003;border:1px solid #7f1d1d;
+        border-radius:14px;margin:0.8rem 0">
+            <div style="font-size:1.8rem">⚠️</div>
+            <div style="color:#fca5a5;font-weight:600;margin-top:0.3rem">No se pudo generar el resumen</div>
+            <div style="color:#6b7280;font-size:0.78rem;margin-top:0.2rem">Problema temporal con la IA</div>
         </div>
         """, unsafe_allow_html=True)
-        if st.button("🔄 Reintentar análisis", use_container_width=True):
-            st.session_state.resumen_error = False
+        if st.button("🔄 Reintentar", use_container_width=True):
+            st.session_state.resumen_error     = False
             st.session_state.generando_resumen = True
             st.rerun()
 
@@ -1686,6 +1690,7 @@ if st.session_state.texto_extraido:
         # Regenerar
         if st.button("🔄 Regenerar resumen", use_container_width=True):
             st.session_state.generando_resumen = True
+            st.session_state.resumen_data = None
             st.rerun()
 
     st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
