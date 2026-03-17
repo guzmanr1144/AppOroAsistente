@@ -678,6 +678,7 @@ for key, val in {
     "lista_cambios": [],
     "texto_modificado": "",
     "generando_resumen": False,
+    "extrayendo_texto": False,
     "resumen_error": False,
     "tab_activa": "resumen",
     "tema": "verde",
@@ -1508,43 +1509,61 @@ archivo = st.file_uploader(
 )
 
 if archivo and archivo.name != st.session_state.nombre_archivo:
-    with st.spinner("📖 Leyendo archivo..."):
-        contenido = archivo.read()
-        st.session_state.archivo_bytes = contenido
-        st.session_state.nombre_archivo = archivo.name
-        st.session_state.archivo_tipo = archivo.name.split('.')[-1].lower()
-        st.session_state.resumen_data = None
-        st.session_state.historial_chat = []
-        st.session_state.lista_cambios = []
-        st.session_state.cambios_aplicados = None
-        st.session_state.texto_corregido = ""
-        st.session_state.preview_cambio = None
+    # Paso 1 — leer bytes inmediatamente (rápido)
+    contenido = archivo.read()
+    st.session_state.archivo_bytes  = contenido
+    st.session_state.nombre_archivo = archivo.name
+    st.session_state.archivo_tipo   = archivo.name.split(".")[-1].lower()
+    st.session_state.resumen_data   = None
+    st.session_state.historial_chat = []
+    st.session_state.lista_cambios  = []
+    st.session_state.cambios_aplicados = None
+    st.session_state.texto_corregido   = ""
+    st.session_state.preview_cambio    = None
+    st.session_state.texto_extraido    = ""
+    st.session_state.resumen_error     = False
+    st.session_state.extrayendo_texto  = True   # flag para extraer en siguiente ciclo
+    st.rerun()
+
+if st.session_state.get("extrayendo_texto") and st.session_state.archivo_bytes:
+    # Paso 2 — extraer texto (puede tardar, mostramos spinner)
+    with st.spinner("📖 Cargando archivo..."):
+        contenido = st.session_state.archivo_bytes
+        nombre    = st.session_state.nombre_archivo
         texto = ""
         try:
-            if archivo.name.endswith(".docx"):
+            if nombre.endswith(".docx"):
                 doc = Document(BytesIO(contenido))
-                texto = "\n".join([p.text for p in doc.paragraphs if p.text.strip()])
+                # Solo texto plano, sin metadatos ni estilos
+                partes = [p.text for p in doc.paragraphs if p.text.strip()]
                 for t in doc.tables:
                     for row in t.rows:
-                        texto += " | ".join([c.text.strip() for c in row.cells]) + "\n"
-            elif archivo.name.endswith(".xlsx"):
-                wb = openpyxl.load_workbook(BytesIO(contenido), data_only=True)
+                        celdas = list(dict.fromkeys([c.text.strip() for c in row.cells]))
+                        if any(celdas):
+                            partes.append(" | ".join(celdas))
+                texto = "\n".join(partes)
+            elif nombre.endswith(".xlsx"):
+                # read_only=True es mucho más rápido — no carga estilos
+                wb = openpyxl.load_workbook(BytesIO(contenido), data_only=True, read_only=True)
                 for s in wb.worksheets:
                     for r in s.iter_rows(values_only=True):
-                        linea = " | ".join([str(c) for c in r if c is not None])
+                        linea = " | ".join([str(c) for c in r if c is not None and str(c).strip()])
                         if linea.strip():
                             texto += linea + "\n"
-            elif archivo.name.endswith(".pdf"):
+                wb.close()
+            elif nombre.endswith(".pdf"):
                 reader = PyPDF2.PdfReader(BytesIO(contenido))
                 for p in reader.pages:
                     t = p.extract_text()
                     if t:
                         texto += t + "\n"
-            st.session_state.texto_extraido = texto
+            st.session_state.texto_extraido   = texto
+            st.session_state.extrayendo_texto = False
             st.session_state.generando_resumen = True
-            st.session_state.resumen_error = False
         except Exception as e:
+            st.session_state.extrayendo_texto = False
             st.error(f"Error leyendo el archivo: {e}")
+    st.rerun()
 
 
 
