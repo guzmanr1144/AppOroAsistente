@@ -1551,6 +1551,10 @@ if archivo and archivo.name != st.session_state.nombre_archivo:
 # ==========================================
 # PANEL PRINCIPAL
 # ==========================================
+# Seguridad: si no hay texto pero generando_resumen está activo, resetear
+if not st.session_state.texto_extraido and st.session_state.generando_resumen:
+    st.session_state.generando_resumen = False
+
 if st.session_state.texto_extraido:
     texto = st.session_state.texto_extraido
     tipo  = st.session_state.archivo_tipo
@@ -1576,21 +1580,25 @@ if st.session_state.texto_extraido:
     # RESUMEN — siempre visible arriba
     # ══════════════════════════════════════
     if st.session_state.generando_resumen:
-        st.markdown("""
-        <div style="text-align:center;padding:2rem 0;">
-            <div style="font-size:2.8rem;animation:pulse-glow 1.2s ease-in-out infinite">🧠</div>
-            <div style="color:#34d399;font-weight:700;font-size:1rem;margin-top:0.7rem">Analizando tu documento...</div>
-            <div style="color:#065f46;font-size:0.78rem;margin-top:0.3rem">Esto puede tomar unos segundos ⏳</div>
-        </div>
-        """, unsafe_allow_html=True)
         texto_para_resumen = st.session_state.texto_corregido if st.session_state.texto_corregido else texto
-        data = solicitar_resumen_estructurado(texto_para_resumen)
-        st.session_state.generando_resumen = False
-        if data:
-            st.session_state.resumen_data = data
+        if not texto_para_resumen.strip():
+            # No hay texto, cancelar para evitar loop
+            st.session_state.generando_resumen = False
         else:
-            st.session_state.resumen_error = True
-        st.rerun()
+            st.markdown("""
+            <div style="text-align:center;padding:2rem 0;">
+                <div style="font-size:2.8rem;animation:pulse-glow 1.2s ease-in-out infinite">🧠</div>
+                <div style="color:#34d399;font-weight:700;font-size:1rem;margin-top:0.7rem">Analizando tu documento...</div>
+                <div style="color:#065f46;font-size:0.78rem;margin-top:0.3rem">Esto puede tomar unos segundos ⏳</div>
+            </div>
+            """, unsafe_allow_html=True)
+            data = solicitar_resumen_estructurado(texto_para_resumen)
+            st.session_state.generando_resumen = False
+            if data:
+                st.session_state.resumen_data = data
+            else:
+                st.session_state.resumen_error = True
+            st.rerun()
 
     if st.session_state.get("resumen_error"):
         st.markdown("""
