@@ -177,12 +177,24 @@ def extraer_cambio_con_regex(instruccion):
     return []
 
 def solicitar_cambios(instruccion, texto_doc=""):
-    ctx = f"\n\nFRAGMENTO DEL DOCUMENTO:\n{texto_doc[:3000]}" if texto_doc else ""
+    ctx = f"\n\nCONTENIDO ACTUAL DEL DOCUMENTO (usa esto para encontrar el texto exacto):\n{texto_doc[:4000]}" if texto_doc else ""
     prompt = (
         "Eres un asistente experto en edición de documentos.\n"
-        f"INSTRUCCIÓN: \"{instruccion}\"\n{ctx}\n\n"
-        "REGLAS: busca texto EXACTO del documento. Responde SOLO JSON array:\n"
-        '[{"buscar":"texto_exacto","reemplazar":"texto_nuevo"}]'
+        f"INSTRUCCIÓN DEL USUARIO: \"{instruccion}\"\n{ctx}\n\n"
+        "REGLAS IMPORTANTES:\n"
+        "1. REEMPLAZAR: Si dice \'cambia X por Y\' → buscar=X exacto del doc, reemplazar=Y\n"
+        "2. AGREGAR DATO A PERSONA/FILA: Si dice \'agrega el número 04XX a Juan Pérez\'\n"
+        "   → buscar=\'Juan Pérez\' (el texto exacto como aparece en el doc)\n"
+        "   → reemplazar=\'Juan Pérez\t04XX\' (agrega el dato separado por tab o espacio según contexto)\n"
+        "   Si la tabla tiene columnas, el número va en la misma fila después del nombre.\n"
+        "3. Si dice \'agrega X al final de Y\' → buscar=Y, reemplazar=\'Y X\'\n"
+        "4. Si dice \'completa el teléfono/correo/dato de Y con X\' → igual que regla 2\n"
+        "5. SIEMPRE usa el texto TAL COMO APARECE en el documento como \'buscar\'\n"
+        "6. Si hay múltiples personas/filas → incluye TODOS en el array\n"
+        "7. Formato opcional: si pide negrita/cursiva/mayúsculas/color, agrega campo \'formato\'\n\n"
+        "Responde SOLO con JSON array (sin explicaciones):\n"
+        '[{"buscar":"texto_exacto_del_doc","reemplazar":"texto_nuevo_completo"}]\n'
+        "Ejemplo agrega teléfono: buscar=\'María González\', reemplazar=\'María González  04241234567\'"
     )
     r = llamar_ia(prompt)
     if r:
@@ -434,20 +446,98 @@ def exportar_pdf(texto, resumen_data=None):
     raw=pdf.output()
     return bytes(raw) if isinstance(raw,(bytes,bytearray)) else raw.encode('latin-1') if isinstance(raw,str) else bytes(raw)
 
+def _aplicar_formato_run(run, fmt):
+    """Aplica formato explícito a un run si se especificó en la instrucción."""
+    if not fmt: return
+    if fmt.get("bold") is not None: run.font.bold = fmt["bold"]
+    if fmt.get("italic") is not None: run.font.italic = fmt["italic"]
+    if fmt.get("underline") is not None: run.font.underline = fmt["underline"]
+    if fmt.get("size"): run.font.size = Pt(fmt["size"])
+    if fmt.get("color"):
+        try:
+            color_hex = fmt["color"].lstrip("#")
+            run.font.color.rgb = RGBColor(int(color_hex[0:2],16), int(color_hex[2:4],16), int(color_hex[4:6],16))
+        except: pass
+    if fmt.get("upper"): run.text = run.text.upper()
+    if fmt.get("lower"): run.text = run.text.lower()
+
 def reemplazar_docx_preservando_formato(archivo_bytes, cambios):
-    doc=Document(BytesIO(archivo_bytes)); conteo=0
+    """
+    Reemplaza texto en DOCX preservando el formato de cada run.
+    Estrategia: reemplazar solo dentro del run que contiene el texto,
+    manteniendo negrita, cursiva, color, tamaño, etc.
+    Si el texto cruza varios runs, reconstruye solo los afectados.
+    """
+    doc = Document(BytesIO(archivo_bytes))
+    conteo = 0
+
     for c in cambios:
-        buscar=str(c["buscar"]); reemplazar=str(c["reemplazar"])
-        if not buscar or buscar.lower()==reemplazar.lower(): continue
-        regex=re.compile(re.escape(buscar),re.IGNORECASE)
+        buscar = str(c["buscar"])
+        reemplazar = str(c["reemplazar"])
+        fmt_extra = c.get("formato", {})  # formato explícito opcional
+        if not buscar or buscar.lower() == reemplazar.lower():
+            continue
+        regex = re.compile(re.escape(buscar), re.IGNORECASE)
+
         def rep_parrafo(p):
             nonlocal conteo
-            if not regex.search(p.text): return
-            nt,n=regex.subn(reemplazar,p.text); conteo+=n
-            if p.runs: p.runs[0].text=nt; [setattr(r,'text','') for r in p.runs[1:]]
+            if not regex.search(p.text):
+                return
+
+            # Caso 1: el texto está completamente dentro de un solo run
+            for run in p.runs:
+                if regex.search(run.text):
+                    nuevo_texto, n = regex.subn(reemplazar, run.text)
+                    if n > 0:
+                        run.text = nuevo_texto
+                        # Aplicar formato adicional si se pidió
+                        if fmt_extra:
+                            _aplicar_formato_run(run, fmt_extra)
+                        conteo += n
+                    return
+
+            # Caso 2: el texto cruza múltiples runs
+            # Reconstruir el párrafo preservando formato del run dominante
+            texto_completo = p.text
+            nuevo_completo, n = regex.subn(reemplazar, texto_completo)
+            if n == 0:
+                return
+            conteo += n
+
+            # Guardar el formato del run que más se parece al texto buscado
+            run_ref = None
+            for run in p.runs:
+                if buscar.lower() in run.text.lower() or len(run.text) > 0:
+                    run_ref = run
+                    break
+            if run_ref is None and p.runs:
+                run_ref = p.runs[0]
+
+            # Aplicar: poner todo en runs[0] con el formato del run de referencia
+            if p.runs:
+                # Copiar formato del run de referencia al run[0]
+                r0 = p.runs[0]
+                if run_ref and run_ref != r0:
+                    r0.font.bold      = run_ref.font.bold
+                    r0.font.italic    = run_ref.font.italic
+                    r0.font.underline = run_ref.font.underline
+                    r0.font.size      = run_ref.font.size
+                    try:
+                        if run_ref.font.color and run_ref.font.color.rgb:
+                            r0.font.color.rgb = run_ref.font.color.rgb
+                    except: pass
+                r0.text = nuevo_completo
+                for run in p.runs[1:]:
+                    run.text = ""
+                if fmt_extra:
+                    _aplicar_formato_run(r0, fmt_extra)
+
         [rep_parrafo(p) for p in doc.paragraphs]
         [rep_parrafo(p) for t in doc.tables for row in t.rows for cell in row.cells for p in cell.paragraphs]
-    buf=BytesIO(); doc.save(buf); return buf.getvalue(),conteo
+
+    buf = BytesIO()
+    doc.save(buf)
+    return buf.getvalue(), conteo
 
 def reemplazar_xlsx_preservando_formato(archivo_bytes, cambios):
     wb=openpyxl.load_workbook(BytesIO(archivo_bytes)); conteo=0
