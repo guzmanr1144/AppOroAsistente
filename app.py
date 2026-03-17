@@ -2,7 +2,10 @@ import os, json, ast, re
 import streamlit as st
 import google.generativeai as genai
 from docx import Document
-from docx.shared import Pt, RGBColor
+from docx.shared import Pt, RGBColor, Inches
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.oxml.ns import qn
+from docx.oxml import OxmlElement
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 import PyPDF2
@@ -247,21 +250,34 @@ html, body, [class*="css"] {
 
 /* ── BOTONES GRANDES TÁCTILES ── */
 .stButton > button {
-    background: linear-gradient(135deg, #1d4ed8, #2563eb) !important;
-    color: white !important;
-    border: none !important;
+    background: linear-gradient(135deg, #0d1525, #111c2e) !important;
+    color: #4b6080 !important;
+    border: 1px solid #1e3a5f !important;
     border-radius: 14px !important;
-    font-weight: 700 !important;
-    font-size: 0.95rem !important;
-    height: 3.2rem !important;
+    font-weight: 600 !important;
+    font-size: 0.82rem !important;
+    min-height: 3.8rem !important;
     width: 100% !important;
     transition: all 0.15s !important;
     letter-spacing: 0.01em !important;
     font-family: 'Outfit', sans-serif !important;
+    line-height: 1.3 !important;
+    white-space: pre-line !important;
+}
+.stButton > button:hover {
+    background: linear-gradient(135deg, #132840, #1a3550) !important;
+    color: #93c5fd !important;
+    border-color: #2563eb !important;
 }
 .stButton > button:active {
-    transform: scale(0.97) !important;
-    box-shadow: 0 2px 10px rgba(37,99,235,0.3) !important;
+    transform: scale(0.96) !important;
+}
+/* Botón acción principal (generar, confirmar, etc.) */
+div[data-testid="stVerticalBlock"] > div:has(> div[data-testid="stButton"]) button[kind="primary"],
+.btn-primary > button {
+    background: linear-gradient(135deg, #1d4ed8, #2563eb) !important;
+    color: white !important;
+    border: none !important;
 }
 
 /* ── BOTONES DESCARGA ── */
@@ -439,6 +455,124 @@ html, body, [class*="css"] {
 </style>
 """, unsafe_allow_html=True)
 
+
+# ── CSS dinámico según tema ──
+_TEMAS = {
+    "oscuro": {
+        "bg1": "#0a0e1a", "bg2": "#0d1525", "bg3": "#111827",
+        "card": "#111827", "card2": "#162032",
+        "borde": "#1e3a5f", "borde2": "#2a4a6b",
+        "acento1": "#3b82f6", "acento2": "#60a5fa",
+        "acento_grad": "linear-gradient(135deg,#1d4ed8,#2563eb)",
+        "titulo_grad": "linear-gradient(135deg,#fbbf24,#f59e0b,#fde68a,#f59e0b)",
+        "texto": "#e2e8f0", "texto2": "#93c5fd", "texto3": "#4b6080",
+    },
+    "azul": {
+        "bg1": "#020818", "bg2": "#030d24", "bg3": "#041230",
+        "card": "#041230", "card2": "#061840",
+        "borde": "#0c3a7a", "borde2": "#1050aa",
+        "acento1": "#38bdf8", "acento2": "#7dd3fc",
+        "acento_grad": "linear-gradient(135deg,#0369a1,#0ea5e9)",
+        "titulo_grad": "linear-gradient(135deg,#38bdf8,#7dd3fc,#bae6fd)",
+        "texto": "#e0f2fe", "texto2": "#7dd3fc", "texto3": "#1e5a8a",
+    },
+    "verde": {
+        "bg1": "#010c06", "bg2": "#021008", "bg3": "#03160a",
+        "card": "#041208", "card2": "#051a0c",
+        "borde": "#0a3d1a", "borde2": "#0f5225",
+        "acento1": "#10b981", "acento2": "#34d399",
+        "acento_grad": "linear-gradient(135deg,#065f46,#10b981)",
+        "titulo_grad": "linear-gradient(135deg,#10b981,#34d399,#6ee7b7,#10b981)",
+        "texto": "#d1fae5", "texto2": "#34d399", "texto3": "#065f46",
+    },
+    "rosa": {
+        "bg1": "#120008", "bg2": "#1a000f", "bg3": "#220015",
+        "card": "#1a000f", "card2": "#280018",
+        "borde": "#7c0040", "borde2": "#9d0050",
+        "acento1": "#f472b6", "acento2": "#f9a8d4",
+        "acento_grad": "linear-gradient(135deg,#be185d,#ec4899)",
+        "titulo_grad": "linear-gradient(135deg,#f472b6,#f9a8d4,#fce7f3)",
+        "texto": "#fce7f3", "texto2": "#f9a8d4", "texto3": "#7c0040",
+    },
+    "ambar": {
+        "bg1": "#0f0800", "bg2": "#180d00", "bg3": "#1f1100",
+        "card": "#1a0e00", "card2": "#251500",
+        "borde": "#78350f", "borde2": "#92400e",
+        "acento1": "#f59e0b", "acento2": "#fbbf24",
+        "acento_grad": "linear-gradient(135deg,#b45309,#f59e0b)",
+        "titulo_grad": "linear-gradient(135deg,#fbbf24,#fde68a,#f59e0b)",
+        "texto": "#fef3c7", "texto2": "#fbbf24", "texto3": "#78350f",
+    },
+}
+
+_t = _TEMAS.get(st.session_state.get("tema", "oscuro"), _TEMAS["oscuro"])
+st.markdown(f"""
+<style>
+.stApp {{
+    background: linear-gradient(160deg, {_t['bg1']} 0%, {_t['bg2']} 50%, {_t['bg1']} 100%) !important;
+}}
+.main .block-container {{ background: transparent !important; }}
+.oro-title {{
+    background: {_t['titulo_grad']} !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+}}
+.file-badge, .metric-pill, .cambio-item {{
+    background: {_t['card']} !important;
+    border-color: {_t['borde']} !important;
+}}
+.summary-card {{
+    background: {_t['card2']} !important;
+    border-color: {_t['borde2']} !important;
+    border-left-color: {_t['acento1']} !important;
+}}
+.tag {{
+    background: {_t['card']} !important;
+    color: {_t['acento2']} !important;
+    border-color: {_t['borde']} !important;
+}}
+.hallazgo-card {{
+    background: {_t['card']} !important;
+    border-left-color: {_t['acento1']} !important;
+    color: {_t['texto2']} !important;
+}}
+.metric-pill-value {{ color: {_t['texto']} !important; }}
+.metric-pill-label, .file-info-stats, .section-hint {{ color: {_t['texto3']} !important; }}
+.section-title, .file-info-name {{ color: {_t['texto']} !important; }}
+.summary-card-title {{ color: {_t['acento2']} !important; }}
+.summary-card {{ color: {_t['texto2']} !important; }}
+.oro-divider {{ background: linear-gradient(90deg, transparent, {_t['borde']}, transparent) !important; }}
+[data-testid="stFileUploader"] > div {{
+    border-color: {_t['borde']} !important;
+    background: {_t['card']} !important;
+}}
+[data-testid="stSidebar"] {{ background: {_t['bg1']} !important; }}
+.stButton > button {{
+    background: {_t['card']} !important;
+    border-color: {_t['borde']} !important;
+    color: {_t['texto3']} !important;
+}}
+.stButton > button:hover {{
+    border-color: {_t['acento1']} !important;
+    color: {_t['acento2']} !important;
+}}
+.stTextInput > div > div > input {{
+    background: {_t['card']} !important;
+    border-color: {_t['borde']} !important;
+    color: {_t['texto']} !important;
+}}
+.stTextInput > div > div > input:focus {{
+    border-color: {_t['acento1']} !important;
+}}
+[data-testid="stDownloadButton"] > button {{
+    background: linear-gradient(135deg,#065f46,#059669) !important;
+    color: white !important;
+    border: none !important;
+}}
+</style>
+""", unsafe_allow_html=True)
+
 # ==========================================
 # CONEXIÓN GEMINI
 # ==========================================
@@ -492,7 +626,11 @@ for key, val in {
     "lista_cambios": [],
     "texto_modificado": "",
     "generando_resumen": False,
+    "resumen_error": False,
+    "tab_activa": "resumen",
+    "tema": "verde",
     "preview_cambio": None,
+    "edicion_counter": 0,
     "texto_corregido": "",
 }.items():
     if key not in st.session_state:
@@ -532,11 +670,11 @@ def extraer_json_seguro(texto, es_lista=False):
 # ==========================================
 def solicitar_resumen_estructurado(texto):
     prompt = (
-        "Eres un analista deportivo profesional. Analiza este documento y devuelve SOLO un JSON.\n"
-        "El resumen_ejecutivo debe ser amigable, directo y máximo 3 oraciones. "
+        "Eres un analista profesional experto en documentos de cualquier tipo. Analiza este documento y devuelve SOLO un JSON.\n"
+        "Identifica automáticamente el tipo de documento y adapta el análisis. El resumen_ejecutivo debe ser amigable, directo y máximo 3 oraciones. "
         "metricas_principales deben ser strings simples (no objetos).\n"
         "Formato exacto:\n"
-        '{"titulo": "...", "emoji_categoria": "⚽", "resumen_ejecutivo": "...", '
+        '{"titulo": "...", "emoji_categoria": "📋", "resumen_ejecutivo": "...", '
         '"metricas": {"Clave1": "Valor1", "Clave2": "Valor2"}, '
         '"puntos_clave": ["punto 1", "punto 2", "punto 3"], '
         '"hallazgo_destacado": "Una observación importante o curiosa del documento"}\n\n'
@@ -549,7 +687,7 @@ def solicitar_resumen_estructurado(texto):
 
 def solicitar_informe_word(texto):
     prompt = (
-        "Escribe un informe ejecutivo deportivo profesional. "
+        "Eres un analista experto en documentos de cualquier índole. Escribe un informe ejecutivo profesional. "
         "Usa párrafos cortos y claros, sin asteriscos ni markdown. "
         "Incluye: introducción, hallazgos principales, análisis y conclusión.\n\n"
         f"DATOS:\n{texto[:12000]}"
@@ -624,7 +762,7 @@ def preguntar_al_documento(pregunta, texto):
     historial = st.session_state.historial_chat
     contexto = "\n".join([f"{m['rol']}: {m['texto']}" for m in historial[-6:]])
     prompt = (
-        f"Eres un asistente experto analizando este documento deportivo.\n"
+        f"Eres un asistente experto en análisis de documentos de cualquier tipo.\n"
         f"DOCUMENTO:\n{texto[:10000]}\n\n"
         f"CONVERSACIÓN PREVIA:\n{contexto}\n\n"
         f"PREGUNTA: {pregunta}\n"
@@ -634,7 +772,7 @@ def preguntar_al_documento(pregunta, texto):
 
 def detectar_anomalias(texto):
     prompt = (
-        "Analiza este documento deportivo y detecta posibles inconsistencias, "
+        "Analiza este documento y detecta posibles inconsistencias, "
         "datos duplicados, errores o anomalías. Sé breve y directo.\n"
         "Devuelve SOLO JSON:\n"
         '{"anomalias": ["anomalía 1", "anomalía 2"], "nivel_calidad": "Alto/Medio/Bajo", '
@@ -700,49 +838,127 @@ def exportar_word(texto, resumen_data=None, archivo_bytes=None, archivo_tipo=Non
         return buf.getvalue()
 
     doc = Document()
-    doc.styles['Normal'].font.name = 'Calibri'
-    doc.styles['Normal'].font.size = Pt(11)
-    titulo_h = doc.add_heading('', 0)
-    run_t = titulo_h.add_run('INFORME EJECUTIVO')
-    run_t.font.color.rgb = RGBColor(0x1E, 0x40, 0xAF)
-    run_t.font.size = Pt(22)
-    doc.add_paragraph().add_run(f'Generado: {fecha}').font.size = Pt(9)
+    # Márgenes más ajustados
+    for section in doc.sections:
+        section.top_margin    = Inches(0.8)
+        section.bottom_margin = Inches(0.8)
+        section.left_margin   = Inches(1.0)
+        section.right_margin  = Inches(1.0)
+
+    sty = doc.styles['Normal']
+    sty.font.name = 'Calibri'
+    sty.font.size = Pt(11)
+
+    # ── Encabezado con banda azul ──
+    tabla_hdr = doc.add_table(rows=1, cols=1)
+    tabla_hdr.style = 'Table Grid'
+    cell_hdr = tabla_hdr.cell(0, 0)
+    cell_hdr.paragraphs[0].clear()
+    run_hdr = cell_hdr.paragraphs[0].add_run(
+        resumen_data.get("titulo", "INFORME EJECUTIVO") if resumen_data else "INFORME EJECUTIVO"
+    )
+    run_hdr.font.bold = True
+    run_hdr.font.size = Pt(16)
+    run_hdr.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+    cell_hdr.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+    # Fondo azul
+    tc = cell_hdr._tc
+    tcPr = tc.get_or_add_tcPr()
+    shd = OxmlElement('w:shd')
+    shd.set(qn('w:val'), 'clear')
+    shd.set(qn('w:color'), 'auto')
+    shd.set(qn('w:fill'), '1E3A5F')
+    tcPr.append(shd)
+    doc.add_paragraph()
+
+    # Fecha pequeña
+    p_fecha = doc.add_paragraph()
+    r_fecha = p_fecha.add_run(f'Generado: {fecha}')
+    r_fecha.font.size = Pt(9)
+    r_fecha.font.color.rgb = RGBColor(0x6B, 0x72, 0x80)
+    p_fecha.alignment = WD_ALIGN_PARAGRAPH.RIGHT
     doc.add_paragraph()
 
     if resumen_data:
-        h2 = doc.add_heading('Resumen Ejecutivo', level=1)
-        h2.runs[0].font.color.rgb = RGBColor(0x1E, 0x40, 0xAF)
-        doc.add_paragraph(resumen_data.get("resumen_ejecutivo", ""))
-        if resumen_data.get("metricas"):
-            doc.add_heading('Metricas Clave', level=2)
-            tabla = doc.add_table(rows=1, cols=2)
-            tabla.style = 'Table Grid'
-            hdr = tabla.rows[0].cells
-            hdr[0].text, hdr[1].text = 'Indicador', 'Valor'
-            for cell in hdr:
-                for run in cell.paragraphs[0].runs:
-                    run.font.bold = True
-            for k, v in resumen_data["metricas"].items():
-                row = tabla.add_row().cells
-                row[0].text, row[1].text = str(k), str(v)
+        # Resumen ejecutivo en caja gris clara
+        if resumen_data.get("resumen_ejecutivo"):
+            t_res = doc.add_table(rows=1, cols=1)
+            t_res.style = 'Table Grid'
+            c_res = t_res.cell(0, 0)
+            c_res.paragraphs[0].clear()
+            r_res = c_res.paragraphs[0].add_run(resumen_data["resumen_ejecutivo"])
+            r_res.font.size = Pt(10)
+            r_res.font.italic = True
+            tcPr2 = c_res._tc.get_or_add_tcPr()
+            shd2 = OxmlElement('w:shd')
+            shd2.set(qn('w:val'), 'clear')
+            shd2.set(qn('w:color'), 'auto')
+            shd2.set(qn('w:fill'), 'EFF6FF')
+            tcPr2.append(shd2)
             doc.add_paragraph()
+
+        if resumen_data.get("metricas"):
+            h2 = doc.add_heading('Métricas Clave', level=1)
+            h2.runs[0].font.color.rgb = RGBColor(0x1E, 0x40, 0xAF)
+            tabla_m = doc.add_table(rows=1, cols=2)
+            tabla_m.style = 'Table Grid'
+            hdr = tabla_m.rows[0].cells
+            for ci, txt in enumerate(['Indicador', 'Valor']):
+                hdr[ci].paragraphs[0].clear()
+                r = hdr[ci].paragraphs[0].add_run(txt)
+                r.font.bold = True
+                r.font.color.rgb = RGBColor(0xFF,0xFF,0xFF)
+                hdr[ci].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+                tcPr_h = hdr[ci]._tc.get_or_add_tcPr()
+                shd_h = OxmlElement('w:shd')
+                shd_h.set(qn('w:val'), 'clear'); shd_h.set(qn('w:color'), 'auto')
+                shd_h.set(qn('w:fill'), '1E40AF')
+                tcPr_h.append(shd_h)
+            for idx, (k, v) in enumerate(resumen_data["metricas"].items()):
+                row_m = tabla_m.add_row().cells
+                row_m[0].text = str(k)
+                row_m[1].text = str(v)
+                fill = 'F8FAFC' if idx % 2 == 0 else 'FFFFFF'
+                for ci2 in range(2):
+                    tcPr_d = row_m[ci2]._tc.get_or_add_tcPr()
+                    shd_d = OxmlElement('w:shd')
+                    shd_d.set(qn('w:val'),'clear'); shd_d.set(qn('w:color'),'auto')
+                    shd_d.set(qn('w:fill'), fill)
+                    tcPr_d.append(shd_d)
+            doc.add_paragraph()
+
         if resumen_data.get("puntos_clave"):
-            doc.add_heading('Puntos Clave', level=2)
+            h3 = doc.add_heading('Puntos Clave', level=1)
+            h3.runs[0].font.color.rgb = RGBColor(0x1E, 0x40, 0xAF)
             for punto in resumen_data["puntos_clave"]:
-                doc.add_paragraph(style='List Bullet').add_run(punto)
+                p_b = doc.add_paragraph(style='List Bullet')
+                p_b.add_run(punto).font.size = Pt(11)
+
         if resumen_data.get("hallazgo_destacado"):
             doc.add_paragraph()
-            doc.add_heading('Hallazgo Destacado', level=2)
-            run_h = doc.add_paragraph().add_run(resumen_data["hallazgo_destacado"])
-            run_h.font.italic = True
-            run_h.font.color.rgb = RGBColor(0x1D, 0x4E, 0xD8)
+            h4 = doc.add_heading('💡 Hallazgo Destacado', level=1)
+            h4.runs[0].font.color.rgb = RGBColor(0x1E, 0x40, 0xAF)
+            t_hall = doc.add_table(rows=1, cols=1)
+            t_hall.style = 'Table Grid'
+            c_hall = t_hall.cell(0,0)
+            c_hall.paragraphs[0].clear()
+            r_hall = c_hall.paragraphs[0].add_run(resumen_data["hallazgo_destacado"])
+            r_hall.font.italic = True
+            r_hall.font.size = Pt(10)
+            tcPr_hall = c_hall._tc.get_or_add_tcPr()
+            shd_hall = OxmlElement('w:shd')
+            shd_hall.set(qn('w:val'),'clear'); shd_hall.set(qn('w:color'),'auto')
+            shd_hall.set(qn('w:fill'), 'F0FDF4')
+            tcPr_hall.append(shd_hall)
         doc.add_page_break()
 
-    doc.add_heading('Contenido del Documento', level=1)
+    h_cont = doc.add_heading('Contenido del Documento', level=1)
+    h_cont.runs[0].font.color.rgb = RGBColor(0x1E, 0x40, 0xAF)
     for linea in texto.split('\n'):
         linea_limpia = linea.strip().replace('*', '').replace('#', '')
         if linea_limpia:
-            doc.add_paragraph(linea_limpia)
+            p = doc.add_paragraph(linea_limpia)
+            p.paragraph_format.space_after = Pt(2)
     buf = BytesIO()
     doc.save(buf)
     return buf.getvalue()
@@ -1092,6 +1308,35 @@ def reemplazar_xlsx_preservando_formato(archivo_bytes, cambios):
 
 st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
 
+# CSS para traducir el uploader al español
+st.markdown("""
+<style>
+[data-testid="stFileUploaderDropzoneInstructions"] > div > span::after {
+    content: "Arrastra tu archivo aquí";
+}
+[data-testid="stFileUploaderDropzoneInstructions"] > div > span {
+    font-size: 0 !important;
+}
+[data-testid="stFileUploaderDropzoneInstructions"] > div > small::after {
+    content: "Límite 200MB por archivo • DOCX, XLSX, PDF";
+}
+[data-testid="stFileUploaderDropzoneInstructions"] > div > small {
+    font-size: 0 !important;
+}
+[data-testid="stFileUploadDropzone"] > div > button {
+    visibility: hidden;
+    position: relative;
+}
+[data-testid="stFileUploadDropzone"] > div > button::after {
+    content: "Seleccionar archivo";
+    visibility: visible;
+    position: absolute;
+    left: 0; right: 0;
+    text-align: center;
+}
+</style>
+""", unsafe_allow_html=True)
+
 archivo = st.file_uploader(
     "📎 Toca aquí para subir tu archivo",
     type=["docx", "xlsx", "pdf"],
@@ -1133,6 +1378,8 @@ if archivo and archivo.name != st.session_state.nombre_archivo:
                     if t:
                         texto += t + "\n"
             st.session_state.texto_extraido = texto
+            st.session_state.generando_resumen = True
+            st.session_state.resumen_error = False
         except Exception as e:
             st.error(f"Error leyendo el archivo: {e}")
 
@@ -1158,24 +1405,41 @@ if st.session_state.texto_extraido:
     </div>
     """, unsafe_allow_html=True)
 
-    # ── Navegación tipo app con radio buttons estilizados ──
+    # ── Navegación con botones táctiles ──
     st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
 
-    # Usamos radio horizontal como nav
-    nav = st.radio(
-        "nav",
-        ["📊 Resumen", "✍️ Editar", "💬 Chat", "🔍 Calidad"],
-        horizontal=True,
-        label_visibility="collapsed",
-        key="nav_principal"
-    )
+    tabs_def = [
+        ("resumen",  "📊", "Resumen"),
+        ("editar",   "✍️", "Editar"),
+        ("chat",     "💬", "Chat"),
+        ("calidad",  "🔍", "Calidad"),
+    ]
+    tab_activa = st.session_state.tab_activa
+    cols_nav = st.columns(4)
+    for i, (key, ico, label) in enumerate(tabs_def):
+        with cols_nav[i]:
+            activo = tab_activa == key
+            btn_style = (
+                "background:linear-gradient(135deg,#1d4ed8,#2563eb);color:white;border:none;"
+                if activo else
+                "background:#0d1525;color:#4b6080;border:1px solid #1e3a5f;"
+            )
+            if st.button(
+                f"{ico}\n{label}",
+                key=f"nav_{key}",
+                use_container_width=True,
+                help=label,
+            ):
+                st.session_state.tab_activa = key
+                st.rerun()
 
     st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
+    nav = st.session_state.tab_activa
 
     # ═══════════════════════════════════════
     # PANTALLA 1 — RESUMEN
     # ═══════════════════════════════════════
-    if nav == "📊 Resumen":
+    if nav == "resumen":
         st.markdown('<div class="section-title">📊 Análisis del documento</div>', unsafe_allow_html=True)
         st.markdown('<div class="section-hint">La IA analiza el contenido y te da un resumen claro y profesional.</div>', unsafe_allow_html=True)
 
@@ -1187,14 +1451,32 @@ if st.session_state.texto_extraido:
                 <div style="color:#374151;font-size:0.8rem;margin-top:0.3rem">Esto puede tomar unos segundos</div>
             </div>
             """, unsafe_allow_html=True)
-            data = solicitar_resumen_estructurado(texto)
-            st.session_state.resumen_data = data
+            texto_para_resumen = st.session_state.texto_corregido if st.session_state.texto_corregido else texto
+            data = solicitar_resumen_estructurado(texto_para_resumen)
             st.session_state.generando_resumen = False
+            if data:
+                st.session_state.resumen_data = data
+            else:
+                st.session_state.resumen_error = True
             st.rerun()
 
-        boton_col, _ = st.columns([3, 1])
-        with boton_col:
-            if st.button("⚡ Generar Resumen", use_container_width=True, disabled=st.session_state.generando_resumen):
+        # Botón solo visible si ya hay resumen (para regenerar)
+        if st.session_state.resumen_data:
+            if st.button("🔄 Regenerar Resumen", use_container_width=True):
+                st.session_state.generando_resumen = True
+                st.rerun()
+
+        # Mostrar error si la IA falló
+        if st.session_state.get("resumen_error"):
+            st.markdown('''
+            <div style="text-align:center;padding:2rem 0;">
+                <div style="font-size:2.5rem">⚠️</div>
+                <div style="color:#fbbf24;font-weight:600;margin-top:0.6rem">No se pudo generar el resumen</div>
+                <div style="color:#4b6080;font-size:0.8rem;margin-top:0.3rem">Puede ser un problema temporal con la IA</div>
+            </div>
+            ''', unsafe_allow_html=True)
+            if st.button("🔄 Intentar de nuevo", use_container_width=True):
+                st.session_state.resumen_error = False
                 st.session_state.generando_resumen = True
                 st.rerun()
 
@@ -1248,21 +1530,13 @@ if st.session_state.texto_extraido:
             pdf_bytes = exportar_pdf(texto, data)
             st.download_button("📕 Descargar PDF", pdf_bytes, "Informe_Oro.pdf",
                 mime="application/pdf", use_container_width=True)
-        else:
-            st.markdown("""
-            <div style="text-align:center;padding:2.5rem 0;color:#1e3a5f;">
-                <div style="font-size:3rem">🧠</div>
-                <div style="color:#374151;font-size:0.9rem;margin-top:0.5rem">
-                    Toca <strong style="color:#3b82f6">Generar Resumen</strong> para analizar tu archivo
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+
 
     # ═══════════════════════════════════════
     # ═══════════════════════════════════════
     # PANTALLA 2 — EDICIÓN
     # ═══════════════════════════════════════
-    elif nav == "✍️ Editar":
+    elif nav == "editar":
         st.markdown('<div class="section-title">✍️ Corregir palabras</div>', unsafe_allow_html=True)
         st.markdown('<div class="section-hint">Escribe qué quieres cambiar en lenguaje natural. Puedes agregar datos, reemplazar palabras o corregir errores.</div>', unsafe_allow_html=True)
 
@@ -1270,7 +1544,7 @@ if st.session_state.texto_extraido:
             "Instrucción",
             placeholder="Ej: cambia atletismo por BEISBOL  /  agrega el número 04241234567 a Juan Pérez",
             label_visibility="collapsed",
-            key="input_edicion"
+            key=f"input_edicion_{st.session_state.edicion_counter}"
         )
 
         if instruccion:
@@ -1340,10 +1614,14 @@ if st.session_state.texto_extraido:
                         txt_corr = re.compile(re.escape(c["buscar"]), re.IGNORECASE).sub(c["reemplazar"], txt_corr)
                     st.session_state.texto_corregido = txt_corr
                     st.session_state.cambios_aplicados = final_bytes
+                    st.session_state.resumen_data = None
+                    st.session_state.generando_resumen = True
+                    st.session_state.edicion_counter += 1  # Resetea el input
                     st.rerun()
             with col_no:
                 if st.button("❌ Cancelar", use_container_width=True):
                     st.session_state.preview_cambio = None
+                    st.session_state.edicion_counter += 1
                     st.rerun()
 
         # ── Historial de cambios confirmados ──
@@ -1381,14 +1659,14 @@ if st.session_state.texto_extraido:
             st.download_button("📊 Excel corregido", excel_out, "Corregido.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 use_container_width=True)
-            txt_corr2 = st.session_state.texto_corregido if st.session_state.texto_corregido else texto
-            pdf_c = exportar_pdf(txt_corr2)
+            txt_para_pdf = st.session_state.texto_corregido if st.session_state.texto_corregido else texto
+            pdf_c = exportar_pdf(txt_para_pdf, st.session_state.resumen_data)
             st.download_button("📕 PDF corregido", pdf_c, "Corregido.pdf",
                 mime="application/pdf", use_container_width=True)
 
     # PANTALLA 3 — CHAT
     # ═══════════════════════════════════════
-    elif nav == "💬 Chat":
+    elif nav == "chat":
         st.markdown('<div class="section-title">💬 Pregunta sobre el documento</div>', unsafe_allow_html=True)
         st.markdown('<div class="section-hint">Hazle cualquier pregunta al asistente sobre el contenido del archivo.</div>', unsafe_allow_html=True)
 
@@ -1421,7 +1699,7 @@ if st.session_state.texto_extraido:
     # ═══════════════════════════════════════
     # PANTALLA 4 — CALIDAD
     # ═══════════════════════════════════════
-    elif nav == "🔍 Calidad":
+    elif nav == "calidad":
         st.markdown('<div class="section-title">🔍 Análisis de calidad</div>', unsafe_allow_html=True)
         st.markdown('<div class="section-hint">Detecta errores, inconsistencias o datos duplicados en el documento.</div>', unsafe_allow_html=True)
 
