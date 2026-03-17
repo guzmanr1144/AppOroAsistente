@@ -1546,269 +1546,255 @@ if archivo and archivo.name != st.session_state.nombre_archivo:
         except Exception as e:
             st.error(f"Error leyendo el archivo: {e}")
 
+
+
 # ==========================================
 # PANEL PRINCIPAL
 # ==========================================
 if st.session_state.texto_extraido:
     texto = st.session_state.texto_extraido
-    tipo = st.session_state.archivo_tipo
+    tipo  = st.session_state.archivo_tipo
+    texto_activo = st.session_state.texto_corregido if st.session_state.texto_corregido else texto
 
-    # ── File Badge unificado ──
-    palabras = len(texto.split())
-    ext_icons = {"docx": "📄", "xlsx": "📊", "pdf": "📕"}
-    ext_icon = ext_icons.get(tipo, "📎")
+    # ── File badge ──
+    palabras  = len(texto.split())
+    ext_icons = {"docx":"📄","xlsx":"📊","pdf":"📕"}
+    ext_icon  = ext_icons.get(tipo,"📎")
+    cambios_n = len(st.session_state.lista_cambios)
+    badge_extra = f' &nbsp;·&nbsp; ✏️ <strong style="color:#10b981">{cambios_n} cambio(s)</strong>' if cambios_n else ""
     st.markdown(f"""
     <div class="file-badge">
         <div class="file-icon">{ext_icon}</div>
         <div>
             <div class="file-info-name">{st.session_state.nombre_archivo}</div>
-            <div class="file-info-stats">📝 {palabras:,} palabras</div>
+            <div class="file-info-stats">📝 {palabras:,} palabras{badge_extra}</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # ── Navegación: 3 pestañas ──
-    _nav_defs = [
-        ("resumen", "📊 Resumen"),
-        ("asistente", "✍️ Asistente"),
-        ("evaluar", "🔍 Evaluar"),
-    ]
-    # Mapear tabs viejas al nuevo esquema
-    _tab_actual = st.session_state.tab_activa
-    if _tab_actual in ("editar", "chat"):
-        _tab_actual = "asistente"
-    elif _tab_actual == "calidad":
-        _tab_actual = "evaluar"
-
-    _cols_nav = st.columns(3)
-    for _i, (_key, _label) in enumerate(_nav_defs):
-        with _cols_nav[_i]:
-            _clase = "nav-tab-activo" if _tab_actual == _key else "nav-tab-inactivo"
-            st.markdown(f'<div class="{_clase}">', unsafe_allow_html=True)
-            if st.button(_label, key=f"navbtn_{_key}", use_container_width=True):
-                st.session_state.tab_activa = _key
-                st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
-
-    # Guía visual
-    _guias = {
-        "resumen":   ("🧠", "Resumen del documento",
-            "La IA analiza tu documento automáticamente y extrae métricas, puntos clave y observaciones relevantes."),
-        "asistente": ("✏️", "Editar y preguntar",
-            "Escribe lo que quieres cambiar o cualquier pregunta.<br>"
-            "<em>Ej: cambia 'negativo' por 'positivo'</em>&nbsp;·&nbsp;<em>¿cuántas personas aparecen?</em>"),
-        "evaluar":   ("🔍", "Evaluar el documento",
-            "Detecta errores, inconsistencias y problemas de calidad clasificados por nivel de gravedad."),
-    }
-    _g = _guias.get(_tab_actual, _guias["resumen"])
-    st.markdown(f"""
-    <div class="guia-card">
-        <div class="guia-icon">{_g[0]}</div>
-        <div>
-            <div class="guia-titulo">{_g[1]}</div>
-            <div class="guia-texto">{_g[2]}</div>
+    # ══════════════════════════════════════
+    # RESUMEN — siempre visible arriba
+    # ══════════════════════════════════════
+    if st.session_state.generando_resumen:
+        st.markdown("""
+        <div style="text-align:center;padding:2rem 0;">
+            <div style="font-size:2.8rem;animation:pulse-glow 1.2s ease-in-out infinite">🧠</div>
+            <div style="color:#34d399;font-weight:700;font-size:1rem;margin-top:0.7rem">Analizando tu documento...</div>
+            <div style="color:#065f46;font-size:0.78rem;margin-top:0.3rem">Esto puede tomar unos segundos ⏳</div>
         </div>
-    </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
+        texto_para_resumen = st.session_state.texto_corregido if st.session_state.texto_corregido else texto
+        data = solicitar_resumen_estructurado(texto_para_resumen)
+        st.session_state.generando_resumen = False
+        if data:
+            st.session_state.resumen_data = data
+        else:
+            st.session_state.resumen_error = True
+        st.rerun()
 
-    nav = _tab_actual
-    st.session_state.tab_activa = _tab_actual
-
-    # ═══════════════════════════════════════
-    # PANTALLA 1 — RESUMEN
-    # ═══════════════════════════════════════
-    if nav == "resumen":
-
-        if st.session_state.generando_resumen:
-            st.markdown("""
-            <div style="text-align:center;padding:2rem 0;">
-                <div style="font-size:2.5rem;animation:pulse-glow 1.5s infinite">🧠</div>
-                <div style="color:#60a5fa;font-weight:600;margin-top:0.8rem;font-size:1rem">Analizando documento...</div>
-                <div style="color:#374151;font-size:0.8rem;margin-top:0.3rem">Esto puede tomar unos segundos</div>
-            </div>
-            """, unsafe_allow_html=True)
-            texto_para_resumen = st.session_state.texto_corregido if st.session_state.texto_corregido else texto
-            data = solicitar_resumen_estructurado(texto_para_resumen)
-            st.session_state.generando_resumen = False
-            if data:
-                st.session_state.resumen_data = data
-            else:
-                st.session_state.resumen_error = True
+    if st.session_state.get("resumen_error"):
+        st.markdown("""
+        <div style="text-align:center;padding:1.5rem;background:#1c0003;border:1px solid #7f1d1d;border-radius:14px;margin:0.8rem 0">
+            <div style="font-size:2rem">⚠️</div>
+            <div style="color:#fca5a5;font-weight:600;margin-top:0.4rem">No se pudo generar el resumen</div>
+            <div style="color:#4b6080;font-size:0.78rem;margin-top:0.2rem">Problema temporal con la IA</div>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("🔄 Reintentar análisis", use_container_width=True):
+            st.session_state.resumen_error = False
+            st.session_state.generando_resumen = True
             st.rerun()
 
-        # Botón solo visible si ya hay resumen (para regenerar)
-        if st.session_state.resumen_data:
-            if st.button("🔄 Regenerar Resumen", use_container_width=True):
-                st.session_state.generando_resumen = True
-                st.rerun()
+    data = st.session_state.resumen_data
+    if data:
+        emoji = data.get("emoji_categoria","📋")
+        titulo_doc = data.get("titulo","Documento analizado")
 
-        # Mostrar error si la IA falló
-        if st.session_state.get("resumen_error"):
-            st.markdown('''
-            <div style="text-align:center;padding:2rem 0;">
-                <div style="font-size:2.5rem">⚠️</div>
-                <div style="color:#fbbf24;font-weight:600;margin-top:0.6rem">No se pudo generar el resumen</div>
-                <div style="color:#4b6080;font-size:0.8rem;margin-top:0.3rem">Puede ser un problema temporal con la IA</div>
-            </div>
-            ''', unsafe_allow_html=True)
-            if st.button("🔄 Intentar de nuevo", use_container_width=True):
-                st.session_state.resumen_error = False
-                st.session_state.generando_resumen = True
-                st.rerun()
+        st.markdown(f"""
+        <div class="summary-card">
+            <div class="summary-card-title">{emoji} {titulo_doc}</div>
+            {data.get("resumen_ejecutivo","")}
+        </div>
+        """, unsafe_allow_html=True)
 
-        data = st.session_state.resumen_data
-        if data:
-            emoji = data.get("emoji_categoria", "📋")
-            titulo_doc = data.get("titulo", "Documento analizado")
+        metricas = data.get("metricas",{})
+        if metricas:
+            items = list(metricas.items())
+            pills = '<div class="metrics-grid">'
+            for k,v in items[:4]:
+                pills += f'<div class="metric-pill"><div class="metric-pill-label">{k}</div><div class="metric-pill-value">{v}</div></div>'
+            pills += '</div>'
+            st.markdown(pills, unsafe_allow_html=True)
 
+        puntos = data.get("puntos_clave",[])
+        if puntos:
+            tags = '<div class="tags-wrap">'+"".join([f'<span class="tag">✓ {p}</span>' for p in puntos])+'</div>'
+            st.markdown(tags, unsafe_allow_html=True)
+
+        hallazgo = data.get("hallazgo_destacado","")
+        if hallazgo:
+            st.markdown(f'<div class="hallazgo-card">💡 <strong>Hallazgo:</strong> {hallazgo}</div>', unsafe_allow_html=True)
+
+        # ── Exportar ──
+        st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">📥 Exportar informe</div>', unsafe_allow_html=True)
+        ab = st.session_state.archivo_bytes
+        ca = st.session_state.lista_cambios
+        c1,c2,c3 = st.columns(3)
+        with c1:
+            wb2 = exportar_word(texto_activo, data, archivo_bytes=ab, archivo_tipo=tipo, cambios=ca)
+            st.download_button("📄 Word", wb2, "Informe.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                use_container_width=True)
+        with c2:
+            eb2 = exportar_excel(texto_activo, data, archivo_bytes=ab, archivo_tipo=tipo, cambios=ca)
+            st.download_button("📊 Excel", eb2, "Informe.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True)
+        with c3:
+            pb2 = exportar_pdf(texto_activo, data)
+            st.download_button("📕 PDF", pb2, "Informe.pdf",
+                mime="application/pdf", use_container_width=True)
+
+        # Regenerar
+        if st.button("🔄 Regenerar resumen", use_container_width=True):
+            st.session_state.generando_resumen = True
+            st.rerun()
+
+    st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
+
+    # ══════════════════════════════════════
+    # BOTÓN EVALUAR
+    # ══════════════════════════════════════
+    if st.button("🔍 Evaluar documento", use_container_width=True):
+        with st.spinner("Analizando errores e inconsistencias..."):
+            resultado = detectar_anomalias(texto_activo)
+
+        if resultado:
+            nivel   = resultado.get("nivel_general","Regular")
+            puntaje = resultado.get("puntaje",0)
+            nivel_cfg = {
+                "Excelente":("#10b981","#021008","🟢"),
+                "Bueno":    ("#34d399","#021008","🟢"),
+                "Regular":  ("#f59e0b","#1c1003","🟡"),
+                "Deficiente":("#ef4444","#1f0707","🔴"),
+            }
+            cfg = nivel_cfg.get(nivel, nivel_cfg["Regular"])
             st.markdown(f"""
-            <div class="summary-card">
-                <div class="summary-card-title">{emoji} {titulo_doc}</div>
-                {data.get("resumen_ejecutivo", "")}
+            <div style="text-align:center;padding:1.2rem 0 0.5rem">
+                <div style="font-size:3rem">{cfg[2]}</div>
+                <div style="color:{cfg[0]};font-size:1.3rem;font-weight:800">{nivel}</div>
+                <div style="color:#2d6a4f;font-size:0.8rem;margin-top:0.2rem">
+                    Puntaje: <strong style="color:{cfg[0]}">{puntaje}/100</strong>
+                </div>
             </div>
             """, unsafe_allow_html=True)
 
-            # Métricas en grid 2 columnas
-            metricas = data.get("metricas", {})
-            if metricas:
-                items = list(metricas.items())
-                pills_html = '<div class="metrics-grid">'
-                for k, v in items[:4]:
-                    pills_html += f'<div class="metric-pill"><div class="metric-pill-label">{k}</div><div class="metric-pill-value">{v}</div></div>'
-                pills_html += '</div>'
-                st.markdown(pills_html, unsafe_allow_html=True)
+            niveles_eval = [
+                ("criticos","🔴 Crítico","#ef4444","#1f0707","#450a0a"),
+                ("altos",   "🟠 Alto",   "#f97316","#1c0a03","#431407"),
+                ("medios",  "🟡 Medio",  "#f59e0b","#1c1003","#451a03"),
+                ("leves",   "🟢 Leve",   "#22c55e","#052e16","#14532d"),
+            ]
+            hay = False
+            for key,label,cfg,cbg,cbrd in niveles_eval:
+                items_e = resultado.get(key,[])
+                if items_e:
+                    hay = True
+                    rows = "".join([f'<div style="color:#d1fae5;font-size:0.8rem;padding:0.25rem 0;border-bottom:1px solid {cbrd}">• {it}</div>' for it in items_e])
+                    st.markdown(f"""
+                    <div style="background:{cbg};border:1px solid {cbrd};border-left:4px solid {cfg};
+                    border-radius:12px;padding:0.8rem 1rem;margin:0.5rem 0">
+                        <div style="color:{cfg};font-weight:700;font-size:0.85rem;margin-bottom:0.4rem">{label}</div>
+                        {rows}
+                    </div>
+                    """, unsafe_allow_html=True)
+            if not hay:
+                st.markdown('<div class="info-box">✅ ¡Sin problemas detectados! El documento se ve en buen estado 🎉</div>', unsafe_allow_html=True)
+            rec = resultado.get("recomendacion","")
+            if rec:
+                st.markdown(f'<div class="hallazgo-card" style="margin-top:0.8rem">💡 <strong>Recomendación:</strong> {rec}</div>', unsafe_allow_html=True)
+        else:
+            st.markdown('<div class="warn-box">⚠️ No se pudo evaluar. Intenta de nuevo.</div>', unsafe_allow_html=True)
 
-            # Puntos clave
-            puntos = data.get("puntos_clave", [])
-            if puntos:
-                tags_html = '<div class="tags-wrap">' + "".join([f'<span class="tag">✓ {p}</span>' for p in puntos]) + '</div>'
-                st.markdown(tags_html, unsafe_allow_html=True)
+    st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
 
-            # Hallazgo
-            hallazgo = data.get("hallazgo_destacado", "")
-            if hallazgo:
-                st.markdown(f'<div class="hallazgo-card">💡 <strong>Hallazgo:</strong> {hallazgo}</div>', unsafe_allow_html=True)
+    # ══════════════════════════════════════
+    # PREVIEW de cambio pendiente
+    # ══════════════════════════════════════
+    if st.session_state.preview_cambio:
+        preview = st.session_state.preview_cambio
+        st.markdown("""
+        <div style="background:#021008;border:1px solid #10b981;border-radius:14px;
+        padding:0.9rem 1rem;margin:0.5rem 0">
+            <div style="color:#34d399;font-weight:700;font-size:0.88rem;margin-bottom:0.6rem">
+                👁 Vista previa del cambio
+            </div>
+        """, unsafe_allow_html=True)
+        for c in preview:
+            bq = c["buscar"][:50]+("..." if len(c["buscar"])>50 else "")
+            rq = c["reemplazar"][:50]+("..." if len(c["reemplazar"])>50 else "")
+            idx = texto_activo.lower().find(c["buscar"].lower())
+            if idx != -1:
+                ini=max(0,idx-30); fin=min(len(texto_activo),idx+len(c["buscar"])+30)
+                ca2=texto_activo[ini:idx]; cd=texto_activo[idx+len(c["buscar"]):fin]
+                st.markdown(
+                    f'<div style="font-size:0.78rem;margin-bottom:0.3rem">'
+                    f'<span style="color:#6b7280;font-size:0.65rem;text-transform:uppercase">Antes: </span>'
+                    f'<span style="color:#fca5a5;font-family:monospace">...{ca2}<mark style="background:#7f1d1d;color:#fca5a5;border-radius:3px;padding:0 3px">{bq}</mark>{cd}...</span>'
+                    f'</div>'
+                    f'<div style="font-size:0.78rem">'
+                    f'<span style="color:#6b7280;font-size:0.65rem;text-transform:uppercase">Después: </span>'
+                    f'<span style="color:#86efac;font-family:monospace">...{ca2}<mark style="background:#14532d;color:#86efac;border-radius:3px;padding:0 3px">{rq}</mark>{cd}...</span>'
+                    f'</div>',
+                    unsafe_allow_html=True)
+            else:
+                st.markdown(f'<div style="color:#fbbf24;font-size:0.8rem">⚠️ "{bq}" no encontrado en el documento</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
-            # ── Botones de descarga debajo del resumen completo ──
-            st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
-            st.markdown('<div class="section-title">📥 Exportar informe</div>', unsafe_allow_html=True)
-            st.markdown('<div class="section-hint">Descarga el informe con el resumen y el contenido del documento.</div>', unsafe_allow_html=True)
-
-            cambios_act = st.session_state.lista_cambios
-            ab = st.session_state.archivo_bytes
-
-            word_bytes = exportar_word(texto, data, archivo_bytes=ab, archivo_tipo=tipo, cambios=cambios_act)
-            st.download_button("📄 Informe Word", word_bytes, "Informe_Oro.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                use_container_width=True)
-
-            excel_bytes = exportar_excel(texto, data, archivo_bytes=ab, archivo_tipo=tipo, cambios=cambios_act)
-            st.download_button("📊 Informe Excel", excel_bytes, "Informe_Oro.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True)
-
-            pdf_bytes = exportar_pdf(texto, data)
-            st.download_button("📕 Informe PDF", pdf_bytes, "Informe_Oro.pdf",
-                mime="application/pdf", use_container_width=True)
-
-
-    # ═══════════════════════════════════════
-    # PANTALLA 2 — ASISTENTE (Editar + Chat)
-    # ═══════════════════════════════════════
-    elif nav == "asistente":
-
-        texto_activo = st.session_state.texto_corregido if st.session_state.texto_corregido else texto
-
-        # ── Historial del chat ──
-        for msg in st.session_state.historial_chat:
-            with st.chat_message("user" if msg["rol"] == "Usuario" else "assistant"):
-                st.write(msg["texto"])
-
-        # ── Preview de cambio pendiente ──
-        if st.session_state.preview_cambio:
-            preview = st.session_state.preview_cambio
-            st.markdown('<div class="section-title">👁 Vista previa del cambio</div>', unsafe_allow_html=True)
-            for c in preview:
-                bq = c["buscar"][:55] + ("..." if len(c["buscar"]) > 55 else "")
-                rq = c["reemplazar"][:55] + ("..." if len(c["reemplazar"]) > 55 else "")
-                idx = texto_activo.lower().find(c["buscar"].lower())
-                if idx != -1:
-                    ini = max(0, idx-35); fin = min(len(texto_activo), idx+len(c["buscar"])+35)
-                    ca = texto_activo[ini:idx]; cd = texto_activo[idx+len(c["buscar"]):fin]
-                    st.markdown(
-                        f'<div style="background:#021008;border:1px solid #0a3d1a;border-radius:12px;padding:1rem;margin:.5rem 0;font-size:.8rem;">'
-                        f'<div style="color:#2d6a4f;font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.3rem">ANTES</div>'
-                        f'<div style="color:#fca5a5;font-family:monospace;word-break:break-all">...{ca}<span style="background:#7f1d1d;padding:.1rem .3rem;border-radius:4px">{bq}</span>{cd}...</div>'
-                        f'<div style="color:#2d6a4f;font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;margin:.5rem 0 .3rem">DESPUÉS</div>'
-                        f'<div style="color:#86efac;font-family:monospace;word-break:break-all">...{ca}<span style="background:#14532d;padding:.1rem .3rem;border-radius:4px">{rq}</span>{cd}...</div>'
-                        f'</div>', unsafe_allow_html=True)
+        cs, cn = st.columns(2)
+        with cs:
+            if st.button("✅ Confirmar", use_container_width=True):
+                st.session_state.lista_cambios.extend(preview)
+                st.session_state.preview_cambio = None
+                todos_c = st.session_state.lista_cambios
+                ab_orig = st.session_state.archivo_bytes
+                if tipo == "docx":
+                    final_bytes, n = reemplazar_docx_preservando_formato(ab_orig, todos_c)
+                elif tipo == "xlsx":
+                    final_bytes, n = reemplazar_xlsx_preservando_formato(ab_orig, todos_c)
+                elif tipo == "pdf" and PYMUPDF_OK:
+                    final_bytes, n = reemplazar_pdf_original(ab_orig, todos_c)
                 else:
-                    st.markdown(
-                        f'<div style="background:#021008;border:1px solid #7f1d1d;border-radius:12px;padding:.9rem 1rem;margin:.4rem 0;">'
-                        f'<span style="color:#fca5a5;font-family:monospace">{bq}</span> <span style="color:#f59e0b">→</span> <span style="color:#86efac;font-family:monospace">{rq}</span>'
-                        f'<div style="color:#ef4444;font-size:.73rem;margin-top:.3rem">⚠️ Texto no encontrado</div></div>',
-                        unsafe_allow_html=True)
-            col_si, col_no = st.columns(2)
-            with col_si:
-                if st.button("✅ Confirmar cambio", use_container_width=True):
-                    st.session_state.lista_cambios.extend(preview)
-                    st.session_state.preview_cambio = None
-                    todos_c = st.session_state.lista_cambios
-                    ab_orig = st.session_state.archivo_bytes
-                    if tipo == "docx":
-                        final_bytes, n = reemplazar_docx_preservando_formato(ab_orig, todos_c)
-                    elif tipo == "xlsx":
-                        final_bytes, n = reemplazar_xlsx_preservando_formato(ab_orig, todos_c)
-                    elif tipo == "pdf" and PYMUPDF_OK:
-                        final_bytes, n = reemplazar_pdf_original(ab_orig, todos_c)
-                    else:
-                        txt_m = texto_activo; n = 0
-                        for c2 in todos_c:
-                            txt_m, cnt = re.compile(re.escape(c2["buscar"]), re.IGNORECASE).subn(c2["reemplazar"], txt_m)
-                            n += cnt
-                        final_bytes = txt_m.encode()
-                    txt_c = texto_activo
+                    txt_m=texto_activo; n=0
                     for c2 in todos_c:
-                        txt_c = re.compile(re.escape(c2["buscar"]), re.IGNORECASE).sub(c2["reemplazar"], txt_c)
-                    st.session_state.texto_corregido = txt_c
-                    st.session_state.cambios_aplicados = final_bytes
-                    st.session_state.resumen_data = None
-                    st.session_state.generando_resumen = True
-                    st.session_state.edicion_counter += 1
-                    st.session_state.historial_chat.append({
-                        "rol": "Asistente",
-                        "texto": f"✅ Listo. Cambié **{preview[0]['buscar']}** por **{preview[0]['reemplazar']}**. ¿Deseas hacer otro cambio o tienes alguna pregunta?"
-                    })
-                    st.rerun()
-            with col_no:
-                if st.button("❌ Cancelar", use_container_width=True):
-                    st.session_state.preview_cambio = None
-                    st.session_state.edicion_counter += 1
-                    st.rerun()
+                        txt_m,cnt = re.compile(re.escape(c2["buscar"]),re.IGNORECASE).subn(c2["reemplazar"],txt_m)
+                        n+=cnt
+                    final_bytes = txt_m.encode()
+                txt_c=texto_activo
+                for c2 in todos_c:
+                    txt_c = re.compile(re.escape(c2["buscar"]),re.IGNORECASE).sub(c2["reemplazar"],txt_c)
+                st.session_state.texto_corregido = txt_c
+                st.session_state.cambios_aplicados = final_bytes
+                st.session_state.resumen_data = None
+                st.session_state.generando_resumen = True
+                st.session_state.edicion_counter += 1
+                st.session_state.historial_chat.append({
+                    "rol":"Asistente",
+                    "texto":f"✅ ¡Listo! Cambié **{preview[0]['buscar']}** → **{preview[0]['reemplazar']}** en el documento. ¿Algo más?"
+                })
+                st.rerun()
+        with cn:
+            if st.button("❌ Cancelar", use_container_width=True):
+                st.session_state.preview_cambio = None
+                st.session_state.edicion_counter += 1
+                st.rerun()
 
-        # ── Historial de cambios ──
-        if st.session_state.lista_cambios:
-            with st.expander(f"📋 {len(st.session_state.lista_cambios)} cambio(s) aplicado(s)", expanded=False):
-                for i, c in enumerate(st.session_state.lista_cambios, 1):
-                    bs = c["buscar"][:28] + ("..." if len(c["buscar"]) > 28 else "")
-                    rs = c["reemplazar"][:28] + ("..." if len(c["reemplazar"]) > 28 else "")
-                    st.markdown(
-                        f'<div class="cambio-item"><span class="cambio-num">{i}.</span>'
-                        f'<span style="color:#fca5a5">{bs}</span><span class="cambio-arrow">→</span>'
-                        f'<span style="color:#86efac">{rs}</span></div>', unsafe_allow_html=True)
-                if st.button("🗑️ Limpiar cambios", use_container_width=True):
-                    st.session_state.lista_cambios = []
-                    st.session_state.cambios_aplicados = None
-                    st.session_state.texto_corregido = ""
-                    st.session_state.preview_cambio = None
-                    st.rerun()
-
-        # ── Descargar si hay cambios ──
-        if st.session_state.cambios_aplicados:
-            st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
-            st.markdown('<div class="section-title">📥 Descargar corregido</div>', unsafe_allow_html=True)
-            todos_c = st.session_state.lista_cambios
+    # ── Descarga si hay cambios ──
+    if st.session_state.cambios_aplicados:
+        with st.expander(f"📥 Descargar documento corregido ({len(st.session_state.lista_cambios)} cambio(s))", expanded=False):
             fb = st.session_state.cambios_aplicados
+            todos_c = st.session_state.lista_cambios
             if tipo == "docx":
                 st.download_button("📄 Word corregido", fb, "Corregido.docx",
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True)
@@ -1818,121 +1804,64 @@ if st.session_state.texto_extraido:
             elif tipo == "pdf" and PYMUPDF_OK:
                 st.download_button("📕 PDF corregido", fb, "Corregido.pdf",
                     mime="application/pdf", use_container_width=True)
-            txt_c2 = st.session_state.texto_corregido if st.session_state.texto_corregido else texto
-            wc = exportar_word(txt_c2, None)
+            wc = exportar_word(st.session_state.texto_corregido or texto, None)
             st.download_button("📄 Exportar como Word", wc, "Exportado.docx",
                 mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True)
+            if st.button("🗑️ Limpiar todos los cambios", use_container_width=True):
+                st.session_state.lista_cambios=[]
+                st.session_state.cambios_aplicados=None
+                st.session_state.texto_corregido=""
+                st.session_state.preview_cambio=None
+                st.rerun()
 
-        # ── Input unificado editar+chat ──
-        entrada = st.chat_input("Escribe un cambio o una pregunta sobre el documento...")
-        if entrada:
-            st.session_state.historial_chat.append({"rol": "Usuario", "texto": entrada})
-            # Detectar si es instrucción de cambio o pregunta
-            palabras_cambio = ["cambia", "reemplaza", "sustituye", "corrige", "agrega", "añade", "borra", "elimina", "pon", "escribe", "modifica"]
-            es_cambio = any(p in entrada.lower() for p in palabras_cambio)
-            if es_cambio:
-                with st.spinner("🔍 Procesando cambio..."):
-                    nuevos = solicitar_cambios(entrada, texto_activo)
-                if nuevos:
-                    st.session_state.preview_cambio = nuevos
-                    st.session_state.historial_chat.append({
-                        "rol": "Asistente",
-                        "texto": f"Encontré el cambio. Revisa la vista previa arriba y confirma si es correcto."
-                    })
-                else:
-                    st.session_state.historial_chat.append({
-                        "rol": "Asistente",
-                        "texto": "No pude identificar qué texto cambiar. Intenta siendo más específico, por ejemplo: cambia 'palabra actual' por 'palabra nueva'."
-                    })
-            else:
-                with st.spinner("🤔 Pensando..."):
-                    resp = preguntar_al_documento(entrada, texto_activo)
-                st.session_state.historial_chat.append({"rol": "Asistente", "texto": resp})
-            st.rerun()
+    # ══════════════════════════════════════
+    # CHAT — siempre visible al fondo
+    # ══════════════════════════════════════
+    # Historial
+    for msg in st.session_state.historial_chat:
+        with st.chat_message("user" if msg["rol"]=="Usuario" else "assistant"):
+            st.write(msg["texto"])
 
-        if not st.session_state.historial_chat and not st.session_state.preview_cambio:
-            st.markdown("""
-            <div style="text-align:center;padding:1.5rem 0;">
-                <div style="font-size:2.5rem">✍️</div>
-                <div style="color:#2d6a4f;font-size:0.88rem;margin-top:0.5rem;line-height:1.7">
-                    Puedes escribir un <strong style="color:#34d399">cambio</strong> o una <strong style="color:#34d399">pregunta</strong>:<br>
-                    <em style="color:#065f46">cambia 'negativo' por 'positivo'</em><br>
-                    <em style="color:#065f46">¿cuántas personas aparecen en el documento?</em>
-                </div>
+    if not st.session_state.historial_chat:
+        st.markdown("""
+        <div style="text-align:center;padding:1.5rem 0 0.5rem">
+            <div style="font-size:2rem">💬</div>
+            <div style="color:#065f46;font-size:0.85rem;margin-top:0.4rem;line-height:1.7">
+                <strong style="color:#10b981">Conversa sobre el documento</strong><br>
+                <span style="color:#2d6a4f">Edita, pregunta o pide cambios en lenguaje natural</span>
             </div>
-            """, unsafe_allow_html=True)
+            <div style="display:flex;justify-content:center;gap:0.5rem;flex-wrap:wrap;margin-top:0.8rem">
+                <span style="background:#021008;border:1px solid #0a3d1a;border-radius:20px;padding:0.25rem 0.7rem;font-size:0.72rem;color:#10b981">cambia X por Y</span>
+                <span style="background:#021008;border:1px solid #0a3d1a;border-radius:20px;padding:0.25rem 0.7rem;font-size:0.72rem;color:#10b981">¿cuántas personas hay?</span>
+                <span style="background:#021008;border:1px solid #0a3d1a;border-radius:20px;padding:0.25rem 0.7rem;font-size:0.72rem;color:#10b981">resume en 3 puntos</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-    # ═══════════════════════════════════════
-    # PANTALLA 3 — EVALUAR
-    # ═══════════════════════════════════════
-    elif nav == "evaluar":
-
-        if st.button("🔍 Evaluar documento", use_container_width=True):
-            with st.spinner("Analizando el documento en detalle..."):
-                resultado = detectar_anomalias(texto)
-
-            if resultado:
-                # Puntaje y nivel general
-                nivel = resultado.get("nivel_general", "Regular")
-                puntaje = resultado.get("puntaje", 0)
-                nivel_cfg = {
-                    "Excelente": ("#10b981", "#021008", "🟢"),
-                    "Bueno":     ("#34d399", "#021008", "🟢"),
-                    "Regular":   ("#f59e0b", "#1c1003", "🟡"),
-                    "Deficiente":("#ef4444", "#1f0707", "🔴"),
-                }
-                cfg = nivel_cfg.get(nivel, nivel_cfg["Regular"])
-                st.markdown(f"""
-                <div style="text-align:center;padding:1.2rem 0 0.8rem 0;">
-                    <div style="font-size:3rem">{cfg[2]}</div>
-                    <div style="color:{cfg[0]};font-size:1.4rem;font-weight:800;margin-top:0.3rem">{nivel}</div>
-                    <div style="color:#2d6a4f;font-size:0.8rem;margin-top:0.2rem">Puntaje de calidad: <strong style="color:{cfg[0]}">{puntaje}/100</strong></div>
-                </div>
-                """, unsafe_allow_html=True)
-
-                # Niveles de problemas con colores
-                niveles = [
-                    ("criticos",  "🔴 Crítico",   "#ef4444", "#1f0707", "#450a0a"),
-                    ("altos",     "🟠 Alto",       "#f97316", "#1c0a03", "#431407"),
-                    ("medios",    "🟡 Medio",      "#f59e0b", "#1c1003", "#451a03"),
-                    ("leves",     "🟢 Leve",       "#22c55e", "#052e16", "#14532d"),
-                ]
-                hay_problemas = False
-                for key, label, color_fg, color_bg, color_borde in niveles:
-                    items = resultado.get(key, [])
-                    if items:
-                        hay_problemas = True
-                        st.markdown(f"""
-                        <div style="background:{color_bg};border:1px solid {color_borde};
-                        border-left:4px solid {color_fg};border-radius:12px;
-                        padding:0.8rem 1rem;margin:0.6rem 0;">
-                            <div style="color:{color_fg};font-weight:700;font-size:0.85rem;margin-bottom:0.5rem">{label}</div>
-                            {"".join([f'<div style="color:#d1fae5;font-size:0.8rem;padding:0.25rem 0;border-bottom:1px solid {color_borde};">• {item}</div>' for item in items])}
-                        </div>
-                        """, unsafe_allow_html=True)
-
-                if not hay_problemas:
-                    st.markdown('<div class="info-box">✅ No se detectaron problemas en el documento</div>', unsafe_allow_html=True)
-
-                rec = resultado.get("recomendacion", "")
-                if rec:
-                    st.markdown(f'<div class="hallazgo-card" style="margin-top:0.8rem">💡 <strong>Recomendación:</strong> {rec}</div>', unsafe_allow_html=True)
+    entrada = st.chat_input("✍️ Escribe un cambio o una pregunta...")
+    if entrada:
+        st.session_state.historial_chat.append({"rol":"Usuario","texto":entrada})
+        palabras_cambio = ["cambia","reemplaza","sustituye","corrige","agrega","añade","borra","elimina","pon","escribe","modifica","quita","actualiza"]
+        es_cambio = any(p in entrada.lower() for p in palabras_cambio)
+        if es_cambio:
+            with st.spinner("🔍 Procesando cambio..."):
+                nuevos = solicitar_cambios(entrada, texto_activo)
+            if nuevos:
+                st.session_state.preview_cambio = nuevos
+                st.session_state.historial_chat.append({
+                    "rol":"Asistente",
+                    "texto":"Encontré el cambio 👆 Revisa la vista previa y confirma si es correcto."
+                })
             else:
-                st.markdown('<div class="warn-box">⚠️ No se pudo analizar el documento. Intenta de nuevo.</div>', unsafe_allow_html=True)
-
+                st.session_state.historial_chat.append({
+                    "rol":"Asistente",
+                    "texto":"No encontré qué cambiar exactamente. Intenta: *cambia 'palabra' por 'nueva palabra'*"
+                })
         else:
-            st.markdown("""
-            <div style="text-align:center;padding:2rem 0;">
-                <div style="font-size:3rem">🔍</div>
-                <div style="color:#2d6a4f;font-size:0.9rem;margin-top:0.6rem;line-height:1.7">
-                    Toca <strong style="color:#10b981">Evaluar documento</strong> para detectar:<br>
-                    <span style="color:#ef4444">● Errores críticos</span> &nbsp;
-                    <span style="color:#f97316">● Problemas altos</span><br>
-                    <span style="color:#f59e0b">● Errores medios</span> &nbsp;
-                    <span style="color:#22c55e">● Mejoras leves</span>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            with st.spinner("🤔 Pensando..."):
+                resp = preguntar_al_documento(entrada, texto_activo)
+            st.session_state.historial_chat.append({"rol":"Asistente","texto":resp})
+        st.rerun()
 
 else:
     # ── Estado vacío ──
