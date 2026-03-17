@@ -25,19 +25,18 @@ st.set_page_config(
 )
 
 # ==========================================
-# ESTILOS CSS
+# ESTILOS CSS (cacheados para no recalcular en cada render)
 # ==========================================
-st.markdown("""
+@st.cache_data
+def get_css_estatico():
+    return """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
 
-/* ── RESET & BASE ── */
 html, body, [class*="css"] {
     font-family: 'Outfit', sans-serif !important;
     -webkit-tap-highlight-color: transparent;
 }
-
-/* ── FONDO PRINCIPAL ── */
 .stApp {
     background: linear-gradient(160deg, #0a0e1a 0%, #0d1525 50%, #0a1020 100%);
     min-height: 100vh;
@@ -47,419 +46,141 @@ html, body, [class*="css"] {
     max-width: 480px !important;
     margin: 0 auto !important;
 }
-
-/* ── OCULTAR elementos de escritorio innecesarios ── */
 #MainMenu, footer, header { visibility: hidden; }
 [data-testid="stToolbar"] { display: none; }
-
-/* ── HEADER ── */
-.oro-header {
-    text-align: center;
-    padding: 1.5rem 0 0.5rem 0;
-    position: relative;
-}
-.oro-logo {
-    font-size: 3rem;
-    line-height: 1;
-    filter: drop-shadow(0 0 20px rgba(251,191,36,0.5));
-    animation: pulse-glow 3s ease-in-out infinite;
-}
+.oro-header { text-align: center; padding: 1.5rem 0 0.5rem 0; position: relative; }
+.oro-logo { font-size: 3rem; line-height: 1; filter: drop-shadow(0 0 20px rgba(251,191,36,0.5)); animation: pulse-glow 3s ease-in-out infinite; }
 @keyframes pulse-glow {
     0%,100% { filter: drop-shadow(0 0 15px rgba(251,191,36,0.4)); }
     50%      { filter: drop-shadow(0 0 30px rgba(251,191,36,0.8)); }
 }
 .oro-title {
-    font-size: 1.9rem;
-    font-weight: 800;
+    font-size: 1.9rem; font-weight: 800;
     background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 40%, #fde68a 70%, #f59e0b 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    letter-spacing: -0.02em;
-    margin: 0.2rem 0 0.1rem 0;
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    letter-spacing: -0.02em; margin: 0.2rem 0 0.1rem 0;
 }
-.oro-subtitle {
-    color: #4b6080;
-    font-size: 0.82rem;
-    font-weight: 400;
-    letter-spacing: 0.03em;
-}
-
-/* ── UPLOAD ZONE ── */
-.upload-zone {
-    background: linear-gradient(135deg, #111827, #162032);
-    border: 2px dashed #2a4a6b;
-    border-radius: 20px;
-    padding: 2rem 1rem;
-    text-align: center;
-    margin: 1rem 0;
-    transition: border-color 0.3s;
-}
-.upload-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
-.upload-text { color: #60a5fa; font-weight: 600; font-size: 1rem; }
-.upload-hint { color: #374151; font-size: 0.78rem; margin-top: 0.3rem; }
-
-[data-testid="stFileUploader"] {
-    background: transparent !important;
-    border: none !important;
-}
-[data-testid="stFileUploader"] > div {
-    background: linear-gradient(135deg, #0f1927, #162032) !important;
-    border: 2px dashed #1e3a5f !important;
-    border-radius: 20px !important;
-    padding: 1.5rem !important;
-}
-[data-testid="stFileUploader"] label {
-    color: #60a5fa !important;
-    font-weight: 600 !important;
-    font-size: 1rem !important;
-}
-
-/* ── FILE BADGE ── */
+.oro-subtitle { color: #4b6080; font-size: 0.82rem; font-weight: 400; letter-spacing: 0.03em; }
 .file-badge {
-    display: flex;
-    align-items: center;
-    gap: 0.8rem;
+    display: flex; align-items: center; gap: 0.8rem;
     background: linear-gradient(135deg, #0f2037, #132840);
-    border: 1px solid #1e4a7a;
-    border-radius: 16px;
-    padding: 1rem 1.2rem;
-    margin: 0.8rem 0;
+    border: 1px solid #1e4a7a; border-radius: 16px; padding: 1rem 1.2rem; margin: 0.8rem 0;
 }
 .file-icon { font-size: 2rem; }
 .file-info-name { color: #93c5fd; font-weight: 600; font-size: 0.9rem; word-break: break-all; }
 .file-info-stats { color: #4b6080; font-size: 0.75rem; margin-top: 0.2rem; }
-
-/* ── NAVEGACIÓN TIPO APP MÓVIL ── */
-.nav-bar {
-    display: flex;
-    gap: 0.4rem;
-    background: #0d1525;
-    border: 1px solid #1e3a5f;
-    border-radius: 16px;
-    padding: 0.4rem;
-    margin: 1rem 0;
-}
-.nav-btn {
-    flex: 1;
-    text-align: center;
-    padding: 0.6rem 0.2rem;
-    border-radius: 12px;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-size: 0.65rem;
-    color: #4b6080;
-    font-weight: 500;
-}
-.nav-btn .nav-icon { font-size: 1.3rem; display: block; margin-bottom: 0.2rem; }
-.nav-btn.active {
-    background: linear-gradient(135deg, #1e40af, #2563eb);
-    color: white;
-    box-shadow: 0 4px 15px rgba(37,99,235,0.35);
-}
-
-/* ── SECCIÓN CONTENT ── */
 .section-title {
-    color: #e2e8f0;
-    font-size: 1.05rem;
-    font-weight: 700;
-    margin: 1.2rem 0 0.5rem 0;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+    color: #e2e8f0; font-size: 1.05rem; font-weight: 700;
+    margin: 1.2rem 0 0.5rem 0; display: flex; align-items: center; gap: 0.5rem;
 }
-.section-hint {
-    color: #374151;
-    font-size: 0.78rem;
-    margin-bottom: 1rem;
-    line-height: 1.5;
-}
-
-/* ── CARD RESUMEN ── */
+.section-hint { color: #374151; font-size: 0.78rem; margin-bottom: 1rem; line-height: 1.5; }
 .summary-card {
     background: linear-gradient(135deg, #0f1e33, #132840);
-    border: 1px solid #1e4a7a;
-    border-left: 4px solid #3b82f6;
-    border-radius: 18px;
-    padding: 1.2rem;
-    margin: 0.8rem 0;
-    color: #bfdbfe;
-    line-height: 1.7;
-    font-size: 0.9rem;
+    border: 1px solid #1e4a7a; border-left: 4px solid #3b82f6;
+    border-radius: 18px; padding: 1.2rem; margin: 0.8rem 0;
+    color: #bfdbfe; line-height: 1.7; font-size: 0.9rem;
 }
-.summary-card-title {
-    color: #60a5fa;
-    font-size: 1rem;
-    font-weight: 700;
-    margin-bottom: 0.6rem;
-}
-
-/* ── METRIC PILL ── */
-.metrics-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.6rem;
-    margin: 0.8rem 0;
-}
+.summary-card-title { color: #60a5fa; font-size: 1rem; font-weight: 700; margin-bottom: 0.6rem; }
+.metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin: 0.8rem 0; }
 .metric-pill {
     background: linear-gradient(135deg, #111827, #162032);
-    border: 1px solid #1e3a5f;
-    border-radius: 14px;
-    padding: 0.8rem 1rem;
-    text-align: center;
+    border: 1px solid #1e3a5f; border-radius: 14px; padding: 0.8rem 1rem; text-align: center;
 }
-.metric-pill-label {
-    color: #4b6080;
-    font-size: 0.68rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-.metric-pill-value {
-    color: #e2e8f0;
-    font-size: 1.2rem;
-    font-weight: 800;
-    margin-top: 0.2rem;
-    font-family: 'JetBrains Mono', monospace;
-}
-
-/* ── TAGS ── */
+.metric-pill-label { color: #4b6080; font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+.metric-pill-value { color: #e2e8f0; font-size: 1.2rem; font-weight: 800; margin-top: 0.2rem; font-family: 'JetBrains Mono', monospace; }
 .tags-wrap { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.6rem 0; }
-.tag {
-    background: #0f2037;
-    color: #60a5fa;
-    border: 1px solid #1e4a7a;
-    border-radius: 20px;
-    padding: 0.35rem 0.8rem;
-    font-size: 0.75rem;
-    font-weight: 500;
-}
-
-/* ── HALLAZGO ── */
+.tag { background: #0f2037; color: #60a5fa; border: 1px solid #1e4a7a; border-radius: 20px; padding: 0.35rem 0.8rem; font-size: 0.75rem; font-weight: 500; }
 .hallazgo-card {
-    background: #0a1f0e;
-    border: 1px solid #14532d;
-    border-left: 4px solid #22c55e;
-    border-radius: 14px;
-    padding: 1rem 1.1rem;
-    color: #86efac;
-    font-size: 0.85rem;
-    margin: 0.8rem 0;
-    line-height: 1.6;
+    background: #0a1f0e; border: 1px solid #14532d; border-left: 4px solid #22c55e;
+    border-radius: 14px; padding: 1rem 1.1rem; color: #86efac; font-size: 0.85rem; margin: 0.8rem 0; line-height: 1.6;
 }
-
-/* ── BOTONES GRANDES TÁCTILES ── */
 .stButton > button {
     background: linear-gradient(135deg, #0d1525, #111c2e) !important;
-    color: #4b6080 !important;
-    border: 1px solid #1e3a5f !important;
-    border-radius: 14px !important;
-    font-weight: 600 !important;
-    font-size: 0.82rem !important;
-    min-height: 3.8rem !important;
-    width: 100% !important;
-    transition: all 0.15s !important;
-    letter-spacing: 0.01em !important;
-    font-family: 'Outfit', sans-serif !important;
-    line-height: 1.3 !important;
-    white-space: pre-line !important;
+    color: #4b6080 !important; border: 1px solid #1e3a5f !important;
+    border-radius: 14px !important; font-weight: 600 !important; font-size: 0.82rem !important;
+    min-height: 3.8rem !important; width: 100% !important; transition: all 0.15s !important;
+    letter-spacing: 0.01em !important; font-family: 'Outfit', sans-serif !important;
+    line-height: 1.3 !important; white-space: pre-line !important;
 }
-.stButton > button:hover {
-    background: linear-gradient(135deg, #132840, #1a3550) !important;
-    color: #93c5fd !important;
-    border-color: #2563eb !important;
-}
-.stButton > button:active {
-    transform: scale(0.96) !important;
-}
-/* Botón acción principal (generar, confirmar, etc.) */
-div[data-testid="stVerticalBlock"] > div:has(> div[data-testid="stButton"]) button[kind="primary"],
-.btn-primary > button {
-    background: linear-gradient(135deg, #1d4ed8, #2563eb) !important;
-    color: white !important;
-    border: none !important;
-}
-
-/* ── BOTONES DESCARGA ── */
+.stButton > button:hover { background: linear-gradient(135deg, #132840, #1a3550) !important; color: #93c5fd !important; border-color: #2563eb !important; }
+.stButton > button:active { transform: scale(0.96) !important; }
 [data-testid="stDownloadButton"] > button {
     background: linear-gradient(135deg, #065f46, #059669) !important;
-    color: white !important;
-    border: none !important;
-    border-radius: 14px !important;
-    font-weight: 700 !important;
-    font-size: 0.88rem !important;
-    height: 3rem !important;
-    width: 100% !important;
-    font-family: 'Outfit', sans-serif !important;
+    color: white !important; border: none !important; border-radius: 14px !important;
+    font-weight: 700 !important; font-size: 0.88rem !important; height: 3rem !important;
+    width: 100% !important; font-family: 'Outfit', sans-serif !important;
 }
-[data-testid="stDownloadButton"] > button:active {
-    transform: scale(0.97) !important;
-}
-
-/* ── DESCARGA GRID ── */
-.download-grid { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.8rem; }
-
-/* ── INPUT TEXTO ── */
+[data-testid="stDownloadButton"] > button:active { transform: scale(0.97) !important; }
 .stTextInput > div > div > input {
-    background: #0f1927 !important;
-    border: 2px solid #1e3a5f !important;
-    border-radius: 14px !important;
-    color: #e2e8f0 !important;
-    font-size: 1rem !important;
-    padding: 0.8rem 1rem !important;
-    font-family: 'Outfit', sans-serif !important;
-    height: 3.2rem !important;
+    background: #0f1927 !important; border: 2px solid #1e3a5f !important;
+    border-radius: 14px !important; color: #e2e8f0 !important;
+    font-size: 1rem !important; padding: 0.8rem 1rem !important;
+    font-family: 'Outfit', sans-serif !important; height: 3.2rem !important;
 }
-.stTextInput > div > div > input:focus {
-    border-color: #3b82f6 !important;
-    box-shadow: 0 0 0 3px rgba(59,130,246,0.15) !important;
-}
-
-/* ── CHAT ── */
+.stTextInput > div > div > input:focus { border-color: #3b82f6 !important; box-shadow: 0 0 0 3px rgba(59,130,246,0.15) !important; }
 [data-testid="stChatInput"] textarea {
-    background: #0f1927 !important;
-    border: 2px solid #1e3a5f !important;
-    border-radius: 14px !important;
-    color: #e2e8f0 !important;
-    font-family: 'Outfit', sans-serif !important;
-    font-size: 0.95rem !important;
+    background: #0f1927 !important; border: 2px solid #1e3a5f !important;
+    border-radius: 14px !important; color: #e2e8f0 !important;
+    font-family: 'Outfit', sans-serif !important; font-size: 0.95rem !important;
 }
-[data-testid="stChatMessageContent"] {
-    font-size: 0.9rem !important;
-}
-
-/* ── INFO / WARN BOXES ── */
+[data-testid="stChatMessageContent"] { font-size: 0.9rem !important; }
 .info-box {
-    background: #052e16;
-    border: 1px solid #15803d;
-    border-radius: 12px;
-    padding: 0.9rem 1rem;
-    color: #4ade80;
-    font-size: 0.88rem;
-    margin: 0.6rem 0;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+    background: #052e16; border: 1px solid #15803d; border-radius: 12px;
+    padding: 0.9rem 1rem; color: #4ade80; font-size: 0.88rem; margin: 0.6rem 0;
+    display: flex; align-items: center; gap: 0.5rem;
 }
 .warn-box {
-    background: #1c1003;
-    border: 1px solid #b45309;
-    border-radius: 12px;
-    padding: 0.9rem 1rem;
-    color: #fbbf24;
-    font-size: 0.88rem;
-    margin: 0.6rem 0;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+    background: #1c1003; border: 1px solid #b45309; border-radius: 12px;
+    padding: 0.9rem 1rem; color: #fbbf24; font-size: 0.88rem; margin: 0.6rem 0;
+    display: flex; align-items: center; gap: 0.5rem;
 }
-
-/* ── CAMBIOS LISTA ── */
 .cambio-item {
-    background: #0d1525;
-    border: 1px solid #1e3a5f;
-    border-radius: 10px;
-    padding: 0.6rem 0.9rem;
-    margin: 0.3rem 0;
-    font-size: 0.82rem;
-    color: #93c5fd;
-    font-family: 'JetBrains Mono', monospace;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+    background: #0d1525; border: 1px solid #1e3a5f; border-radius: 10px;
+    padding: 0.6rem 0.9rem; margin: 0.3rem 0; font-size: 0.82rem; color: #93c5fd;
+    font-family: 'JetBrains Mono', monospace; display: flex; align-items: center; gap: 0.5rem;
 }
 .cambio-num { color: #4b6080; font-size: 0.7rem; min-width: 1.2rem; }
 .cambio-arrow { color: #f59e0b; }
-
-/* ── CALIDAD BADGE ── */
-.calidad-badge {
-    text-align: center;
-    padding: 1.2rem;
-    margin: 0.8rem 0;
-}
-.calidad-pill {
-    display: inline-block;
-    padding: 0.6rem 2rem;
-    border-radius: 30px;
-    font-weight: 800;
-    font-size: 1rem;
-    letter-spacing: 0.03em;
-}
+.calidad-badge { text-align: center; padding: 1.2rem; margin: 0.8rem 0; }
+.calidad-pill { display: inline-block; padding: 0.6rem 2rem; border-radius: 30px; font-weight: 800; font-size: 1rem; letter-spacing: 0.03em; }
 .anomalia-item {
-    background: #1c0f03;
-    border: 1px solid #92400e;
-    border-radius: 10px;
-    padding: 0.7rem 1rem;
-    color: #fcd34d;
-    font-size: 0.84rem;
-    margin: 0.4rem 0;
-    display: flex;
-    gap: 0.5rem;
-    line-height: 1.5;
+    background: #1c0f03; border: 1px solid #92400e; border-radius: 10px;
+    padding: 0.7rem 1rem; color: #fcd34d; font-size: 0.84rem; margin: 0.4rem 0;
+    display: flex; gap: 0.5rem; line-height: 1.5;
 }
-
-/* ── TABS OCULTAR estilo nativo, usar nuestro nav ── */
 [data-testid="stTabs"] [role="tablist"] { display: none !important; }
 [data-testid="stTabPanel"] { padding-top: 0 !important; }
-
-/* ── EXPANDER ── */
-[data-testid="stExpander"] {
-    background: #0d1525 !important;
-    border: 1px solid #1e3a5f !important;
-    border-radius: 14px !important;
-}
-
-/* ── SPINNER ── */
+[data-testid="stExpander"] { background: #0d1525 !important; border: 1px solid #1e3a5f !important; border-radius: 14px !important; }
 [data-testid="stSpinner"] { color: #60a5fa !important; }
-
-/* ── DIVIDER ── */
-.oro-divider {
-    height: 1px;
-    background: linear-gradient(90deg, transparent, #1e3a5f, transparent);
-    margin: 1.2rem 0;
-}
-
-/* ── ESTADO VACÍO ── */
-.empty-state {
-    text-align: center;
-    padding: 3rem 1rem;
-}
+.oro-divider { height: 1px; background: linear-gradient(90deg, transparent, #1e3a5f, transparent); margin: 1.2rem 0; }
+.empty-state { text-align: center; padding: 3rem 1rem; }
 .empty-icon { font-size: 4rem; margin-bottom: 1rem; opacity: 0.5; }
 .empty-title { color: #374151; font-size: 1rem; font-weight: 600; }
 .empty-hint { color: #1f2937; font-size: 0.8rem; margin-top: 0.4rem; }
 .format-badges { display: flex; justify-content: center; gap: 0.5rem; margin-top: 1rem; }
-.format-badge {
-    background: #111827;
-    border: 1px solid #1f2937;
-    border-radius: 8px;
-    padding: 0.3rem 0.7rem;
-    color: #374151;
-    font-size: 0.75rem;
-    font-family: 'JetBrains Mono', monospace;
+.format-badge { background: #111827; border: 1px solid #1f2937; border-radius: 8px; padding: 0.3rem 0.7rem; color: #374151; font-size: 0.75rem; font-family: 'JetBrains Mono', monospace; }
+.oro-footer { text-align: center; font-size: 0.72rem; color: #1f2937; padding: 1.5rem 0 0.5rem 0; border-top: 1px solid #111827; margin-top: 2rem; }
+[data-testid="stSidebar"] { background: #080e1a !important; }
+[data-testid="stFileUploader"] > div {
+    background: linear-gradient(135deg, #0f1927, #162032) !important;
+    border: 2px dashed #1e3a5f !important; border-radius: 20px !important; padding: 1.5rem !important;
 }
-
-/* ── FOOTER ── */
-.oro-footer {
-    text-align: center;
-    font-size: 0.72rem;
-    color: #1f2937;
-    padding: 1.5rem 0 0.5rem 0;
-    border-top: 1px solid #111827;
-    margin-top: 2rem;
-}
-
-/* ── SELECTBOX SIDEBAR ── */
-[data-testid="stSidebar"] {
-    background: #080e1a !important;
-}
+[data-testid="stFileUploader"] label { color: #60a5fa !important; font-weight: 600 !important; font-size: 1rem !important; }
+[data-testid="stFileUploaderDropzoneInstructions"] > div > span::after { content: "Arrastra tu archivo aquí"; }
+[data-testid="stFileUploaderDropzoneInstructions"] > div > span { font-size: 0 !important; }
+[data-testid="stFileUploaderDropzoneInstructions"] > div > small::after { content: "Límite 200MB por archivo • DOCX, XLSX, PDF"; }
+[data-testid="stFileUploaderDropzoneInstructions"] > div > small { font-size: 0 !important; }
+[data-testid="stFileUploadDropzone"] > div > button { visibility: hidden; position: relative; }
+[data-testid="stFileUploadDropzone"] > div > button::after { content: "Seleccionar archivo"; visibility: visible; position: absolute; left: 0; right: 0; text-align: center; }
 </style>
-""", unsafe_allow_html=True)
+"""
 
+st.markdown(get_css_estatico(), unsafe_allow_html=True)
 
-# ── CSS dinámico según tema ──
+# ── CSS dinámico según tema (solo colores, mucho más liviano) ──
 _TEMAS = {
     "oscuro": {
-        "bg1": "#0a0e1a", "bg2": "#0d1525", "bg3": "#111827",
+        "bg1": "#0a0e1a", "bg2": "#0d1525",
         "card": "#111827", "card2": "#162032",
         "borde": "#1e3a5f", "borde2": "#2a4a6b",
         "acento1": "#3b82f6", "acento2": "#60a5fa",
@@ -468,7 +189,7 @@ _TEMAS = {
         "texto": "#e2e8f0", "texto2": "#93c5fd", "texto3": "#4b6080",
     },
     "azul": {
-        "bg1": "#020818", "bg2": "#030d24", "bg3": "#041230",
+        "bg1": "#020818", "bg2": "#030d24",
         "card": "#041230", "card2": "#061840",
         "borde": "#0c3a7a", "borde2": "#1050aa",
         "acento1": "#38bdf8", "acento2": "#7dd3fc",
@@ -477,7 +198,7 @@ _TEMAS = {
         "texto": "#e0f2fe", "texto2": "#7dd3fc", "texto3": "#1e5a8a",
     },
     "verde": {
-        "bg1": "#010c06", "bg2": "#021008", "bg3": "#03160a",
+        "bg1": "#010c06", "bg2": "#021008",
         "card": "#041208", "card2": "#051a0c",
         "borde": "#0a3d1a", "borde2": "#0f5225",
         "acento1": "#10b981", "acento2": "#34d399",
@@ -486,7 +207,7 @@ _TEMAS = {
         "texto": "#d1fae5", "texto2": "#34d399", "texto3": "#065f46",
     },
     "rosa": {
-        "bg1": "#120008", "bg2": "#1a000f", "bg3": "#220015",
+        "bg1": "#120008", "bg2": "#1a000f",
         "card": "#1a000f", "card2": "#280018",
         "borde": "#7c0040", "borde2": "#9d0050",
         "acento1": "#f472b6", "acento2": "#f9a8d4",
@@ -495,7 +216,7 @@ _TEMAS = {
         "texto": "#fce7f3", "texto2": "#f9a8d4", "texto3": "#7c0040",
     },
     "ambar": {
-        "bg1": "#0f0800", "bg2": "#180d00", "bg3": "#1f1100",
+        "bg1": "#0f0800", "bg2": "#180d00",
         "card": "#1a0e00", "card2": "#251500",
         "borde": "#78350f", "borde2": "#92400e",
         "acento1": "#f59e0b", "acento2": "#fbbf24",
@@ -508,68 +229,26 @@ _TEMAS = {
 _t = _TEMAS.get(st.session_state.get("tema", "oscuro"), _TEMAS["oscuro"])
 st.markdown(f"""
 <style>
-.stApp {{
-    background: linear-gradient(160deg, {_t['bg1']} 0%, {_t['bg2']} 50%, {_t['bg1']} 100%) !important;
-}}
+.stApp {{ background: linear-gradient(160deg, {_t['bg1']} 0%, {_t['bg2']} 50%, {_t['bg1']} 100%) !important; }}
 .main .block-container {{ background: transparent !important; }}
-.oro-title {{
-    background: {_t['titulo_grad']} !important;
-    -webkit-background-clip: text !important;
-    -webkit-text-fill-color: transparent !important;
-    background-clip: text !important;
-}}
-.file-badge, .metric-pill, .cambio-item {{
-    background: {_t['card']} !important;
-    border-color: {_t['borde']} !important;
-}}
-.summary-card {{
-    background: {_t['card2']} !important;
-    border-color: {_t['borde2']} !important;
-    border-left-color: {_t['acento1']} !important;
-}}
-.tag {{
-    background: {_t['card']} !important;
-    color: {_t['acento2']} !important;
-    border-color: {_t['borde']} !important;
-}}
-.hallazgo-card {{
-    background: {_t['card']} !important;
-    border-left-color: {_t['acento1']} !important;
-    color: {_t['texto2']} !important;
-}}
+.oro-title {{ background: {_t['titulo_grad']} !important; -webkit-background-clip: text !important; -webkit-text-fill-color: transparent !important; background-clip: text !important; }}
+.file-badge, .metric-pill, .cambio-item {{ background: {_t['card']} !important; border-color: {_t['borde']} !important; }}
+.summary-card {{ background: {_t['card2']} !important; border-color: {_t['borde2']} !important; border-left-color: {_t['acento1']} !important; }}
+.tag {{ background: {_t['card']} !important; color: {_t['acento2']} !important; border-color: {_t['borde']} !important; }}
+.hallazgo-card {{ background: {_t['card']} !important; border-left-color: {_t['acento1']} !important; color: {_t['texto2']} !important; }}
 .metric-pill-value {{ color: {_t['texto']} !important; }}
 .metric-pill-label, .file-info-stats, .section-hint {{ color: {_t['texto3']} !important; }}
 .section-title, .file-info-name {{ color: {_t['texto']} !important; }}
 .summary-card-title {{ color: {_t['acento2']} !important; }}
 .summary-card {{ color: {_t['texto2']} !important; }}
 .oro-divider {{ background: linear-gradient(90deg, transparent, {_t['borde']}, transparent) !important; }}
-[data-testid="stFileUploader"] > div {{
-    border-color: {_t['borde']} !important;
-    background: {_t['card']} !important;
-}}
+[data-testid="stFileUploader"] > div {{ border-color: {_t['borde']} !important; background: {_t['card']} !important; }}
 [data-testid="stSidebar"] {{ background: {_t['bg1']} !important; }}
-.stButton > button {{
-    background: {_t['card']} !important;
-    border-color: {_t['borde']} !important;
-    color: {_t['texto3']} !important;
-}}
-.stButton > button:hover {{
-    border-color: {_t['acento1']} !important;
-    color: {_t['acento2']} !important;
-}}
-.stTextInput > div > div > input {{
-    background: {_t['card']} !important;
-    border-color: {_t['borde']} !important;
-    color: {_t['texto']} !important;
-}}
-.stTextInput > div > div > input:focus {{
-    border-color: {_t['acento1']} !important;
-}}
-[data-testid="stDownloadButton"] > button {{
-    background: linear-gradient(135deg,#065f46,#059669) !important;
-    color: white !important;
-    border: none !important;
-}}
+.stButton > button {{ background: {_t['card']} !important; border-color: {_t['borde']} !important; color: {_t['texto3']} !important; }}
+.stButton > button:hover {{ border-color: {_t['acento1']} !important; color: {_t['acento2']} !important; }}
+.stTextInput > div > div > input {{ background: {_t['card']} !important; border-color: {_t['borde']} !important; color: {_t['texto']} !important; }}
+.stTextInput > div > div > input:focus {{ border-color: {_t['acento1']} !important; }}
+[data-testid="stDownloadButton"] > button {{ background: linear-gradient(135deg,#065f46,#059669) !important; color: white !important; border: none !important; }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -583,23 +262,27 @@ except Exception as e:
     st.error(f"🔑 Error configurando la IA: {e}")
     st.stop()
 
-# Modelos en orden de preferencia — el sistema prueba cada uno automáticamente
+# Modelos en orden de preferencia
 MODELOS_FALLBACK = [
     "gemini-3.1-flash-lite-preview",
     "gemini-3.1-flash-preview",
     "gemini-3.1-pro-preview",
 ]
 
+# ── FIX PRINCIPAL: timeout + finally garantizado ──
 def llamar_ia(prompt, es_json=False):
     """
     Llama a la IA probando los modelos en orden.
-    Si uno falla, pasa automáticamente al siguiente.
-    El usuario nunca ve qué modelo se está usando.
+    - Timeout de 45 segundos por modelo para evitar cuelgues.
+    - Si todos fallan devuelve None limpiamente.
     """
     for modelo in MODELOS_FALLBACK:
         try:
             model = genai.GenerativeModel(modelo)
-            resp = model.generate_content(prompt)
+            resp = model.generate_content(
+                prompt,
+                request_options={"timeout": 45}  # FIX: timeout para no colgar
+            )
             texto = resp.text
             if es_json:
                 return extraer_json_seguro(texto, es_lista=texto.strip().startswith("["))
@@ -608,7 +291,6 @@ def llamar_ia(prompt, es_json=False):
             continue
     return None
 
-# Sidebar mínimo — solo para info interna si hace falta
 with st.sidebar:
     st.caption("Oro Asistente v2")
 
@@ -695,14 +377,6 @@ def solicitar_informe_word(texto):
     return llamar_ia(prompt) or "No se pudo generar el informe."
 
 def extraer_cambio_con_regex(instruccion):
-    """
-    Fallback: detecta patrones comunes sin necesidad de IA.
-    Soporta variantes como:
-      - cambia 'X' por 'Y'
-      - reemplaza X por Y
-      - X → Y  /  X -> Y
-      - sustituye X con Y
-    """
     patrones = [
         r"(?:cambia|reemplaza|sustituye|cambie|reemplaz[ao])\s+['\"]?(.+?)['\"]?\s+(?:por|con|a)\s+['\"]?(.+?)['\"]?\s*$",
         r"['\"](.+?)['\"]\s*(?:→|->|=>|por|con)\s*['\"]?(.+?)['\"]?\s*$",
@@ -719,11 +393,6 @@ def extraer_cambio_con_regex(instruccion):
     return []
 
 def solicitar_cambios(instruccion, texto_doc=""):
-    """
-    Interpreta instrucciones de edición en lenguaje natural.
-    Soporta: reemplazar, agregar datos, completar campos vacíos.
-    Devuelve lista de {buscar, reemplazar} para aplicar en el documento.
-    """
     contexto_doc = f"\n\nFRAGMENTO DEL DOCUMENTO (para contexto):\n{texto_doc[:3000]}" if texto_doc else ""
     prompt = (
         "Eres un asistente experto en edición de documentos.\n"
@@ -788,12 +457,6 @@ def detectar_anomalias(texto):
 # EXPORTADORES
 # ==========================================
 def exportar_word(texto, resumen_data=None, archivo_bytes=None, archivo_tipo=None, cambios=None):
-    """
-    Genera Word profesional con conversion cruzada.
-    - DOCX original: aplica cambios preservando formato.
-    - XLSX original: convierte cada hoja en tabla Word real.
-    - PDF/texto: genera informe con resumen estructurado.
-    """
     zona = pytz.timezone('America/Caracas')
     fecha = datetime.now(zona).strftime('%d de %B de %Y, %I:%M %p')
     cambios = cambios or []
@@ -838,7 +501,6 @@ def exportar_word(texto, resumen_data=None, archivo_bytes=None, archivo_tipo=Non
         return buf.getvalue()
 
     doc = Document()
-    # Márgenes más ajustados
     for section in doc.sections:
         section.top_margin    = Inches(0.8)
         section.bottom_margin = Inches(0.8)
@@ -849,7 +511,6 @@ def exportar_word(texto, resumen_data=None, archivo_bytes=None, archivo_tipo=Non
     sty.font.name = 'Calibri'
     sty.font.size = Pt(11)
 
-    # ── Encabezado con banda azul ──
     tabla_hdr = doc.add_table(rows=1, cols=1)
     tabla_hdr.style = 'Table Grid'
     cell_hdr = tabla_hdr.cell(0, 0)
@@ -861,7 +522,6 @@ def exportar_word(texto, resumen_data=None, archivo_bytes=None, archivo_tipo=Non
     run_hdr.font.size = Pt(16)
     run_hdr.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
     cell_hdr.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
-    # Fondo azul
     tc = cell_hdr._tc
     tcPr = tc.get_or_add_tcPr()
     shd = OxmlElement('w:shd')
@@ -871,7 +531,6 @@ def exportar_word(texto, resumen_data=None, archivo_bytes=None, archivo_tipo=Non
     tcPr.append(shd)
     doc.add_paragraph()
 
-    # Fecha pequeña
     p_fecha = doc.add_paragraph()
     r_fecha = p_fecha.add_run(f'Generado: {fecha}')
     r_fecha.font.size = Pt(9)
@@ -880,7 +539,6 @@ def exportar_word(texto, resumen_data=None, archivo_bytes=None, archivo_tipo=Non
     doc.add_paragraph()
 
     if resumen_data:
-        # Resumen ejecutivo en caja gris clara
         if resumen_data.get("resumen_ejecutivo"):
             t_res = doc.add_table(rows=1, cols=1)
             t_res.style = 'Table Grid'
@@ -964,12 +622,6 @@ def exportar_word(texto, resumen_data=None, archivo_bytes=None, archivo_tipo=Non
     return buf.getvalue()
 
 def exportar_excel(texto, resumen_data=None, archivo_bytes=None, archivo_tipo=None, cambios=None):
-    """
-    Genera Excel profesional con conversion cruzada.
-    - XLSX original: aplica cambios y devuelve el archivo original formateado.
-    - DOCX original: extrae cada tabla como hoja separada.
-    - PDF/texto: vuelca lineas en una hoja con resumen.
-    """
     cambios = cambios or []
 
     if archivo_tipo == "xlsx" and archivo_bytes and cambios:
@@ -983,15 +635,12 @@ def exportar_excel(texto, resumen_data=None, archivo_bytes=None, archivo_tipo=No
         wb = openpyxl.Workbook()
         wb.remove(wb.active)
         doc_src = Document(BytesIO(bytes_usar))
-        azul = "1E3A5F"
-        blanco = "FFFFFF"
-        gris = "F8FAFC"
+        azul = "1E3A5F"; blanco = "FFFFFF"; gris = "F8FAFC"
         for i, tabla in enumerate(doc_src.tables):
             ws = wb.create_sheet(title=f"Tabla_{i+1}")
             filas_limpias = []
             for row in tabla.rows:
-                vistas = set()
-                fila = []
+                vistas = set(); fila = []
                 for cell in row.cells:
                     if cell._tc not in vistas:
                         vistas.add(cell._tc)
@@ -1013,16 +662,16 @@ def exportar_excel(texto, resumen_data=None, archivo_bytes=None, archivo_tipo=No
         if not wb.sheetnames:
             ws = wb.create_sheet("Datos")
             ws.cell(1, 1, "No se encontraron tablas estructuradas en el documento.")
-        buf = BytesIO()
-        wb.save(buf)
+        buf = BytesIO(); wb.save(buf)
         return buf.getvalue()
 
     wb = openpyxl.Workbook()
-    azul_oscuro = "1E3A5F"
-    azul_medio  = "2563EB"
-    azul_claro  = "DBEAFE"
-    blanco      = "FFFFFF"
-    gris_claro  = "F8FAFC"
+    azul_oscuro = "1E3A5F"; azul_medio = "2563EB"; azul_claro = "DBEAFE"
+    blanco = "FFFFFF"; gris_claro = "F8FAFC"
+    thin = Border(
+        left=Side(style='thin', color='CBD5E1'), right=Side(style='thin', color='CBD5E1'),
+        top=Side(style='thin', color='CBD5E1'), bottom=Side(style='thin', color='CBD5E1')
+    )
 
     def header_cell(ws, row, col, texto_cell, bg=azul_oscuro, fg=blanco, size=12, bold=True):
         cell = ws.cell(row=row, column=col, value=texto_cell)
@@ -1037,11 +686,6 @@ def exportar_excel(texto, resumen_data=None, archivo_bytes=None, archivo_tipo=No
         cell.font = Font(bold=bold, size=11)
         cell.alignment = Alignment(horizontal=align, vertical="center", wrap_text=True)
         return cell
-
-    thin = Border(
-        left=Side(style='thin', color='CBD5E1'), right=Side(style='thin', color='CBD5E1'),
-        top=Side(style='thin', color='CBD5E1'), bottom=Side(style='thin', color='CBD5E1')
-    )
 
     ws_res = wb.active
     ws_res.title = "Resumen"
@@ -1126,16 +770,13 @@ def exportar_excel(texto, resumen_data=None, archivo_bytes=None, archivo_tipo=No
             cell.fill = PatternFill("solid", fgColor=gris_claro if i%2==0 else blanco)
             ws_data.row_dimensions[i].height = 18
 
-    buf = BytesIO()
-    wb.save(buf)
+    buf = BytesIO(); wb.save(buf)
     return buf.getvalue()
 
 def safe_text(t):
-    """Convierte texto a latin-1 seguro para fpdf versión antigua."""
     return str(t).encode('latin-1', 'replace').decode('latin-1')
 
 def pdf_seccion_header(pdf, titulo, r, g, b):
-    """Dibuja un encabezado de sección con fondo de color."""
     pdf.set_fill_color(r, g, b)
     pdf.set_text_color(255, 255, 255)
     pdf.set_font("Arial", 'B', 11)
@@ -1144,13 +785,10 @@ def pdf_seccion_header(pdf, titulo, r, g, b):
     pdf.set_text_color(30, 30, 30)
 
 def exportar_pdf(texto, resumen_data=None):
-    """Genera PDF compatible con fpdf (versión clásica)."""
     pdf = FPDF()
     pdf.set_margins(10, 10, 10)
     pdf.add_page()
     pdf.set_auto_page_break(auto=True, margin=15)
-
-    # ---- Encabezado ----
     pdf.set_fill_color(30, 58, 95)
     pdf.rect(0, 0, 210, 32, 'F')
     pdf.set_text_color(255, 255, 255)
@@ -1166,7 +804,6 @@ def exportar_pdf(texto, resumen_data=None):
     pdf.set_text_color(30, 30, 30)
 
     if resumen_data:
-        # Título del documento
         titulo_doc = resumen_data.get("titulo", "")
         if titulo_doc:
             pdf.set_fill_color(37, 99, 235)
@@ -1175,15 +812,11 @@ def exportar_pdf(texto, resumen_data=None):
             pdf.cell(190, 10, safe_text(titulo_doc[:90]), border=0, ln=1, align='C', fill=True)
             pdf.ln(3)
             pdf.set_text_color(30, 30, 30)
-
-        # Resumen ejecutivo
         res_ej = resumen_data.get("resumen_ejecutivo", "")
         if res_ej:
             pdf.set_font("Arial", 'I', 10)
             pdf.multi_cell(190, 6, safe_text(res_ej))
             pdf.ln(4)
-
-        # Métricas
         metricas = resumen_data.get("metricas", {})
         if metricas:
             pdf_seccion_header(pdf, "  METRICAS CLAVE", 30, 58, 95)
@@ -1197,8 +830,6 @@ def exportar_pdf(texto, resumen_data=None):
                 pdf.cell(105, 8, safe_text(str(v)), border=0, ln=1, fill=True)
                 toggle = not toggle
             pdf.ln(4)
-
-        # Puntos clave
         puntos = resumen_data.get("puntos_clave", [])
         if puntos:
             pdf_seccion_header(pdf, "  PUNTOS CLAVE", 30, 64, 175)
@@ -1206,18 +837,14 @@ def exportar_pdf(texto, resumen_data=None):
             for i, punto in enumerate(puntos, 1):
                 pdf.multi_cell(190, 7, safe_text(f"  {i}. {punto}"))
             pdf.ln(4)
-
-        # Hallazgo
         hallazgo = resumen_data.get("hallazgo_destacado", "")
         if hallazgo:
             pdf_seccion_header(pdf, "  HALLAZGO DESTACADO", 180, 120, 10)
             pdf.set_font("Arial", 'I', 10)
             pdf.multi_cell(190, 7, safe_text(f"  {hallazgo}"))
             pdf.ln(4)
-
         pdf.add_page()
 
-    # ---- Contenido del documento ----
     pdf_seccion_header(pdf, "  CONTENIDO DEL DOCUMENTO", 30, 58, 95)
     pdf.set_font("Arial", '', 9)
     for linea in texto.split('\n'):
@@ -1230,22 +857,18 @@ def exportar_pdf(texto, resumen_data=None):
         return bytes(raw)
     return raw.encode('latin-1')
 
-
 # ==========================================
 # REEMPLAZOS PRESERVANDO FORMATO
 # ==========================================
 def reemplazar_docx_preservando_formato(archivo_bytes, cambios):
-    """Reemplaza texto en DOCX iterando runs para preservar formato."""
     doc = Document(BytesIO(archivo_bytes))
     conteo = 0
-    
     for c in cambios:
         buscar = str(c["buscar"])
         reemplazar = str(c["reemplazar"])
         if not buscar or buscar.lower() == reemplazar.lower():
             continue
         regex = re.compile(re.escape(buscar), re.IGNORECASE)
-        
         def reemplazar_en_parrafo(parrafo):
             nonlocal conteo
             texto_completo = parrafo.text
@@ -1253,38 +876,30 @@ def reemplazar_docx_preservando_formato(archivo_bytes, cambios):
                 return
             nuevo_texto, n = regex.subn(reemplazar, texto_completo)
             conteo += n
-            # Preservar formato del primer run, limpiar el resto
             if parrafo.runs:
                 parrafo.runs[0].text = nuevo_texto
                 for run in parrafo.runs[1:]:
                     run.text = ""
-        
         for parrafo in doc.paragraphs:
             reemplazar_en_parrafo(parrafo)
-        
         for tabla in doc.tables:
             for fila in tabla.rows:
                 for celda in fila.cells:
                     for parrafo in celda.paragraphs:
                         reemplazar_en_parrafo(parrafo)
-    
     buf = BytesIO()
     doc.save(buf)
     return buf.getvalue(), conteo
 
-
 def reemplazar_xlsx_preservando_formato(archivo_bytes, cambios):
-    """Reemplaza texto en XLSX preservando estilos."""
     wb = openpyxl.load_workbook(BytesIO(archivo_bytes))
     conteo = 0
-    
     for c in cambios:
         buscar = str(c["buscar"])
         reemplazar_val = str(c["reemplazar"])
         if not buscar or buscar.lower() == reemplazar_val.lower():
             continue
         regex = re.compile(re.escape(buscar), re.IGNORECASE)
-        
         for sheet in wb.worksheets:
             for row in sheet.iter_rows():
                 for cell in row:
@@ -1293,49 +908,14 @@ def reemplazar_xlsx_preservando_formato(archivo_bytes, cambios):
                             nuevo, n = regex.subn(reemplazar_val, cell.value)
                             cell.value = nuevo
                             conteo += n
-    
     buf = BytesIO()
     wb.save(buf)
     return buf.getvalue(), conteo
 
-
-
-
 # ==========================================
 # SUBIDA DE ARCHIVO
 # ==========================================
-
-
 st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
-
-# CSS para traducir el uploader al español
-st.markdown("""
-<style>
-[data-testid="stFileUploaderDropzoneInstructions"] > div > span::after {
-    content: "Arrastra tu archivo aquí";
-}
-[data-testid="stFileUploaderDropzoneInstructions"] > div > span {
-    font-size: 0 !important;
-}
-[data-testid="stFileUploaderDropzoneInstructions"] > div > small::after {
-    content: "Límite 200MB por archivo • DOCX, XLSX, PDF";
-}
-[data-testid="stFileUploaderDropzoneInstructions"] > div > small {
-    font-size: 0 !important;
-}
-[data-testid="stFileUploadDropzone"] > div > button {
-    visibility: hidden;
-    position: relative;
-}
-[data-testid="stFileUploadDropzone"] > div > button::after {
-    content: "Seleccionar archivo";
-    visibility: visible;
-    position: absolute;
-    left: 0; right: 0;
-    text-align: center;
-}
-</style>
-""", unsafe_allow_html=True)
 
 archivo = st.file_uploader(
     "📎 Toca aquí para subir tu archivo",
@@ -1356,6 +936,9 @@ if archivo and archivo.name != st.session_state.nombre_archivo:
         st.session_state.cambios_aplicados = None
         st.session_state.texto_corregido = ""
         st.session_state.preview_cambio = None
+        # FIX: resetear flags antes de intentar
+        st.session_state.generando_resumen = False
+        st.session_state.resumen_error = False
         texto = ""
         try:
             if archivo.name.endswith(".docx"):
@@ -1378,10 +961,14 @@ if archivo and archivo.name != st.session_state.nombre_archivo:
                     if t:
                         texto += t + "\n"
             st.session_state.texto_extraido = texto
-            st.session_state.generando_resumen = True
-            st.session_state.resumen_error = False
+            # Solo activar si se extrajo texto correctamente
+            if texto.strip():
+                st.session_state.generando_resumen = True
+            else:
+                st.session_state.resumen_error = True
         except Exception as e:
             st.error(f"Error leyendo el archivo: {e}")
+            st.session_state.resumen_error = True
 
 # ==========================================
 # PANEL PRINCIPAL
@@ -1390,7 +977,6 @@ if st.session_state.texto_extraido:
     texto = st.session_state.texto_extraido
     tipo = st.session_state.archivo_tipo
 
-    # ── File Badge ──
     palabras = len(texto.split())
     lineas = len([l for l in texto.split('\n') if l.strip()])
     ext_icons = {"docx": "📄", "xlsx": "📊", "pdf": "📕"}
@@ -1405,7 +991,6 @@ if st.session_state.texto_extraido:
     </div>
     """, unsafe_allow_html=True)
 
-    # ── Navegación con botones táctiles ──
     st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
 
     tabs_def = [
@@ -1418,18 +1003,7 @@ if st.session_state.texto_extraido:
     cols_nav = st.columns(4)
     for i, (key, ico, label) in enumerate(tabs_def):
         with cols_nav[i]:
-            activo = tab_activa == key
-            btn_style = (
-                "background:linear-gradient(135deg,#1d4ed8,#2563eb);color:white;border:none;"
-                if activo else
-                "background:#0d1525;color:#4b6080;border:1px solid #1e3a5f;"
-            )
-            if st.button(
-                f"{ico}\n{label}",
-                key=f"nav_{key}",
-                use_container_width=True,
-                help=label,
-            ):
+            if st.button(f"{ico}\n{label}", key=f"nav_{key}", use_container_width=True, help=label):
                 st.session_state.tab_activa = key
                 st.rerun()
 
@@ -1443,36 +1017,38 @@ if st.session_state.texto_extraido:
         st.markdown('<div class="section-title">📊 Análisis del documento</div>', unsafe_allow_html=True)
         st.markdown('<div class="section-hint">La IA analiza el contenido y te da un resumen claro y profesional.</div>', unsafe_allow_html=True)
 
+        # ── FIX PRINCIPAL: bloque de generación con finally garantizado ──
         if st.session_state.generando_resumen:
-            st.markdown("""
-            <div style="text-align:center;padding:2rem 0;">
-                <div style="font-size:2.5rem;animation:pulse-glow 1.5s infinite">🧠</div>
-                <div style="color:#60a5fa;font-weight:600;margin-top:0.8rem;font-size:1rem">Analizando documento...</div>
-                <div style="color:#374151;font-size:0.8rem;margin-top:0.3rem">Esto puede tomar unos segundos</div>
-            </div>
-            """, unsafe_allow_html=True)
-            texto_para_resumen = st.session_state.texto_corregido if st.session_state.texto_corregido else texto
-            data = solicitar_resumen_estructurado(texto_para_resumen)
-            st.session_state.generando_resumen = False
-            if data:
-                st.session_state.resumen_data = data
-            else:
-                st.session_state.resumen_error = True
+            with st.spinner("🧠 Analizando documento... (puede tomar hasta 45 segundos)"):
+                texto_para_resumen = st.session_state.texto_corregido if st.session_state.texto_corregido else texto
+                try:
+                    data = solicitar_resumen_estructurado(texto_para_resumen)
+                    if data:
+                        st.session_state.resumen_data = data
+                        st.session_state.resumen_error = False
+                    else:
+                        st.session_state.resumen_error = True
+                except Exception:
+                    st.session_state.resumen_error = True
+                finally:
+                    # SIEMPRE se desactiva el flag, nunca queda en bucle
+                    st.session_state.generando_resumen = False
             st.rerun()
 
-        # Botón solo visible si ya hay resumen (para regenerar)
+        # Botón regenerar (solo si ya hay resumen)
         if st.session_state.resumen_data:
             if st.button("🔄 Regenerar Resumen", use_container_width=True):
                 st.session_state.generando_resumen = True
+                st.session_state.resumen_data = None
                 st.rerun()
 
-        # Mostrar error si la IA falló
+        # Error visible con botón de reintento
         if st.session_state.get("resumen_error"):
             st.markdown('''
             <div style="text-align:center;padding:2rem 0;">
                 <div style="font-size:2.5rem">⚠️</div>
                 <div style="color:#fbbf24;font-weight:600;margin-top:0.6rem">No se pudo generar el resumen</div>
-                <div style="color:#4b6080;font-size:0.8rem;margin-top:0.3rem">Puede ser un problema temporal con la IA</div>
+                <div style="color:#4b6080;font-size:0.8rem;margin-top:0.3rem">Puede ser un problema temporal con la IA o el archivo</div>
             </div>
             ''', unsafe_allow_html=True)
             if st.button("🔄 Intentar de nuevo", use_container_width=True):
@@ -1484,7 +1060,6 @@ if st.session_state.texto_extraido:
         if data:
             emoji = data.get("emoji_categoria", "📋")
             titulo_doc = data.get("titulo", "Documento analizado")
-
             st.markdown(f"""
             <div class="summary-card">
                 <div class="summary-card-title">{emoji} {titulo_doc}</div>
@@ -1492,7 +1067,6 @@ if st.session_state.texto_extraido:
             </div>
             """, unsafe_allow_html=True)
 
-            # Métricas en grid 2 columnas
             metricas = data.get("metricas", {})
             if metricas:
                 items = list(metricas.items())
@@ -1502,18 +1076,15 @@ if st.session_state.texto_extraido:
                 pills_html += '</div>'
                 st.markdown(pills_html, unsafe_allow_html=True)
 
-            # Puntos clave
             puntos = data.get("puntos_clave", [])
             if puntos:
                 tags_html = '<div class="tags-wrap">' + "".join([f'<span class="tag">✓ {p}</span>' for p in puntos]) + '</div>'
                 st.markdown(tags_html, unsafe_allow_html=True)
 
-            # Hallazgo
             hallazgo = data.get("hallazgo_destacado", "")
             if hallazgo:
                 st.markdown(f'<div class="hallazgo-card">💡 <strong>Hallazgo:</strong> {hallazgo}</div>', unsafe_allow_html=True)
 
-            # Exportar — UNA columna en móvil
             st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
             st.markdown('<div class="section-title">📥 Exportar informe</div>', unsafe_allow_html=True)
 
@@ -1531,8 +1102,6 @@ if st.session_state.texto_extraido:
             st.download_button("📕 Descargar PDF", pdf_bytes, "Informe_Oro.pdf",
                 mime="application/pdf", use_container_width=True)
 
-
-    # ═══════════════════════════════════════
     # ═══════════════════════════════════════
     # PANTALLA 2 — EDICIÓN
     # ═══════════════════════════════════════
@@ -1549,13 +1118,15 @@ if st.session_state.texto_extraido:
 
         if instruccion:
             with st.spinner("🔍 Procesando..."):
-                nuevos_cambios = solicitar_cambios(instruccion, texto)
+                try:
+                    nuevos_cambios = solicitar_cambios(instruccion, texto)
+                except Exception:
+                    nuevos_cambios = []
             if nuevos_cambios:
                 st.session_state.preview_cambio = nuevos_cambios
             else:
                 st.markdown('<div class="warn-box">⚠️ No entendí la instrucción. Prueba: cambia X por Y</div>', unsafe_allow_html=True)
 
-        # ── PREVIEW antes de confirmar ──
         if st.session_state.preview_cambio:
             preview = st.session_state.preview_cambio
             st.markdown('<div class="section-title">👁 Vista previa</div>', unsafe_allow_html=True)
@@ -1598,25 +1169,27 @@ if st.session_state.texto_extraido:
                     st.session_state.preview_cambio = None
                     todos_cambios = st.session_state.lista_cambios
                     archivo_bytes_orig = st.session_state.archivo_bytes
-                    if tipo == "docx":
-                        final_bytes, n = reemplazar_docx_preservando_formato(archivo_bytes_orig, todos_cambios)
-                    elif tipo == "xlsx":
-                        final_bytes, n = reemplazar_xlsx_preservando_formato(archivo_bytes_orig, todos_cambios)
-                    else:
-                        txt_mod = texto; n = 0
+                    try:
+                        if tipo == "docx":
+                            final_bytes, n = reemplazar_docx_preservando_formato(archivo_bytes_orig, todos_cambios)
+                        elif tipo == "xlsx":
+                            final_bytes, n = reemplazar_xlsx_preservando_formato(archivo_bytes_orig, todos_cambios)
+                        else:
+                            txt_mod = texto; n = 0
+                            for c in todos_cambios:
+                                txt_mod, cnt = re.compile(re.escape(c["buscar"]), re.IGNORECASE).subn(c["reemplazar"], txt_mod)
+                                n += cnt
+                            final_bytes = txt_mod.encode()
+                        txt_corr = texto
                         for c in todos_cambios:
-                            txt_mod, cnt = re.compile(re.escape(c["buscar"]), re.IGNORECASE).subn(c["reemplazar"], txt_mod)
-                            n += cnt
-                        final_bytes = txt_mod.encode()
-                    # Actualizar texto corregido para el chat
-                    txt_corr = texto
-                    for c in todos_cambios:
-                        txt_corr = re.compile(re.escape(c["buscar"]), re.IGNORECASE).sub(c["reemplazar"], txt_corr)
-                    st.session_state.texto_corregido = txt_corr
-                    st.session_state.cambios_aplicados = final_bytes
-                    st.session_state.resumen_data = None
-                    st.session_state.generando_resumen = True
-                    st.session_state.edicion_counter += 1  # Resetea el input
+                            txt_corr = re.compile(re.escape(c["buscar"]), re.IGNORECASE).sub(c["reemplazar"], txt_corr)
+                        st.session_state.texto_corregido = txt_corr
+                        st.session_state.cambios_aplicados = final_bytes
+                        st.session_state.resumen_data = None
+                        st.session_state.generando_resumen = True
+                    except Exception as e:
+                        st.error(f"Error aplicando cambios: {e}")
+                    st.session_state.edicion_counter += 1
                     st.rerun()
             with col_no:
                 if st.button("❌ Cancelar", use_container_width=True):
@@ -1624,7 +1197,6 @@ if st.session_state.texto_extraido:
                     st.session_state.edicion_counter += 1
                     st.rerun()
 
-        # ── Historial de cambios confirmados ──
         if st.session_state.lista_cambios:
             st.markdown(f'<div class="section-title">📋 Cambios confirmados ({len(st.session_state.lista_cambios)})</div>', unsafe_allow_html=True)
             for i, c in enumerate(st.session_state.lista_cambios, 1):
@@ -1646,7 +1218,6 @@ if st.session_state.texto_extraido:
                 st.session_state.preview_cambio = None
                 st.rerun()
 
-        # ── Descarga ──
         if st.session_state.cambios_aplicados:
             st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
             st.markdown('<div class="section-title">📥 Descargar corregido</div>', unsafe_allow_html=True)
@@ -1664,6 +1235,7 @@ if st.session_state.texto_extraido:
             st.download_button("📕 PDF corregido", pdf_c, "Corregido.pdf",
                 mime="application/pdf", use_container_width=True)
 
+    # ═══════════════════════════════════════
     # PANTALLA 3 — CHAT
     # ═══════════════════════════════════════
     elif nav == "chat":
@@ -1676,11 +1248,13 @@ if st.session_state.texto_extraido:
 
         pregunta = st.chat_input("Escribe tu pregunta...")
         if pregunta:
-            # Usar texto corregido si hay cambios aplicados
             texto_para_chat = st.session_state.texto_corregido if st.session_state.texto_corregido else texto
             st.session_state.historial_chat.append({"rol": "Usuario", "texto": pregunta})
             with st.spinner("🤔 Pensando..."):
-                respuesta = preguntar_al_documento(pregunta, texto_para_chat)
+                try:
+                    respuesta = preguntar_al_documento(pregunta, texto_para_chat)
+                except Exception:
+                    respuesta = "Hubo un error al procesar tu pregunta. Intenta de nuevo."
             st.session_state.historial_chat.append({"rol": "Asistente", "texto": respuesta})
             st.rerun()
 
@@ -1705,7 +1279,10 @@ if st.session_state.texto_extraido:
 
         if st.button("🔎 Analizar Calidad", use_container_width=True):
             with st.spinner("🔍 Revisando el documento..."):
-                resultado = detectar_anomalias(texto)
+                try:
+                    resultado = detectar_anomalias(texto)
+                except Exception:
+                    resultado = None
 
             if resultado:
                 nivel = resultado.get("nivel_calidad", "?")
@@ -1718,7 +1295,6 @@ if st.session_state.texto_extraido:
                     </span>
                 </div>
                 """, unsafe_allow_html=True)
-
                 anomalias = resultado.get("anomalias", [])
                 if anomalias:
                     st.markdown('<div class="section-title">⚠️ Posibles problemas</div>', unsafe_allow_html=True)
@@ -1726,12 +1302,11 @@ if st.session_state.texto_extraido:
                         st.markdown(f'<div class="anomalia-item"><span>⚠️</span><span>{a}</span></div>', unsafe_allow_html=True)
                 else:
                     st.markdown('<div class="info-box">✅ No se detectaron anomalías significativas</div>', unsafe_allow_html=True)
-
                 rec = resultado.get("recomendacion", "")
                 if rec:
                     st.markdown(f'<div class="hallazgo-card">💡 <strong>Recomendación:</strong> {rec}</div>', unsafe_allow_html=True)
             else:
-                st.markdown('<div class="warn-box">⚠️ No se pudo analizar el documento</div>', unsafe_allow_html=True)
+                st.markdown('<div class="warn-box">⚠️ No se pudo analizar el documento. Intenta de nuevo.</div>', unsafe_allow_html=True)
 
         else:
             st.markdown("""
@@ -1744,7 +1319,6 @@ if st.session_state.texto_extraido:
             """, unsafe_allow_html=True)
 
 else:
-    # ── Estado vacío ──
     st.markdown("""
     <div class="empty-state">
         <div class="empty-icon">📂</div>
