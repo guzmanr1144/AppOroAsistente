@@ -492,6 +492,8 @@ for key, val in {
     "lista_cambios": [],
     "texto_modificado": "",
     "generando_resumen": False,
+    "preview_cambio": None,
+    "texto_corregido": "",
 }.items():
     if key not in st.session_state:
         st.session_state[key] = val
@@ -578,20 +580,29 @@ def extraer_cambio_con_regex(instruccion):
                 return [{"buscar": buscar, "reemplazar": reemplazar}]
     return []
 
-def solicitar_cambios(instruccion):
+def solicitar_cambios(instruccion, texto_doc=""):
+    """
+    Interpreta instrucciones de edición en lenguaje natural.
+    Soporta: reemplazar, agregar datos, completar campos vacíos.
+    Devuelve lista de {buscar, reemplazar} para aplicar en el documento.
+    """
+    contexto_doc = f"\n\nFRAGMENTO DEL DOCUMENTO (para contexto):\n{texto_doc[:3000]}" if texto_doc else ""
     prompt = (
-        "Eres un asistente que extrae instrucciones de edición de texto.\n"
-        "El usuario quiere cambiar una palabra o frase por otra en un documento.\n\n"
-        f"INSTRUCCIÓN DEL USUARIO: \"{instruccion}\"\n\n"
-        "Extrae el texto a buscar y el texto de reemplazo.\n"
-        "REGLAS IMPORTANTES:\n"
-        "- Si el usuario dice 'cambia X por Y', buscar=X y reemplazar=Y\n"
-        "- Si dice 'reemplaza X con Y', buscar=X y reemplazar=Y\n"
-        "- Si dice 'X → Y' o 'X -> Y', buscar=X y reemplazar=Y\n"
-        "- Devuelve los valores EXACTOS sin modificar mayúsculas/minúsculas\n"
-        "- Si hay múltiples cambios, incluye todos en el array\n\n"
-        "Responde ÚNICAMENTE con este JSON (sin texto adicional, sin markdown):\n"
-        '[{"buscar": "texto_exacto_a_buscar", "reemplazar": "texto_nuevo"}]'
+        "Eres un asistente experto en edición de documentos.\n"
+        "El usuario quiere modificar su documento con esta instrucción.\n\n"
+        f"INSTRUCCIÓN: \"{instruccion}\"\n"
+        f"{contexto_doc}\n\n"
+        "REGLAS:\n"
+        "- Si dice 'cambia X por Y' o 'reemplaza X con Y': buscar=X, reemplazar=Y\n"
+        "- Si dice 'agrega el número XXXX a Juan Pérez': buscar el texto exacto de Juan Pérez "
+        "en el documento y reemplazarlo por 'Juan Pérez XXXX' (o donde corresponda en la fila/línea)\n"
+        "- Si dice 'agrega X a la fila/celda de Y': buscar el texto de Y y agregar X al final\n"
+        "- Si dice 'completa el campo de Y con X': igual, buscar Y y añadir X\n"
+        "- SIEMPRE usa texto que realmente exista en el documento como 'buscar'\n"
+        "- Si hay múltiples personas/cambios, incluye TODOS en el array\n"
+        "- NO inventes texto que no esté en el documento\n\n"
+        "Responde ÚNICAMENTE con JSON array (sin texto adicional):\n"
+        '[{"buscar": "texto_exacto_del_doc", "reemplazar": "texto_nuevo_completo"}]'
     )
     resp = llamar_ia(prompt)
     if resp:
@@ -603,6 +614,7 @@ def solicitar_cambios(instruccion):
                 and "buscar" in c and "reemplazar" in c
                 and str(c["buscar"]).strip()
                 and str(c["reemplazar"]).strip()
+                and c["buscar"] != c["reemplazar"]
             ]
             if validos:
                 return validos
@@ -1097,6 +1109,8 @@ if archivo and archivo.name != st.session_state.nombre_archivo:
         st.session_state.historial_chat = []
         st.session_state.lista_cambios = []
         st.session_state.cambios_aplicados = None
+        st.session_state.texto_corregido = ""
+        st.session_state.preview_cambio = None
         texto = ""
         try:
             if archivo.name.endswith(".docx"):
@@ -1245,91 +1259,133 @@ if st.session_state.texto_extraido:
             """, unsafe_allow_html=True)
 
     # ═══════════════════════════════════════
+    # ═══════════════════════════════════════
     # PANTALLA 2 — EDICIÓN
     # ═══════════════════════════════════════
     elif nav == "✍️ Editar":
         st.markdown('<div class="section-title">✍️ Corregir palabras</div>', unsafe_allow_html=True)
-        st.markdown('<div class="section-hint">Escribe qué quieres cambiar en lenguaje natural. Puedes hacer varios cambios seguidos.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-hint">Escribe qué quieres cambiar en lenguaje natural. Puedes agregar datos, reemplazar palabras o corregir errores.</div>', unsafe_allow_html=True)
 
         instruccion = st.text_input(
             "Instrucción",
-            placeholder="Ej: cambia atletismo por BEISBOL",
+            placeholder="Ej: cambia atletismo por BEISBOL  /  agrega el número 04241234567 a Juan Pérez",
             label_visibility="collapsed",
             key="input_edicion"
         )
 
         if instruccion:
             with st.spinner("🔍 Procesando..."):
-                nuevos_cambios = solicitar_cambios(instruccion)
-
+                nuevos_cambios = solicitar_cambios(instruccion, texto)
             if nuevos_cambios:
-                st.session_state.lista_cambios.extend(nuevos_cambios)
-                archivo_bytes_orig = st.session_state.archivo_bytes
-                todos_cambios = st.session_state.lista_cambios
-
-                if tipo == "docx":
-                    final_bytes, n = reemplazar_docx_preservando_formato(archivo_bytes_orig, todos_cambios)
-                elif tipo == "xlsx":
-                    final_bytes, n = reemplazar_xlsx_preservando_formato(archivo_bytes_orig, todos_cambios)
-                else:
-                    txt_mod = texto
-                    n = 0
-                    for c in todos_cambios:
-                        txt_mod, count = re.compile(re.escape(c["buscar"]), re.IGNORECASE).subn(c["reemplazar"], txt_mod)
-                        n += count
-                    final_bytes = txt_mod.encode()
-
-                st.session_state.cambios_aplicados = final_bytes
-
-                if n > 0:
-                    st.markdown(f'<div class="info-box">✅ {n} cambio(s) aplicados correctamente</div>', unsafe_allow_html=True)
-                else:
-                    st.markdown(f'<div class="warn-box">⚠️ No encontré "{nuevos_cambios[0]["buscar"]}" en el documento</div>', unsafe_allow_html=True)
+                st.session_state.preview_cambio = nuevos_cambios
             else:
                 st.markdown('<div class="warn-box">⚠️ No entendí la instrucción. Prueba: cambia X por Y</div>', unsafe_allow_html=True)
 
-        # Historial de cambios
-        if st.session_state.lista_cambios:
-            st.markdown(f'<div class="section-title">📋 Cambios registrados ({len(st.session_state.lista_cambios)})</div>', unsafe_allow_html=True)
-            for i, c in enumerate(st.session_state.lista_cambios, 1):
-                st.markdown(f"""
-                <div class="cambio-item">
-                    <span class="cambio-num">{i}.</span>
-                    <span style="color:#e2e8f0">{c['buscar']}</span>
-                    <span class="cambio-arrow">→</span>
-                    <span style="color:#fbbf24">{c['reemplazar']}</span>
-                </div>
-                """, unsafe_allow_html=True)
+        # ── PREVIEW antes de confirmar ──
+        if st.session_state.preview_cambio:
+            preview = st.session_state.preview_cambio
+            st.markdown('<div class="section-title">👁 Vista previa</div>', unsafe_allow_html=True)
 
+            for c in preview:
+                buscar_corto = c["buscar"][:55] + ("..." if len(c["buscar"]) > 55 else "")
+                reemplazar_corto = c["reemplazar"][:55] + ("..." if len(c["reemplazar"]) > 55 else "")
+                idx = texto.lower().find(c["buscar"].lower())
+                if idx != -1:
+                    inicio = max(0, idx - 35)
+                    fin = min(len(texto), idx + len(c["buscar"]) + 35)
+                    ctx_a = texto[inicio:idx]
+                    ctx_d = texto[idx + len(c["buscar"]):fin]
+                    st.markdown(
+                        f'<div style="background:#0d1525;border:1px solid #1e3a5f;border-radius:12px;padding:1rem;margin:0.5rem 0;font-size:0.8rem;">'
+                        f'<div style="color:#6b7280;font-size:0.68rem;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.4rem">ANTES</div>'
+                        f'<div style="color:#fca5a5;font-family:monospace;word-break:break-all">...{ctx_a}'
+                        f'<span style="background:#7f1d1d;padding:.1rem .3rem;border-radius:4px;">{buscar_corto}</span>{ctx_d}...</div>'
+                        f'<div style="color:#6b7280;font-size:0.68rem;text-transform:uppercase;letter-spacing:.05em;margin:.6rem 0 .3rem">DESPUÉS</div>'
+                        f'<div style="color:#86efac;font-family:monospace;word-break:break-all">...{ctx_a}'
+                        f'<span style="background:#14532d;padding:.1rem .3rem;border-radius:4px;">{reemplazar_corto}</span>{ctx_d}...</div>'
+                        f'</div>',
+                        unsafe_allow_html=True
+                    )
+                else:
+                    st.markdown(
+                        f'<div style="background:#0d1525;border:1px solid #7f1d1d;border-radius:12px;padding:.9rem 1rem;margin:.4rem 0;">'
+                        f'<span style="color:#fca5a5;font-family:monospace">{buscar_corto}</span>'
+                        f'<span style="color:#f59e0b;margin:0 .5rem">→</span>'
+                        f'<span style="color:#86efac;font-family:monospace">{reemplazar_corto}</span>'
+                        f'<div style="color:#ef4444;font-size:.73rem;margin-top:.3rem">⚠️ Texto no encontrado en el documento</div>'
+                        f'</div>',
+                        unsafe_allow_html=True
+                    )
+
+            col_si, col_no = st.columns(2)
+            with col_si:
+                if st.button("✅ Confirmar", use_container_width=True):
+                    st.session_state.lista_cambios.extend(preview)
+                    st.session_state.preview_cambio = None
+                    todos_cambios = st.session_state.lista_cambios
+                    archivo_bytes_orig = st.session_state.archivo_bytes
+                    if tipo == "docx":
+                        final_bytes, n = reemplazar_docx_preservando_formato(archivo_bytes_orig, todos_cambios)
+                    elif tipo == "xlsx":
+                        final_bytes, n = reemplazar_xlsx_preservando_formato(archivo_bytes_orig, todos_cambios)
+                    else:
+                        txt_mod = texto; n = 0
+                        for c in todos_cambios:
+                            txt_mod, cnt = re.compile(re.escape(c["buscar"]), re.IGNORECASE).subn(c["reemplazar"], txt_mod)
+                            n += cnt
+                        final_bytes = txt_mod.encode()
+                    # Actualizar texto corregido para el chat
+                    txt_corr = texto
+                    for c in todos_cambios:
+                        txt_corr = re.compile(re.escape(c["buscar"]), re.IGNORECASE).sub(c["reemplazar"], txt_corr)
+                    st.session_state.texto_corregido = txt_corr
+                    st.session_state.cambios_aplicados = final_bytes
+                    st.rerun()
+            with col_no:
+                if st.button("❌ Cancelar", use_container_width=True):
+                    st.session_state.preview_cambio = None
+                    st.rerun()
+
+        # ── Historial de cambios confirmados ──
+        if st.session_state.lista_cambios:
+            st.markdown(f'<div class="section-title">📋 Cambios confirmados ({len(st.session_state.lista_cambios)})</div>', unsafe_allow_html=True)
+            for i, c in enumerate(st.session_state.lista_cambios, 1):
+                buscar_s = c["buscar"][:30] + ("..." if len(c["buscar"]) > 30 else "")
+                reemplazar_s = c["reemplazar"][:30] + ("..." if len(c["reemplazar"]) > 30 else "")
+                st.markdown(
+                    f'<div class="cambio-item">'
+                    f'<span class="cambio-num">{i}.</span>'
+                    f'<span style="color:#fca5a5">{buscar_s}</span>'
+                    f'<span class="cambio-arrow">→</span>'
+                    f'<span style="color:#86efac">{reemplazar_s}</span>'
+                    f'</div>',
+                    unsafe_allow_html=True
+                )
             if st.button("🗑️ Limpiar todos los cambios", use_container_width=True):
                 st.session_state.lista_cambios = []
                 st.session_state.cambios_aplicados = None
+                st.session_state.texto_corregido = ""
+                st.session_state.preview_cambio = None
                 st.rerun()
 
-        # Descarga
+        # ── Descarga ──
         if st.session_state.cambios_aplicados:
             st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
             st.markdown('<div class="section-title">📥 Descargar corregido</div>', unsafe_allow_html=True)
             todos_cambios = st.session_state.lista_cambios
-
             word_out = exportar_word(texto, None, archivo_bytes=st.session_state.archivo_bytes, archivo_tipo=tipo, cambios=todos_cambios)
             st.download_button("📄 Word corregido", word_out, "Corregido.docx",
                 mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 use_container_width=True)
-
             excel_out = exportar_excel(texto, None, archivo_bytes=st.session_state.archivo_bytes, archivo_tipo=tipo, cambios=todos_cambios)
             st.download_button("📊 Excel corregido", excel_out, "Corregido.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 use_container_width=True)
-
-            txt_corr = texto
-            for c in todos_cambios:
-                txt_corr = re.compile(re.escape(c["buscar"]), re.IGNORECASE).sub(c["reemplazar"], txt_corr)
-            pdf_c = exportar_pdf(txt_corr)
+            txt_corr2 = st.session_state.texto_corregido if st.session_state.texto_corregido else texto
+            pdf_c = exportar_pdf(txt_corr2)
             st.download_button("📕 PDF corregido", pdf_c, "Corregido.pdf",
                 mime="application/pdf", use_container_width=True)
 
-    # ═══════════════════════════════════════
     # PANTALLA 3 — CHAT
     # ═══════════════════════════════════════
     elif nav == "💬 Chat":
@@ -1342,9 +1398,11 @@ if st.session_state.texto_extraido:
 
         pregunta = st.chat_input("Escribe tu pregunta...")
         if pregunta:
+            # Usar texto corregido si hay cambios aplicados
+            texto_para_chat = st.session_state.texto_corregido if st.session_state.texto_corregido else texto
             st.session_state.historial_chat.append({"rol": "Usuario", "texto": pregunta})
             with st.spinner("🤔 Pensando..."):
-                respuesta = preguntar_al_documento(pregunta, texto)
+                respuesta = preguntar_al_documento(pregunta, texto_para_chat)
             st.session_state.historial_chat.append({"rol": "Asistente", "texto": respuesta})
             st.rerun()
 
