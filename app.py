@@ -534,121 +534,38 @@ for key, val in {
         st.session_state[key] = val
 
 # ── CSS dinámico según tema ──
-_TEMAS = {
-    "oscuro": {
-        "bg1": "#0a0e1a", "bg2": "#0d1525", "bg3": "#111827",
-        "card": "#111827", "card2": "#162032",
-        "borde": "#1e3a5f", "borde2": "#2a4a6b",
-        "acento1": "#3b82f6", "acento2": "#60a5fa",
-        "acento_grad": "linear-gradient(135deg,#1d4ed8,#2563eb)",
-        "titulo_grad": "linear-gradient(135deg,#fbbf24,#f59e0b,#fde68a,#f59e0b)",
-        "texto": "#e2e8f0", "texto2": "#93c5fd", "texto3": "#4b6080",
-    },
-    "azul": {
-        "bg1": "#020818", "bg2": "#030d24", "bg3": "#041230",
-        "card": "#041230", "card2": "#061840",
-        "borde": "#0c3a7a", "borde2": "#1050aa",
-        "acento1": "#38bdf8", "acento2": "#7dd3fc",
-        "acento_grad": "linear-gradient(135deg,#0369a1,#0ea5e9)",
-        "titulo_grad": "linear-gradient(135deg,#38bdf8,#7dd3fc,#bae6fd)",
-        "texto": "#e0f2fe", "texto2": "#7dd3fc", "texto3": "#1e5a8a",
-    },
-    "verde": {
-        "bg1": "#010c06", "bg2": "#021008", "bg3": "#03160a",
-        "card": "#041208", "card2": "#051a0c",
-        "borde": "#0a3d1a", "borde2": "#0f5225",
-        "acento1": "#10b981", "acento2": "#34d399",
-        "acento_grad": "linear-gradient(135deg,#065f46,#10b981)",
-        "titulo_grad": "linear-gradient(135deg,#10b981,#34d399,#6ee7b7,#10b981)",
-        "texto": "#d1fae5", "texto2": "#34d399", "texto3": "#065f46",
-    },
-    "rosa": {
-        "bg1": "#120008", "bg2": "#1a000f", "bg3": "#220015",
-        "card": "#1a000f", "card2": "#280018",
-        "borde": "#7c0040", "borde2": "#9d0050",
-        "acento1": "#f472b6", "acento2": "#f9a8d4",
-        "acento_grad": "linear-gradient(135deg,#be185d,#ec4899)",
-        "titulo_grad": "linear-gradient(135deg,#f472b6,#f9a8d4,#fce7f3)",
-        "texto": "#fce7f3", "texto2": "#f9a8d4", "texto3": "#7c0040",
-    },
-    "ambar": {
-        "bg1": "#0f0800", "bg2": "#180d00", "bg3": "#1f1100",
-        "card": "#1a0e00", "card2": "#251500",
-        "borde": "#78350f", "borde2": "#92400e",
-        "acento1": "#f59e0b", "acento2": "#fbbf24",
-        "acento_grad": "linear-gradient(135deg,#b45309,#f59e0b)",
-        "titulo_grad": "linear-gradient(135deg,#fbbf24,#fde68a,#f59e0b)",
-        "texto": "#fef3c7", "texto2": "#fbbf24", "texto3": "#78350f",
-    },
-}
+@st.cache_data(show_spinner=False)
+def _css_tema(tema_key):
+    _TEMAS_LOCAL = {
+        "oscuro": {"bg1":"#0a0e1a","bg2":"#0d1525","card":"#111827","card2":"#162032","borde":"#1e3a5f","borde2":"#2a4a6b","acento1":"#3b82f6","acento2":"#60a5fa","titulo_grad":"linear-gradient(135deg,#fbbf24,#f59e0b,#fde68a,#f59e0b)","texto":"#e2e8f0","texto2":"#93c5fd","texto3":"#4b6080"},
+        "azul":   {"bg1":"#020818","bg2":"#030d24","card":"#041230","card2":"#061840","borde":"#0c3a7a","borde2":"#1050aa","acento1":"#38bdf8","acento2":"#7dd3fc","titulo_grad":"linear-gradient(135deg,#38bdf8,#7dd3fc,#bae6fd)","texto":"#e0f2fe","texto2":"#7dd3fc","texto3":"#1e5a8a"},
+        "verde":  {"bg1":"#010c06","bg2":"#021008","card":"#041208","card2":"#051a0c","borde":"#0a3d1a","borde2":"#0f5225","acento1":"#10b981","acento2":"#34d399","titulo_grad":"linear-gradient(135deg,#10b981,#34d399,#6ee7b7,#10b981)","texto":"#d1fae5","texto2":"#34d399","texto3":"#065f46"},
+        "rosa":   {"bg1":"#120008","bg2":"#1a000f","card":"#1a000f","card2":"#280018","borde":"#7c0040","borde2":"#9d0050","acento1":"#f472b6","acento2":"#f9a8d4","titulo_grad":"linear-gradient(135deg,#f472b6,#f9a8d4,#fce7f3)","texto":"#fce7f3","texto2":"#f9a8d4","texto3":"#7c0040"},
+        "ambar":  {"bg1":"#0f0800","bg2":"#180d00","card":"#1a0e00","card2":"#251500","borde":"#78350f","borde2":"#92400e","acento1":"#f59e0b","acento2":"#fbbf24","titulo_grad":"linear-gradient(135deg,#fbbf24,#fde68a,#f59e0b)","texto":"#fef3c7","texto2":"#fbbf24","texto3":"#78350f"},
+    }
+    _t = _TEMAS_LOCAL.get(tema_key, _TEMAS_LOCAL["verde"])
+    return f"""<style>
+.stApp {{background:linear-gradient(160deg,{_t['bg1']} 0%,{_t['bg2']} 50%,{_t['bg1']} 100%) !important}}
+.oro-title {{background:{_t['titulo_grad']} !important;-webkit-background-clip:text !important;-webkit-text-fill-color:transparent !important;background-clip:text !important}}
+.file-badge,.metric-pill,.cambio-item {{background:{_t['card']} !important;border-color:{_t['borde']} !important}}
+.summary-card {{background:{_t['card2']} !important;border-color:{_t['borde2']} !important;border-left-color:{_t['acento1']} !important}}
+.tag {{background:{_t['card']} !important;color:{_t['acento2']} !important;border-color:{_t['borde']} !important}}
+.hallazgo-card {{background:{_t['card']} !important;border-left-color:{_t['acento1']} !important;color:{_t['texto2']} !important}}
+.metric-pill-value {{color:{_t['texto']} !important}}
+.metric-pill-label,.file-info-stats,.section-hint {{color:{_t['texto3']} !important}}
+.section-title,.file-info-name {{color:{_t['texto']} !important}}
+.summary-card-title {{color:{_t['acento2']} !important}}
+.summary-card {{color:{_t['texto2']} !important}}
+.oro-divider {{background:linear-gradient(90deg,transparent,{_t['borde']},transparent) !important}}
+[data-testid="stFileUploader"] > div {{border-color:{_t['borde']} !important;background:{_t['card']} !important}}
+[data-testid="stSidebar"] {{background:{_t['bg1']} !important}}
+.stButton > button {{background:{_t['card']} !important;border-color:{_t['borde']} !important;color:{_t['texto3']} !important}}
+.stButton > button:hover {{border-color:{_t['acento1']} !important;color:{_t['acento2']} !important}}
+.stTextInput > div > div > input {{background:{_t['card']} !important;border-color:{_t['borde']} !important;color:{_t['texto']} !important}}
+[data-testid="stDownloadButton"] > button {{background:linear-gradient(135deg,#065f46,#059669) !important;color:white !important;border:none !important}}
+</style>"""
 
-_t = _TEMAS.get(st.session_state.get("tema", "oscuro"), _TEMAS["oscuro"])
-st.markdown(f"""
-<style>
-.stApp {{
-    background: linear-gradient(160deg, {_t['bg1']} 0%, {_t['bg2']} 50%, {_t['bg1']} 100%) !important;
-}}
-.main .block-container {{ background: transparent !important; }}
-.oro-title {{
-    background: {_t['titulo_grad']} !important;
-    -webkit-background-clip: text !important;
-    -webkit-text-fill-color: transparent !important;
-    background-clip: text !important;
-}}
-.file-badge, .metric-pill, .cambio-item {{
-    background: {_t['card']} !important;
-    border-color: {_t['borde']} !important;
-}}
-.summary-card {{
-    background: {_t['card2']} !important;
-    border-color: {_t['borde2']} !important;
-    border-left-color: {_t['acento1']} !important;
-}}
-.tag {{
-    background: {_t['card']} !important;
-    color: {_t['acento2']} !important;
-    border-color: {_t['borde']} !important;
-}}
-.hallazgo-card {{
-    background: {_t['card']} !important;
-    border-left-color: {_t['acento1']} !important;
-    color: {_t['texto2']} !important;
-}}
-.metric-pill-value {{ color: {_t['texto']} !important; }}
-.metric-pill-label, .file-info-stats, .section-hint {{ color: {_t['texto3']} !important; }}
-.section-title, .file-info-name {{ color: {_t['texto']} !important; }}
-.summary-card-title {{ color: {_t['acento2']} !important; }}
-.summary-card {{ color: {_t['texto2']} !important; }}
-.oro-divider {{ background: linear-gradient(90deg, transparent, {_t['borde']}, transparent) !important; }}
-[data-testid="stFileUploader"] > div {{
-    border-color: {_t['borde']} !important;
-    background: {_t['card']} !important;
-}}
-[data-testid="stSidebar"] {{ background: {_t['bg1']} !important; }}
-.stButton > button {{
-    background: {_t['card']} !important;
-    border-color: {_t['borde']} !important;
-    color: {_t['texto3']} !important;
-}}
-.stButton > button:hover {{
-    border-color: {_t['acento1']} !important;
-    color: {_t['acento2']} !important;
-}}
-.stTextInput > div > div > input {{
-    background: {_t['card']} !important;
-    border-color: {_t['borde']} !important;
-    color: {_t['texto']} !important;
-}}
-.stTextInput > div > div > input:focus {{
-    border-color: {_t['acento1']} !important;
-}}
-[data-testid="stDownloadButton"] > button {{
-    background: linear-gradient(135deg,#065f46,#059669) !important;
-    color: white !important;
-    border: none !important;
-}}
-</style>
-""", unsafe_allow_html=True)
+st.markdown(_css_tema(st.session_state.get("tema","verde")), unsafe_allow_html=True)
 
 # ==========================================
 # CONEXIÓN GEMINI
