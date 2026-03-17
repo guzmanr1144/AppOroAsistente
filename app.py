@@ -451,63 +451,35 @@ div[data-testid="stVerticalBlock"] > div:has(> div[data-testid="stButton"]) butt
     padding: 0.5rem 0;
 }
 
-/* ══ RADIO → PESTAÑAS DESLIZABLES ══ */
-div[data-testid="stRadio"] {
-    background: #010c06 !important;
-    border-bottom: 2px solid #0a3d1a !important;
-    padding: 0 0 0 0 !important;
-    margin: 0.6rem 0 0 0 !important;
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-    scrollbar-width: none !important;
+/* ── BOTONES DE NAVEGACIÓN ── */
+.nav-tab-activo > button {
+    background: linear-gradient(135deg, #065f46, #10b981) !important;
+    color: white !important;
+    border: none !important;
+    font-weight: 700 !important;
+    box-shadow: 0 4px 15px rgba(16,185,129,0.3) !important;
 }
-div[data-testid="stRadio"]::-webkit-scrollbar { display: none !important; }
-
-/* Fila de opciones en horizontal sin wrap */
-div[data-testid="stRadio"] > div {
-    display: flex !important;
-    flex-direction: row !important;
-    flex-wrap: nowrap !important;
-    gap: 0 !important;
-    min-width: max-content !important;
-}
-
-/* Ocultar label del radio */
-div[data-testid="stRadio"] > label { display: none !important; }
-
-/* Cada opción individual */
-div[data-testid="stRadio"] label {
-    display: flex !important;
-    align-items: center !important;
-    gap: 0.4rem !important;
-    padding: 0.75rem 1.3rem !important;
-    font-size: 0.9rem !important;
-    font-weight: 600 !important;
-    font-family: 'Outfit', sans-serif !important;
+.nav-tab-inactivo > button {
+    background: #021008 !important;
     color: #2d6a4f !important;
-    cursor: pointer !important;
-    border-bottom: 3px solid transparent !important;
-    white-space: nowrap !important;
-    transition: all 0.18s !important;
-    background: transparent !important;
-    margin: 0 !important;
+    border: 1.5px solid #0a3d1a !important;
+    font-weight: 500 !important;
 }
-div[data-testid="stRadio"] label:hover {
+.nav-tab-inactivo > button:hover {
+    background: #031510 !important;
     color: #34d399 !important;
-    background: rgba(16,185,129,0.06) !important;
+    border-color: #10b981 !important;
 }
-
-/* Pestaña activa */
-div[data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked),
-div[data-testid="stRadio"] label[aria-checked="true"] {
-    color: #10b981 !important;
-    border-bottom: 3px solid #10b981 !important;
-    background: rgba(16,185,129,0.08) !important;
+/* Todos los botones de nav con misma altura */
+.nav-tab-activo > button,
+.nav-tab-inactivo > button {
+    height: 3rem !important;
+    border-radius: 12px !important;
+    font-size: 0.85rem !important;
+    font-family: 'Outfit', sans-serif !important;
+    width: 100% !important;
+    transition: all 0.15s !important;
 }
-
-/* Ocultar el círculo del radio */
-div[data-testid="stRadio"] [data-baseweb="radio"] div:first-child,
-div[data-testid="stRadio"] input[type="radio"] { display: none !important; }
 
 /* ── GUÍA VISUAL ── */
 .guia-card {
@@ -1587,42 +1559,36 @@ if st.session_state.texto_extraido:
     </div>
     """, unsafe_allow_html=True)
 
-    # ── Pestañas deslizables con st.radio ──
-    _tab_opts = {
-        "📊  Resumen":  "resumen",
-        "✍️  Editar":   "editar",
-        "💬  Chat":     "chat",
-        "🔍  Calidad":  "calidad",
-    }
-    _labels = list(_tab_opts.keys())
-    _keys   = list(_tab_opts.values())
-    _idx_actual = _keys.index(st.session_state.tab_activa) if st.session_state.tab_activa in _keys else 0
+    # ── Navegación con columnas + CSS clases ──
+    _nav_defs = [
+        ("resumen", "📊 Resumen"),
+        ("editar",  "✍️ Editar"),
+        ("chat",    "💬 Chat"),
+        ("calidad", "🔍 Calidad"),
+    ]
+    _activa = st.session_state.tab_activa
+    _cols_nav = st.columns(4)
+    for _i, (_key, _label) in enumerate(_nav_defs):
+        with _cols_nav[_i]:
+            _clase = "nav-tab-activo" if _activa == _key else "nav-tab-inactivo"
+            st.markdown(f'<div class="{_clase}">', unsafe_allow_html=True)
+            if st.button(_label, key=f"navbtn_{_key}", use_container_width=True):
+                st.session_state.tab_activa = _key
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
 
-    _sel = st.radio(
-        "nav",
-        _labels,
-        index=_idx_actual,
-        horizontal=True,
-        label_visibility="collapsed",
-        key="nav_radio"
-    )
-    _nueva_tab = _tab_opts[_sel]
-    if _nueva_tab != st.session_state.tab_activa:
-        st.session_state.tab_activa = _nueva_tab
-        st.rerun()
-
-    # Guía visual de la pestaña activa
+    # Guía visual
     _guias = {
         "resumen": ("🧠", "Resumen inteligente",
-            "La IA analiza tu documento y extrae lo más importante: métricas clave, puntos destacados y observaciones relevantes."),
+            "La IA analiza tu documento y extrae lo más importante: métricas, puntos clave y observaciones relevantes."),
         "editar":  ("✏️", "Editar documento",
-            "Escribe en lenguaje natural lo que quieres cambiar.<br><em>Ej: cambia 'negativo' por 'positivo'</em> &nbsp;·&nbsp; <em>agrega el teléfono 04241234567 a Juan Pérez</em>"),
+            "Escribe en lenguaje natural lo que quieres cambiar.<br><em>Ej: cambia 'negativo' por 'positivo'</em>&nbsp;·&nbsp;<em>agrega el teléfono 04241234567 a Juan Pérez</em>"),
         "chat":    ("💬", "Preguntar al documento",
-            "Hazle cualquier pregunta sobre el contenido del archivo.<br><em>Ej: ¿cuántas personas aparecen?</em> &nbsp;·&nbsp; <em>¿qué municipios hay?</em>"),
+            "Hazle cualquier pregunta sobre el contenido.<br><em>Ej: ¿cuántas personas aparecen?</em>&nbsp;·&nbsp;<em>¿qué municipios hay?</em>"),
         "calidad": ("🔍", "Revisar calidad",
             "Detecta automáticamente errores, datos duplicados o inconsistencias en el documento."),
     }
-    _g = _guias[st.session_state.tab_activa]
+    _g = _guias[_activa]
     st.markdown(f"""
     <div class="guia-card">
         <div class="guia-icon">{_g[0]}</div>
@@ -1633,7 +1599,7 @@ if st.session_state.texto_extraido:
     </div>
     """, unsafe_allow_html=True)
 
-    nav = st.session_state.tab_activa
+    nav = _activa
 
     # ═══════════════════════════════════════
     # PANTALLA 1 — RESUMEN
