@@ -1473,10 +1473,11 @@ if archivo and archivo.name != st.session_state.nombre_archivo:
 
 
 
+
+
 # ==========================================
 # PANEL PRINCIPAL
 # ==========================================
-# Seguridad anti-loop: si no hay texto, nunca generar resumen
 if not st.session_state.get("texto_extraido") and st.session_state.get("generando_resumen"):
     st.session_state.generando_resumen = False
 
@@ -1501,322 +1502,300 @@ if st.session_state.texto_extraido:
     </div>
     """, unsafe_allow_html=True)
 
-    # ══════════════════════════════════════
-    # RESUMEN
-    # ══════════════════════════════════════
-    # Si no hay resumen aún, mostrar botón prominente
-    if not st.session_state.resumen_data and not st.session_state.generando_resumen:
-        st.markdown("""
-        <div style="text-align:center;padding:1.5rem 0 0.5rem">
-            <div style="font-size:2.5rem">🧠</div>
-            <div style="color:#34d399;font-weight:700;font-size:1rem;margin-top:0.5rem">
-                Listo para analizar
-            </div>
-            <div style="color:#065f46;font-size:0.78rem;margin-top:0.2rem">
-                Toca el botón para generar el resumen inteligente
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        if st.button("⚡ Analizar documento", use_container_width=True):
-            st.session_state.generando_resumen = True
-            st.rerun()
+    # ── Navegación 3 tabs ──
+    _nav_defs = [
+        ("resumen",   "📊 Resumen"),
+        ("asistente", "✍️ Asistente"),
+        ("evaluar",   "🔍 Evaluar"),
+    ]
+    _activa = st.session_state.get("tab_activa", "resumen")
+    if _activa not in ("resumen","asistente","evaluar"):
+        _activa = "resumen"
 
-    # Procesando — llamar a IA solo cuando el usuario lo pidió
-    if st.session_state.generando_resumen:
-        st.markdown("""
-        <div style="text-align:center;padding:2rem 0;">
-            <div style="font-size:2.8rem;animation:pulse-glow 1.2s ease-in-out infinite">🧠</div>
-            <div style="color:#34d399;font-weight:700;font-size:1rem;margin-top:0.7rem">
-                Analizando tu documento...
-            </div>
-            <div style="color:#065f46;font-size:0.78rem;margin-top:0.3rem">Esto puede tomar unos segundos ⏳</div>
-        </div>
-        """, unsafe_allow_html=True)
-        texto_para_resumen = st.session_state.texto_corregido if st.session_state.texto_corregido else texto
-        data_nueva = solicitar_resumen_estructurado(texto_para_resumen)
-        st.session_state.generando_resumen = False
-        if data_nueva:
-            st.session_state.resumen_data  = data_nueva
-            st.session_state.resumen_error = False
-        else:
-            st.session_state.resumen_error = True
-        st.rerun()
-
-    if st.session_state.get("resumen_error"):
-        st.markdown("""
-        <div style="text-align:center;padding:1.2rem;background:#1c0003;border:1px solid #7f1d1d;
-        border-radius:14px;margin:0.8rem 0">
-            <div style="font-size:1.8rem">⚠️</div>
-            <div style="color:#fca5a5;font-weight:600;margin-top:0.3rem">No se pudo generar el resumen</div>
-            <div style="color:#6b7280;font-size:0.78rem;margin-top:0.2rem">Problema temporal con la IA</div>
-        </div>
-        """, unsafe_allow_html=True)
-        if st.button("🔄 Reintentar", use_container_width=True):
-            st.session_state.resumen_error     = False
-            st.session_state.generando_resumen = True
-            st.rerun()
-
-    data = st.session_state.resumen_data
-    if data:
-        emoji = data.get("emoji_categoria","📋")
-        titulo_doc = data.get("titulo","Documento analizado")
-
-        st.markdown(f"""
-        <div class="summary-card">
-            <div class="summary-card-title">{emoji} {titulo_doc}</div>
-            {data.get("resumen_ejecutivo","")}
-        </div>
-        """, unsafe_allow_html=True)
-
-        metricas = data.get("metricas",{})
-        if metricas:
-            items = list(metricas.items())
-            pills = '<div class="metrics-grid">'
-            for k,v in items[:4]:
-                pills += f'<div class="metric-pill"><div class="metric-pill-label">{k}</div><div class="metric-pill-value">{v}</div></div>'
-            pills += '</div>'
-            st.markdown(pills, unsafe_allow_html=True)
-
-        puntos = data.get("puntos_clave",[])
-        if puntos:
-            tags = '<div class="tags-wrap">'+"".join([f'<span class="tag">✓ {p}</span>' for p in puntos])+'</div>'
-            st.markdown(tags, unsafe_allow_html=True)
-
-        hallazgo = data.get("hallazgo_destacado","")
-        if hallazgo:
-            st.markdown(f'<div class="hallazgo-card">💡 <strong>Hallazgo:</strong> {hallazgo}</div>', unsafe_allow_html=True)
-
-        # ── Exportar ──
-        st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
-        st.markdown('<div class="section-title">📥 Exportar informe</div>', unsafe_allow_html=True)
-        ab = st.session_state.archivo_bytes
-        ca = st.session_state.lista_cambios
-        c1,c2,c3 = st.columns(3)
-        with c1:
-            wb2 = exportar_word(texto_activo, data, archivo_bytes=ab, archivo_tipo=tipo, cambios=ca)
-            st.download_button("📄 Word", wb2, "Informe.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                use_container_width=True)
-        with c2:
-            eb2 = exportar_excel(texto_activo, data, archivo_bytes=ab, archivo_tipo=tipo, cambios=ca)
-            st.download_button("📊 Excel", eb2, "Informe.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True)
-        with c3:
-            pb2 = exportar_pdf(texto_activo, data)
-            st.download_button("📕 PDF", pb2, "Informe.pdf",
-                mime="application/pdf", use_container_width=True)
-
-        # Regenerar
-        if st.button("🔄 Regenerar resumen", use_container_width=True):
-            st.session_state.generando_resumen = True
-            st.session_state.resumen_data = None
-            st.rerun()
+    _cols = st.columns(3)
+    for _i, (_key, _label) in enumerate(_nav_defs):
+        with _cols[_i]:
+            _clase = "nav-tab-activo" if _activa == _key else "nav-tab-inactivo"
+            st.markdown(f'<div class="{_clase}">', unsafe_allow_html=True)
+            if st.button(_label, key=f"navbtn_{_key}", use_container_width=True):
+                st.session_state.tab_activa = _key
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
+    nav = _activa
 
-    # ══════════════════════════════════════
-    # BOTÓN EVALUAR
-    # ══════════════════════════════════════
-    if st.button("🔍 Evaluar documento", use_container_width=True):
-        with st.spinner("Analizando errores e inconsistencias..."):
-            resultado = detectar_anomalias(texto_activo)
+    # ══════════════════════════════════════════
+    # TAB 1 — RESUMEN
+    # ══════════════════════════════════════════
+    if nav == "resumen":
 
-        if resultado:
-            nivel   = resultado.get("nivel_general","Regular")
-            puntaje = resultado.get("puntaje",0)
-            nivel_cfg = {
-                "Excelente":("#10b981","#021008","🟢"),
-                "Bueno":    ("#34d399","#021008","🟢"),
-                "Regular":  ("#f59e0b","#1c1003","🟡"),
-                "Deficiente":("#ef4444","#1f0707","🔴"),
-            }
-            cfg = nivel_cfg.get(nivel, nivel_cfg["Regular"])
+        if st.session_state.generando_resumen:
+            with st.spinner("🧠 Analizando documento..."):
+                txt_r = st.session_state.texto_corregido if st.session_state.texto_corregido else texto
+                data_nueva = solicitar_resumen_estructurado(txt_r)
+            st.session_state.generando_resumen = False
+            if data_nueva:
+                st.session_state.resumen_data  = data_nueva
+                st.session_state.resumen_error = False
+            else:
+                st.session_state.resumen_error = True
+            st.rerun()
+
+        if st.session_state.get("resumen_error"):
+            st.markdown('<div class="warn-box">⚠️ No se pudo generar el resumen. Intenta de nuevo.</div>', unsafe_allow_html=True)
+            if st.button("🔄 Reintentar", use_container_width=True):
+                st.session_state.resumen_error = False
+                st.session_state.generando_resumen = True
+                st.rerun()
+
+        data = st.session_state.resumen_data
+
+        if not data and not st.session_state.generando_resumen and not st.session_state.get("resumen_error"):
+            st.markdown("""
+            <div style="text-align:center;padding:2rem 0 1rem">
+                <div style="font-size:3rem">🧠</div>
+                <div style="color:#34d399;font-weight:700;font-size:1rem;margin-top:0.5rem">Listo para analizar</div>
+                <div style="color:#065f46;font-size:0.78rem;margin-top:0.2rem">Toca el botón para generar el resumen</div>
+            </div>
+            """, unsafe_allow_html=True)
+            if st.button("⚡ Analizar documento", use_container_width=True):
+                st.session_state.generando_resumen = True
+                st.rerun()
+
+        if data:
+            emoji = data.get("emoji_categoria","📋")
+            titulo_doc = data.get("titulo","Documento analizado")
             st.markdown(f"""
-            <div style="text-align:center;padding:1.2rem 0 0.5rem">
-                <div style="font-size:3rem">{cfg[2]}</div>
-                <div style="color:{cfg[0]};font-size:1.3rem;font-weight:800">{nivel}</div>
-                <div style="color:#2d6a4f;font-size:0.8rem;margin-top:0.2rem">
-                    Puntaje: <strong style="color:{cfg[0]}">{puntaje}/100</strong>
+            <div class="summary-card">
+                <div class="summary-card-title">{emoji} {titulo_doc}</div>
+                {data.get("resumen_ejecutivo","")}
+            </div>
+            """, unsafe_allow_html=True)
+
+            metricas = data.get("metricas",{})
+            if metricas:
+                pills = '<div class="metrics-grid">'
+                for k,v in list(metricas.items())[:4]:
+                    pills += f'<div class="metric-pill"><div class="metric-pill-label">{k}</div><div class="metric-pill-value">{v}</div></div>'
+                pills += '</div>'
+                st.markdown(pills, unsafe_allow_html=True)
+
+            puntos = data.get("puntos_clave",[])
+            if puntos:
+                tags = '<div class="tags-wrap">'+"".join([f'<span class="tag">✓ {p}</span>' for p in puntos])+'</div>'
+                st.markdown(tags, unsafe_allow_html=True)
+
+            hallazgo = data.get("hallazgo_destacado","")
+            if hallazgo:
+                st.markdown(f'<div class="hallazgo-card">💡 <strong>Hallazgo:</strong> {hallazgo}</div>', unsafe_allow_html=True)
+
+            # Exportar
+            st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-title">📥 Exportar informe</div>', unsafe_allow_html=True)
+            ab = st.session_state.archivo_bytes
+            ca = st.session_state.lista_cambios
+            c1,c2,c3 = st.columns(3)
+            with c1:
+                st.download_button("📄 Word",
+                    exportar_word(texto_activo, data, archivo_bytes=ab, archivo_tipo=tipo, cambios=ca),
+                    "Informe.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    use_container_width=True)
+            with c2:
+                st.download_button("📊 Excel",
+                    exportar_excel(texto_activo, data, archivo_bytes=ab, archivo_tipo=tipo, cambios=ca),
+                    "Informe.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True)
+            with c3:
+                st.download_button("📕 PDF",
+                    exportar_pdf(texto_activo, data),
+                    "Informe.pdf", mime="application/pdf", use_container_width=True)
+
+            if st.button("🔄 Regenerar resumen", use_container_width=True):
+                st.session_state.generando_resumen = True
+                st.session_state.resumen_data = None
+                st.rerun()
+
+    # ══════════════════════════════════════════
+    # TAB 2 — ASISTENTE (chat + edición)
+    # ══════════════════════════════════════════
+    elif nav == "asistente":
+
+        # Historial
+        for msg in st.session_state.historial_chat:
+            with st.chat_message("user" if msg["rol"]=="Usuario" else "assistant"):
+                st.write(msg["texto"])
+
+        # Preview pendiente
+        if st.session_state.preview_cambio:
+            preview = st.session_state.preview_cambio
+            st.markdown('<div class="section-title">👁 Vista previa</div>', unsafe_allow_html=True)
+            for c in preview:
+                bq = c["buscar"][:50]+("..." if len(c["buscar"])>50 else "")
+                rq = c["reemplazar"][:50]+("..." if len(c["reemplazar"])>50 else "")
+                idx = texto_activo.lower().find(c["buscar"].lower())
+                if idx != -1:
+                    ini=max(0,idx-30); fin=min(len(texto_activo),idx+len(c["buscar"])+30)
+                    ca2=texto_activo[ini:idx]; cd=texto_activo[idx+len(c["buscar"]):fin]
+                    st.markdown(
+                        f'<div style="background:#021008;border:1px solid #0a3d1a;border-radius:12px;padding:0.9rem;margin:0.4rem 0;font-size:0.8rem">'
+                        f'<div style="color:#6b7280;font-size:0.65rem;text-transform:uppercase">Antes</div>'
+                        f'<div style="color:#fca5a5;font-family:monospace;word-break:break-all">...{ca2}<mark style="background:#7f1d1d;color:#fca5a5;border-radius:3px;padding:0 3px">{bq}</mark>{cd}...</div>'
+                        f'<div style="color:#6b7280;font-size:0.65rem;text-transform:uppercase;margin-top:0.4rem">Después</div>'
+                        f'<div style="color:#86efac;font-family:monospace;word-break:break-all">...{ca2}<mark style="background:#14532d;color:#86efac;border-radius:3px;padding:0 3px">{rq}</mark>{cd}...</div>'
+                        f'</div>', unsafe_allow_html=True)
+                else:
+                    st.markdown(f'<div class="warn-box">⚠️ "{bq}" no encontrado en el documento</div>', unsafe_allow_html=True)
+
+            cs,cn = st.columns(2)
+            with cs:
+                if st.button("✅ Confirmar", use_container_width=True):
+                    st.session_state.lista_cambios.extend(preview)
+                    st.session_state.preview_cambio = None
+                    todos_c = st.session_state.lista_cambios
+                    ab_orig = st.session_state.archivo_bytes
+                    if tipo == "docx":
+                        final_bytes, n = reemplazar_docx_preservando_formato(ab_orig, todos_c)
+                    elif tipo == "xlsx":
+                        final_bytes, n = reemplazar_xlsx_preservando_formato(ab_orig, todos_c)
+                    elif tipo == "pdf" and PYMUPDF_OK:
+                        final_bytes, n = reemplazar_pdf_original(ab_orig, todos_c)
+                    else:
+                        txt_m=texto_activo; n=0
+                        for c2 in todos_c:
+                            txt_m,cnt=re.compile(re.escape(c2["buscar"]),re.IGNORECASE).subn(c2["reemplazar"],txt_m)
+                            n+=cnt
+                        final_bytes=txt_m.encode()
+                    txt_c=texto_activo
+                    for c2 in todos_c:
+                        txt_c=re.compile(re.escape(c2["buscar"]),re.IGNORECASE).sub(c2["reemplazar"],txt_c)
+                    st.session_state.texto_corregido  = txt_c
+                    st.session_state.cambios_aplicados= final_bytes
+                    st.session_state.resumen_data     = None
+                    st.session_state.generando_resumen= True
+                    st.session_state.edicion_counter += 1
+                    st.session_state.historial_chat.append({"rol":"Asistente","texto":f"✅ Listo — cambié **{preview[0]['buscar']}** → **{preview[0]['reemplazar']}**. ¿Algo más?"})
+                    st.rerun()
+            with cn:
+                if st.button("❌ Cancelar", use_container_width=True):
+                    st.session_state.preview_cambio = None
+                    st.session_state.edicion_counter += 1
+                    st.rerun()
+
+        # Historial de cambios
+        if st.session_state.lista_cambios:
+            with st.expander(f"📋 {len(st.session_state.lista_cambios)} cambio(s) aplicado(s)"):
+                for i,c in enumerate(st.session_state.lista_cambios,1):
+                    bs=c["buscar"][:28]+("..." if len(c["buscar"])>28 else "")
+                    rs=c["reemplazar"][:28]+("..." if len(c["reemplazar"])>28 else "")
+                    st.markdown(f'<div class="cambio-item"><span class="cambio-num">{i}.</span><span style="color:#fca5a5">{bs}</span><span class="cambio-arrow">→</span><span style="color:#86efac">{rs}</span></div>', unsafe_allow_html=True)
+                if st.button("🗑️ Limpiar cambios", use_container_width=True):
+                    st.session_state.lista_cambios=[]; st.session_state.cambios_aplicados=None
+                    st.session_state.texto_corregido=""; st.session_state.preview_cambio=None
+                    st.rerun()
+
+        # Descargar si hay cambios
+        if st.session_state.cambios_aplicados:
+            st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-title">📥 Descargar corregido</div>', unsafe_allow_html=True)
+            fb=st.session_state.cambios_aplicados; todos_c=st.session_state.lista_cambios
+            if tipo=="docx":
+                st.download_button("📄 Word corregido", fb, "Corregido.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True)
+            elif tipo=="xlsx":
+                st.download_button("📊 Excel corregido", fb, "Corregido.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
+            elif tipo=="pdf" and PYMUPDF_OK:
+                st.download_button("📕 PDF corregido", fb, "Corregido.pdf",
+                    mime="application/pdf", use_container_width=True)
+            wc=exportar_word(st.session_state.texto_corregido or texto, None)
+            st.download_button("📄 Exportar como Word", wc, "Exportado.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True)
+
+        # Estado vacío del chat
+        if not st.session_state.historial_chat and not st.session_state.preview_cambio:
+            st.markdown("""
+            <div style="text-align:center;padding:1.5rem 0 0.5rem">
+                <div style="font-size:2.2rem">💬</div>
+                <div style="color:#10b981;font-weight:700;font-size:0.95rem;margin-top:0.4rem">Conversa sobre el documento</div>
+                <div style="color:#065f46;font-size:0.8rem;margin-top:0.3rem">Edita palabras o haz preguntas en lenguaje natural</div>
+                <div style="display:flex;justify-content:center;gap:0.4rem;flex-wrap:wrap;margin-top:0.8rem">
+                    <span style="background:#021008;border:1px solid #0a3d1a;border-radius:20px;padding:0.2rem 0.7rem;font-size:0.72rem;color:#10b981">cambia X por Y</span>
+                    <span style="background:#021008;border:1px solid #0a3d1a;border-radius:20px;padding:0.2rem 0.7rem;font-size:0.72rem;color:#10b981">¿cuántas personas hay?</span>
+                    <span style="background:#021008;border:1px solid #0a3d1a;border-radius:20px;padding:0.2rem 0.7rem;font-size:0.72rem;color:#10b981">resume en 3 puntos</span>
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
-            niveles_eval = [
-                ("criticos","🔴 Crítico","#ef4444","#1f0707","#450a0a"),
-                ("altos",   "🟠 Alto",   "#f97316","#1c0a03","#431407"),
-                ("medios",  "🟡 Medio",  "#f59e0b","#1c1003","#451a03"),
-                ("leves",   "🟢 Leve",   "#22c55e","#052e16","#14532d"),
-            ]
-            hay = False
-            for key,label,cfg,cbg,cbrd in niveles_eval:
-                items_e = resultado.get(key,[])
-                if items_e:
-                    hay = True
-                    rows = "".join([f'<div style="color:#d1fae5;font-size:0.8rem;padding:0.25rem 0;border-bottom:1px solid {cbrd}">• {it}</div>' for it in items_e])
-                    st.markdown(f"""
-                    <div style="background:{cbg};border:1px solid {cbrd};border-left:4px solid {cfg};
-                    border-radius:12px;padding:0.8rem 1rem;margin:0.5rem 0">
-                        <div style="color:{cfg};font-weight:700;font-size:0.85rem;margin-bottom:0.4rem">{label}</div>
-                        {rows}
-                    </div>
-                    """, unsafe_allow_html=True)
-            if not hay:
-                st.markdown('<div class="info-box">✅ ¡Sin problemas detectados! El documento se ve en buen estado 🎉</div>', unsafe_allow_html=True)
-            rec = resultado.get("recomendacion","")
-            if rec:
-                st.markdown(f'<div class="hallazgo-card" style="margin-top:0.8rem">💡 <strong>Recomendación:</strong> {rec}</div>', unsafe_allow_html=True)
-        else:
-            st.markdown('<div class="warn-box">⚠️ No se pudo evaluar. Intenta de nuevo.</div>', unsafe_allow_html=True)
-
-    st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
-
-    # ══════════════════════════════════════
-    # PREVIEW de cambio pendiente
-    # ══════════════════════════════════════
-    if st.session_state.preview_cambio:
-        preview = st.session_state.preview_cambio
-        st.markdown("""
-        <div style="background:#021008;border:1px solid #10b981;border-radius:14px;
-        padding:0.9rem 1rem;margin:0.5rem 0">
-            <div style="color:#34d399;font-weight:700;font-size:0.88rem;margin-bottom:0.6rem">
-                👁 Vista previa del cambio
-            </div>
-        """, unsafe_allow_html=True)
-        for c in preview:
-            bq = c["buscar"][:50]+("..." if len(c["buscar"])>50 else "")
-            rq = c["reemplazar"][:50]+("..." if len(c["reemplazar"])>50 else "")
-            idx = texto_activo.lower().find(c["buscar"].lower())
-            if idx != -1:
-                ini=max(0,idx-30); fin=min(len(texto_activo),idx+len(c["buscar"])+30)
-                ca2=texto_activo[ini:idx]; cd=texto_activo[idx+len(c["buscar"]):fin]
-                st.markdown(
-                    f'<div style="font-size:0.78rem;margin-bottom:0.3rem">'
-                    f'<span style="color:#6b7280;font-size:0.65rem;text-transform:uppercase">Antes: </span>'
-                    f'<span style="color:#fca5a5;font-family:monospace">...{ca2}<mark style="background:#7f1d1d;color:#fca5a5;border-radius:3px;padding:0 3px">{bq}</mark>{cd}...</span>'
-                    f'</div>'
-                    f'<div style="font-size:0.78rem">'
-                    f'<span style="color:#6b7280;font-size:0.65rem;text-transform:uppercase">Después: </span>'
-                    f'<span style="color:#86efac;font-family:monospace">...{ca2}<mark style="background:#14532d;color:#86efac;border-radius:3px;padding:0 3px">{rq}</mark>{cd}...</span>'
-                    f'</div>',
-                    unsafe_allow_html=True)
-            else:
-                st.markdown(f'<div style="color:#fbbf24;font-size:0.8rem">⚠️ "{bq}" no encontrado en el documento</div>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-
-        cs, cn = st.columns(2)
-        with cs:
-            if st.button("✅ Confirmar", use_container_width=True):
-                st.session_state.lista_cambios.extend(preview)
-                st.session_state.preview_cambio = None
-                todos_c = st.session_state.lista_cambios
-                ab_orig = st.session_state.archivo_bytes
-                if tipo == "docx":
-                    final_bytes, n = reemplazar_docx_preservando_formato(ab_orig, todos_c)
-                elif tipo == "xlsx":
-                    final_bytes, n = reemplazar_xlsx_preservando_formato(ab_orig, todos_c)
-                elif tipo == "pdf" and PYMUPDF_OK:
-                    final_bytes, n = reemplazar_pdf_original(ab_orig, todos_c)
+        entrada = st.chat_input("✍️ Escribe un cambio o una pregunta...", key=f"chat_{st.session_state.edicion_counter}")
+        if entrada:
+            st.session_state.historial_chat.append({"rol":"Usuario","texto":entrada})
+            palabras_cambio=["cambia","reemplaza","sustituye","corrige","agrega","añade","borra","elimina","pon","escribe","modifica","quita","actualiza"]
+            es_cambio=any(p in entrada.lower() for p in palabras_cambio)
+            if es_cambio:
+                with st.spinner("🔍 Procesando cambio..."):
+                    nuevos=solicitar_cambios(entrada, texto_activo)
+                if nuevos:
+                    st.session_state.preview_cambio=nuevos
+                    st.session_state.historial_chat.append({"rol":"Asistente","texto":"Encontré el cambio 👆 Revisa la vista previa arriba y confirma."})
                 else:
-                    txt_m=texto_activo; n=0
-                    for c2 in todos_c:
-                        txt_m,cnt = re.compile(re.escape(c2["buscar"]),re.IGNORECASE).subn(c2["reemplazar"],txt_m)
-                        n+=cnt
-                    final_bytes = txt_m.encode()
-                txt_c=texto_activo
-                for c2 in todos_c:
-                    txt_c = re.compile(re.escape(c2["buscar"]),re.IGNORECASE).sub(c2["reemplazar"],txt_c)
-                st.session_state.texto_corregido = txt_c
-                st.session_state.cambios_aplicados = final_bytes
-                st.session_state.resumen_data = None
-                st.session_state.generando_resumen = True
-                st.session_state.edicion_counter += 1
-                st.session_state.historial_chat.append({
-                    "rol":"Asistente",
-                    "texto":f"✅ ¡Listo! Cambié **{preview[0]['buscar']}** → **{preview[0]['reemplazar']}** en el documento. ¿Algo más?"
-                })
-                st.rerun()
-        with cn:
-            if st.button("❌ Cancelar", use_container_width=True):
-                st.session_state.preview_cambio = None
-                st.session_state.edicion_counter += 1
-                st.rerun()
-
-    # ── Descarga si hay cambios ──
-    if st.session_state.cambios_aplicados:
-        with st.expander(f"📥 Descargar documento corregido ({len(st.session_state.lista_cambios)} cambio(s))", expanded=False):
-            fb = st.session_state.cambios_aplicados
-            todos_c = st.session_state.lista_cambios
-            if tipo == "docx":
-                st.download_button("📄 Word corregido", fb, "Corregido.docx",
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True)
-            elif tipo == "xlsx":
-                st.download_button("📊 Excel corregido", fb, "Corregido.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
-            elif tipo == "pdf" and PYMUPDF_OK:
-                st.download_button("📕 PDF corregido", fb, "Corregido.pdf",
-                    mime="application/pdf", use_container_width=True)
-            wc = exportar_word(st.session_state.texto_corregido or texto, None)
-            st.download_button("📄 Exportar como Word", wc, "Exportado.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True)
-            if st.button("🗑️ Limpiar todos los cambios", use_container_width=True):
-                st.session_state.lista_cambios=[]
-                st.session_state.cambios_aplicados=None
-                st.session_state.texto_corregido=""
-                st.session_state.preview_cambio=None
-                st.rerun()
-
-    # ══════════════════════════════════════
-    # CHAT — siempre visible al fondo
-    # ══════════════════════════════════════
-    # Historial
-    for msg in st.session_state.historial_chat:
-        with st.chat_message("user" if msg["rol"]=="Usuario" else "assistant"):
-            st.write(msg["texto"])
-
-    if not st.session_state.historial_chat:
-        st.markdown("""
-        <div style="text-align:center;padding:1.5rem 0 0.5rem">
-            <div style="font-size:2rem">💬</div>
-            <div style="color:#065f46;font-size:0.85rem;margin-top:0.4rem;line-height:1.7">
-                <strong style="color:#10b981">Conversa sobre el documento</strong><br>
-                <span style="color:#2d6a4f">Edita, pregunta o pide cambios en lenguaje natural</span>
-            </div>
-            <div style="display:flex;justify-content:center;gap:0.5rem;flex-wrap:wrap;margin-top:0.8rem">
-                <span style="background:#021008;border:1px solid #0a3d1a;border-radius:20px;padding:0.25rem 0.7rem;font-size:0.72rem;color:#10b981">cambia X por Y</span>
-                <span style="background:#021008;border:1px solid #0a3d1a;border-radius:20px;padding:0.25rem 0.7rem;font-size:0.72rem;color:#10b981">¿cuántas personas hay?</span>
-                <span style="background:#021008;border:1px solid #0a3d1a;border-radius:20px;padding:0.25rem 0.7rem;font-size:0.72rem;color:#10b981">resume en 3 puntos</span>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    entrada = st.chat_input("✍️ Escribe un cambio o una pregunta...")
-    if entrada:
-        st.session_state.historial_chat.append({"rol":"Usuario","texto":entrada})
-        palabras_cambio = ["cambia","reemplaza","sustituye","corrige","agrega","añade","borra","elimina","pon","escribe","modifica","quita","actualiza"]
-        es_cambio = any(p in entrada.lower() for p in palabras_cambio)
-        if es_cambio:
-            with st.spinner("🔍 Procesando cambio..."):
-                nuevos = solicitar_cambios(entrada, texto_activo)
-            if nuevos:
-                st.session_state.preview_cambio = nuevos
-                st.session_state.historial_chat.append({
-                    "rol":"Asistente",
-                    "texto":"Encontré el cambio 👆 Revisa la vista previa y confirma si es correcto."
-                })
+                    st.session_state.historial_chat.append({"rol":"Asistente","texto":"No encontré qué cambiar. Intenta: *cambia 'palabra' por 'nueva palabra'*"})
             else:
-                st.session_state.historial_chat.append({
-                    "rol":"Asistente",
-                    "texto":"No encontré qué cambiar exactamente. Intenta: *cambia 'palabra' por 'nueva palabra'*"
-                })
+                with st.spinner("🤔 Pensando..."):
+                    resp=preguntar_al_documento(entrada, texto_activo)
+                st.session_state.historial_chat.append({"rol":"Asistente","texto":resp})
+            st.rerun()
+
+    # ══════════════════════════════════════════
+    # TAB 3 — EVALUAR
+    # ══════════════════════════════════════════
+    elif nav == "evaluar":
+        if st.button("🔍 Evaluar documento ahora", use_container_width=True):
+            with st.spinner("Analizando errores e inconsistencias..."):
+                resultado = detectar_anomalias(texto_activo)
+            if resultado:
+                nivel=resultado.get("nivel_general","Regular")
+                puntaje=resultado.get("puntaje",0)
+                nivel_cfg={"Excelente":("#10b981","#021008","🟢"),"Bueno":("#34d399","#021008","🟢"),"Regular":("#f59e0b","#1c1003","🟡"),"Deficiente":("#ef4444","#1f0707","🔴")}
+                cfg=nivel_cfg.get(nivel,nivel_cfg["Regular"])
+                st.markdown(f"""
+                <div style="text-align:center;padding:1rem 0 0.5rem">
+                    <div style="font-size:3rem">{cfg[2]}</div>
+                    <div style="color:{cfg[0]};font-size:1.3rem;font-weight:800">{nivel}</div>
+                    <div style="color:#2d6a4f;font-size:0.8rem">Puntaje: <strong style="color:{cfg[0]}">{puntaje}/100</strong></div>
+                </div>
+                """, unsafe_allow_html=True)
+                niveles_e=[("criticos","🔴 Crítico","#ef4444","#1f0707","#450a0a"),("altos","🟠 Alto","#f97316","#1c0a03","#431407"),("medios","🟡 Medio","#f59e0b","#1c1003","#451a03"),("leves","🟢 Leve","#22c55e","#052e16","#14532d")]
+                hay=False
+                for key,label,cfg,cbg,cbrd in niveles_e:
+                    items_e=resultado.get(key,[])
+                    if items_e:
+                        hay=True
+                        rows="".join([f'<div style="color:#d1fae5;font-size:0.8rem;padding:0.2rem 0;border-bottom:1px solid {cbrd}">• {it}</div>' for it in items_e])
+                        st.markdown(f'<div style="background:{cbg};border:1px solid {cbrd};border-left:4px solid {cfg};border-radius:12px;padding:0.8rem 1rem;margin:0.5rem 0"><div style="color:{cfg};font-weight:700;font-size:0.85rem;margin-bottom:0.3rem">{label}</div>{rows}</div>', unsafe_allow_html=True)
+                if not hay:
+                    st.markdown('<div class="info-box">✅ ¡Sin problemas detectados! El documento se ve bien 🎉</div>', unsafe_allow_html=True)
+                rec=resultado.get("recomendacion","")
+                if rec:
+                    st.markdown(f'<div class="hallazgo-card">💡 <strong>Recomendación:</strong> {rec}</div>', unsafe_allow_html=True)
+            else:
+                st.markdown('<div class="warn-box">⚠️ No se pudo evaluar. Intenta de nuevo.</div>', unsafe_allow_html=True)
         else:
-            with st.spinner("🤔 Pensando..."):
-                resp = preguntar_al_documento(entrada, texto_activo)
-            st.session_state.historial_chat.append({"rol":"Asistente","texto":resp})
-        st.rerun()
+            st.markdown("""
+            <div style="text-align:center;padding:2rem 0">
+                <div style="font-size:3rem">🔍</div>
+                <div style="color:#34d399;font-weight:700;font-size:0.95rem;margin-top:0.5rem">Evaluación de calidad</div>
+                <div style="color:#065f46;font-size:0.8rem;margin-top:0.3rem;line-height:1.7">
+                    Detecta errores clasificados por nivel:<br>
+                    <span style="color:#ef4444">● Crítico</span> &nbsp;
+                    <span style="color:#f97316">● Alto</span> &nbsp;
+                    <span style="color:#f59e0b">● Medio</span> &nbsp;
+                    <span style="color:#22c55e">● Leve</span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
 else:
-    # ── Estado vacío ──
     st.markdown("""
     <div class="empty-state">
         <div class="empty-icon">📂</div>
