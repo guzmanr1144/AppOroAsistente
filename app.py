@@ -1548,6 +1548,7 @@ if archivo and archivo.name != st.session_state.nombre_archivo:
                         texto += t + "\n"
             st.session_state.texto_extraido    = texto
             st.session_state.generando_resumen = False
+            # NO auto-generar resumen — el usuario lo pide cuando quiera
         except Exception as e:
             st.error(f"Error leyendo el archivo: {e}")
 
