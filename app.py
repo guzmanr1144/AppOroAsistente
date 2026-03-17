@@ -451,73 +451,82 @@ div[data-testid="stVerticalBlock"] > div:has(> div[data-testid="stButton"]) butt
     padding: 0.5rem 0;
 }
 
-/* ── PESTAÑAS DESLIZABLES ARRIBA ── */
-.tabs-scroll-wrap {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    margin: 0.8rem 0 0 0;
+/* ══ RADIO → PESTAÑAS DESLIZABLES ══ */
+div[data-testid="stRadio"] {
+    background: #010c06 !important;
+    border-bottom: 2px solid #0a3d1a !important;
+    padding: 0 0 0 0 !important;
+    margin: 0.6rem 0 0 0 !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
 }
-.tabs-scroll-wrap::-webkit-scrollbar { display: none; }
-.tabs-row {
-    display: flex;
-    gap: 0.5rem;
-    min-width: max-content;
-    padding: 0 0.2rem 0.6rem 0.2rem;
-}
-.tab-pill {
-    display: flex;
-    align-items: center;
-    gap: 0.45rem;
-    padding: 0.55rem 1.1rem;
-    border-radius: 30px;
-    font-size: 0.88rem;
-    font-weight: 600;
-    font-family: 'Outfit', sans-serif;
-    cursor: pointer;
-    white-space: nowrap;
-    border: 1.5px solid #0a3d1a;
-    background: #021008;
-    color: #065f46;
-    transition: all 0.18s;
-    letter-spacing: 0.01em;
-}
-.tab-pill.activa {
-    background: linear-gradient(135deg, #065f46, #10b981);
-    color: white;
-    border-color: #10b981;
-    box-shadow: 0 3px 14px rgba(16,185,129,0.35);
-}
-.tab-pill-icon { font-size: 1.05rem; }
-/* Indicador de scroll */
-.tabs-scroll-hint {
-    text-align: right;
-    font-size: 0.68rem;
-    color: #065f46;
-    margin-bottom: 0.2rem;
-    opacity: 0.7;
+div[data-testid="stRadio"]::-webkit-scrollbar { display: none !important; }
+
+/* Fila de opciones en horizontal sin wrap */
+div[data-testid="stRadio"] > div {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    gap: 0 !important;
+    min-width: max-content !important;
 }
 
-/* ── GUÍAS VISUALES ── */
+/* Ocultar label del radio */
+div[data-testid="stRadio"] > label { display: none !important; }
+
+/* Cada opción individual */
+div[data-testid="stRadio"] label {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.4rem !important;
+    padding: 0.75rem 1.3rem !important;
+    font-size: 0.9rem !important;
+    font-weight: 600 !important;
+    font-family: 'Outfit', sans-serif !important;
+    color: #2d6a4f !important;
+    cursor: pointer !important;
+    border-bottom: 3px solid transparent !important;
+    white-space: nowrap !important;
+    transition: all 0.18s !important;
+    background: transparent !important;
+    margin: 0 !important;
+}
+div[data-testid="stRadio"] label:hover {
+    color: #34d399 !important;
+    background: rgba(16,185,129,0.06) !important;
+}
+
+/* Pestaña activa */
+div[data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked),
+div[data-testid="stRadio"] label[aria-checked="true"] {
+    color: #10b981 !important;
+    border-bottom: 3px solid #10b981 !important;
+    background: rgba(16,185,129,0.08) !important;
+}
+
+/* Ocultar el círculo del radio */
+div[data-testid="stRadio"] [data-baseweb="radio"] div:first-child,
+div[data-testid="stRadio"] input[type="radio"] { display: none !important; }
+
+/* ── GUÍA VISUAL ── */
 .guia-card {
-    background: #021008;
+    background: linear-gradient(135deg, #021008, #031510);
     border: 1px solid #0a3d1a;
     border-left: 3px solid #10b981;
-    border-radius: 12px;
-    padding: 0.9rem 1rem;
-    margin-bottom: 1rem;
+    border-radius: 14px;
+    padding: 1rem 1.1rem;
+    margin: 0.8rem 0 1rem 0;
     display: flex;
-    gap: 0.8rem;
+    gap: 0.9rem;
     align-items: flex-start;
 }
-.guia-icon { font-size: 1.5rem; flex-shrink: 0; }
-.guia-titulo { color: #34d399; font-weight: 700; font-size: 0.9rem; }
-.guia-texto  { color: #065f46; font-size: 0.78rem; margin-top: 0.2rem; line-height: 1.5; }
+.guia-icon { font-size: 1.6rem; flex-shrink: 0; margin-top: 0.1rem; }
+.guia-titulo { color: #34d399; font-weight: 700; font-size: 0.95rem; margin-bottom: 0.25rem; }
+.guia-texto  { color: #2d6a4f; font-size: 0.8rem; line-height: 1.55; }
+.guia-texto em { color: #10b981; font-style: normal; font-weight: 500; }
 
-/* Espacio inferior */
-.main .block-container {
-    padding-bottom: 2rem !important;
-}
+.main .block-container { padding-bottom: 2rem !important; }
 
 /* ── SELECTBOX SIDEBAR ── */
 [data-testid="stSidebar"] {
@@ -1578,42 +1587,43 @@ if st.session_state.texto_extraido:
     </div>
     """, unsafe_allow_html=True)
 
-    # ── Pestañas deslizables ──
-    _tab_defs = [
-        ("resumen", "📊", "Resumen",  "Análisis inteligente"),
-        ("editar",  "✍️", "Editar",   "Corregir palabras"),
-        ("chat",    "💬", "Chat",     "Hacer preguntas"),
-        ("calidad", "🔍", "Calidad",  "Revisar errores"),
-    ]
-    _activa = st.session_state.tab_activa
-
-    # Construir pills HTML
-    _pills_html = '<div class="tabs-scroll-hint">desliza ›</div><div class="tabs-scroll-wrap"><div class="tabs-row">'
-    for _key, _ico, _label, _desc in _tab_defs:
-        _clase = "tab-pill activa" if _activa == _key else "tab-pill"
-        _pills_html += f'<span class="{_clase}"><span class="tab-pill-icon">{_ico}</span>{_label}</span>'
-    _pills_html += '</div></div>'
-    st.markdown(_pills_html, unsafe_allow_html=True)
-
-    # Botones invisibles para capturar click — uno por pestaña
-    _btn_cols = st.columns(4)
-    for _i, (_key, _ico, _label, _desc) in enumerate(_tab_defs):
-        with _btn_cols[_i]:
-            st.markdown('<div style="visibility:hidden;height:0;overflow:hidden">', unsafe_allow_html=True)
-            if st.button(_label, key=f"nav_{_key}"):
-                st.session_state.tab_activa = _key
-                st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
-
-    # Mostrar descripción de la pestaña activa como guía
-    _guias = {
-        "resumen": ("🧠", "Resumen inteligente", "La IA lee tu documento y te da un análisis claro: datos clave, puntos importantes y observaciones destacadas."),
-        "editar":  ("✏️", "Editar documento", "Escribe en lenguaje natural lo que quieres cambiar. Ej: <em>cambia 'negativo' por 'positivo'</em> o <em>agrega el teléfono a Juan</em>."),
-        "chat":    ("💬", "Preguntar al documento", "Hazle cualquier pregunta sobre el contenido. Ej: <em>¿cuántas personas aparecen?</em> o <em>¿qué municipios hay?</em>"),
-        "calidad": ("🔍", "Revisar calidad", "Detecta errores, datos duplicados o inconsistencias en el documento automáticamente."),
+    # ── Pestañas deslizables con st.radio ──
+    _tab_opts = {
+        "📊  Resumen":  "resumen",
+        "✍️  Editar":   "editar",
+        "💬  Chat":     "chat",
+        "🔍  Calidad":  "calidad",
     }
-    _g = _guias.get(_activa, ("📋","",""))
-    st.markdown(f'''
+    _labels = list(_tab_opts.keys())
+    _keys   = list(_tab_opts.values())
+    _idx_actual = _keys.index(st.session_state.tab_activa) if st.session_state.tab_activa in _keys else 0
+
+    _sel = st.radio(
+        "nav",
+        _labels,
+        index=_idx_actual,
+        horizontal=True,
+        label_visibility="collapsed",
+        key="nav_radio"
+    )
+    _nueva_tab = _tab_opts[_sel]
+    if _nueva_tab != st.session_state.tab_activa:
+        st.session_state.tab_activa = _nueva_tab
+        st.rerun()
+
+    # Guía visual de la pestaña activa
+    _guias = {
+        "resumen": ("🧠", "Resumen inteligente",
+            "La IA analiza tu documento y extrae lo más importante: métricas clave, puntos destacados y observaciones relevantes."),
+        "editar":  ("✏️", "Editar documento",
+            "Escribe en lenguaje natural lo que quieres cambiar.<br><em>Ej: cambia 'negativo' por 'positivo'</em> &nbsp;·&nbsp; <em>agrega el teléfono 04241234567 a Juan Pérez</em>"),
+        "chat":    ("💬", "Preguntar al documento",
+            "Hazle cualquier pregunta sobre el contenido del archivo.<br><em>Ej: ¿cuántas personas aparecen?</em> &nbsp;·&nbsp; <em>¿qué municipios hay?</em>"),
+        "calidad": ("🔍", "Revisar calidad",
+            "Detecta automáticamente errores, datos duplicados o inconsistencias en el documento."),
+    }
+    _g = _guias[st.session_state.tab_activa]
+    st.markdown(f"""
     <div class="guia-card">
         <div class="guia-icon">{_g[0]}</div>
         <div>
@@ -1621,7 +1631,7 @@ if st.session_state.texto_extraido:
             <div class="guia-texto">{_g[2]}</div>
         </div>
     </div>
-    ''', unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
     nav = st.session_state.tab_activa
 
