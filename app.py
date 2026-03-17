@@ -508,6 +508,30 @@ div[data-testid="stVerticalBlock"] > div:has(> div[data-testid="stButton"]) butt
 """, unsafe_allow_html=True)
 
 
+# ==========================================
+# SESSION STATE
+# ==========================================
+for key, val in {
+    "texto_extraido": "",
+    "nombre_archivo": "",
+    "archivo_bytes": None,
+    "resumen_data": None,
+    "historial_chat": [],
+    "cambios_aplicados": None,
+    "archivo_tipo": "",
+    "lista_cambios": [],
+    "texto_modificado": "",
+    "generando_resumen": False,
+    "resumen_error": False,
+    "tab_activa": "resumen",
+    "tema": "verde",
+    "preview_cambio": None,
+    "edicion_counter": 0,
+    "texto_corregido": "",
+}.items():
+    if key not in st.session_state:
+        st.session_state[key] = val
+
 # ── CSS dinámico según tema ──
 _TEMAS = {
     "oscuro": {
@@ -664,29 +688,6 @@ def llamar_ia(prompt, es_json=False):
 with st.sidebar:
     st.caption("Oro Asistente v2")
 
-# ==========================================
-# SESSION STATE
-# ==========================================
-for key, val in {
-    "texto_extraido": "",
-    "nombre_archivo": "",
-    "archivo_bytes": None,
-    "resumen_data": None,
-    "historial_chat": [],
-    "cambios_aplicados": None,
-    "archivo_tipo": "",
-    "lista_cambios": [],
-    "texto_modificado": "",
-    "generando_resumen": False,
-    "resumen_error": False,
-    "tab_activa": "resumen",
-    "tema": "verde",
-    "preview_cambio": None,
-    "edicion_counter": 0,
-    "texto_corregido": "",
-}.items():
-    if key not in st.session_state:
-        st.session_state[key] = val
 
 # ==========================================
 # HEADER
