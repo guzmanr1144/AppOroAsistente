@@ -1560,7 +1560,26 @@ if st.session_state.texto_extraido:
     </div>
     """, unsafe_allow_html=True)
 
-    # ── Nav viene del session_state, barra está abajo ──
+    # ── Navegación con botones nativos Streamlit ──
+    st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
+    _tabs = [("resumen","📊 Resumen"),("editar","✍️ Editar"),("chat","💬 Chat"),("calidad","🔍 Calidad")]
+    _cols = st.columns(4)
+    for _i, (_key, _label) in enumerate(_tabs):
+        with _cols[_i]:
+            _activo = st.session_state.tab_activa == _key
+            if _activo:
+                st.markdown(
+                    f'<div style="background:linear-gradient(135deg,#065f46,#10b981);'
+                    f'border-radius:12px;padding:0.6rem 0;text-align:center;'
+                    f'color:white;font-weight:700;font-size:0.82rem;cursor:pointer;">'
+                    f'{_label}</div>',
+                    unsafe_allow_html=True
+                )
+            else:
+                if st.button(_label, key=f"nav_{_key}", use_container_width=True):
+                    st.session_state.tab_activa = _key
+                    st.rerun()
+    st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
     nav = st.session_state.tab_activa
 
     # ═══════════════════════════════════════
@@ -1919,41 +1938,5 @@ else:
 
 zona_horaria = pytz.timezone('America/Caracas')
 hora = datetime.now(zona_horaria).strftime('%I:%M %p')
-
-# ── Barra de navegación fija abajo ──
-tabs_nav = [
-    ("resumen", "📊", "Resumen"),
-    ("editar",  "✍️", "Editar"),
-    ("chat",    "💬", "Chat"),
-    ("calidad", "🔍", "Calidad"),
-]
-tab_activa_now = st.session_state.get("tab_activa", "resumen")
-
-# Construir HTML de la barra
-nav_items_html = ""
-for key, ico, label in tabs_nav:
-    clase = "nav-btn-item active" if tab_activa_now == key else "nav-btn-item"
-    nav_items_html += f'''
-    <a class="{clase}" href="?nav={key}" target="_self" style="text-decoration:none;">
-        <span class="nav-btn-icon">{ico}</span>
-        <span class="nav-btn-label">{label}</span>
-    </a>'''
-
-st.markdown(f'''
-<div class="nav-bottom-bar">
-    {nav_items_html}
-</div>
-''', unsafe_allow_html=True)
-
-# Manejar cambio de tab via query params
-try:
-    params = st.query_params
-    if "nav" in params and params["nav"] in [t[0] for t in tabs_nav]:
-        if params["nav"] != st.session_state.tab_activa:
-            st.session_state.tab_activa = params["nav"]
-            st.query_params.clear()
-            st.rerun()
-except Exception:
-    pass
 
 st.markdown(f"<p class='oro-footer'>🏆 Oro Asistente · {hora} VET</p>", unsafe_allow_html=True)
