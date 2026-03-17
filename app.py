@@ -6,7 +6,7 @@ from docx.shared import Pt, RGBColor
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 import PyPDF2
-from fpdf2 import FPDF
+from fpdf import FPDF
 from io import BytesIO
 from datetime import datetime
 import pytz
