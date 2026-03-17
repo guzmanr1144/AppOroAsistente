@@ -9,7 +9,7 @@ from docx.oxml import OxmlElement
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 import PyPDF2
-from fpdf import FPDF
+from fpdf2 import FPDF
 from io import BytesIO
 from datetime import datetime
 import pytz
