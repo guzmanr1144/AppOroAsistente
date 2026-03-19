@@ -29,49 +29,76 @@ st.set_page_config(page_title="Oro Asistente", page_icon="🏆", layout="centere
 def _get_all_css(tema_key="claro"):
     _T = {
         "claro": {
-            "bg1":"#f0f4ff","bg2":"#e8f0fe","bg3":"#dce8fd",
-            "card":"#ffffff","card2":"#f8faff",
-            "borde":"#c7d7f5","borde2":"#a5bfee",
+            "bg1":"#eef2ff","bg2":"#e0e9ff","bg3":"#d4dfff",
+            "card":"#ffffff","card2":"#f3f6ff",
+            "borde":"#b8caf8","borde2":"#93aff5",
             "acento1":"#4f6ef7","acento2":"#3b5bf0","acento3":"#6b83f8",
             "titulo_grad":"linear-gradient(135deg,#4f6ef7,#7c3aed,#4f6ef7)",
-            "texto":"#1a1f36","texto2":"#3b4a6b","texto3":"#8896b3",
-            "sombra":"rgba(79,110,247,0.12)","sombra2":"rgba(79,110,247,0.06)",
+            "texto":"#0f1429","texto2":"#2d3a6b","texto3":"#6474a8",
+            "sombra":"rgba(79,110,247,0.15)","sombra2":"rgba(79,110,247,0.08)",
         },
         "aurora": {
-            "bg1":"#f5f0ff","bg2":"#ede8ff","bg3":"#e4dcff",
-            "card":"#ffffff","card2":"#faf8ff",
-            "borde":"#d4c5f9","borde2":"#b8a4f5",
+            "bg1":"#ede8ff","bg2":"#e3daff","bg3":"#d8cfff",
+            "card":"#f9f7ff","card2":"#f0ecff",
+            "borde":"#c4b0f5","borde2":"#a990f0",
             "acento1":"#7c3aed","acento2":"#6d28d9","acento3":"#8b5cf6",
             "titulo_grad":"linear-gradient(135deg,#7c3aed,#ec4899,#7c3aed)",
-            "texto":"#1e1030","texto2":"#4c3575","texto3":"#9878cc",
-            "sombra":"rgba(124,58,237,0.12)","sombra2":"rgba(124,58,237,0.06)",
+            "texto":"#18082e","texto2":"#3d1a6e","texto3":"#8060aa",
+            "sombra":"rgba(124,58,237,0.15)","sombra2":"rgba(124,58,237,0.08)",
         },
         "sol": {
-            "bg1":"#fffbf0","bg2":"#fff7e0","bg3":"#fff3cc",
-            "card":"#ffffff","card2":"#fffdf5",
-            "borde":"#fcd99a","borde2":"#f9c560",
-            "acento1":"#d97706","acento2":"#b45309","acento3":"#f59e0b",
-            "titulo_grad":"linear-gradient(135deg,#d97706,#ef4444,#d97706)",
-            "texto":"#1c1200","texto2":"#4a3500","texto3":"#997a30",
-            "sombra":"rgba(217,119,6,0.12)","sombra2":"rgba(217,119,6,0.06)",
+            "bg1":"#fff8e0","bg2":"#fff2c0","bg3":"#ffeba0",
+            "card":"#fffef5","card2":"#fffbe8",
+            "borde":"#f0c840","borde2":"#e8b020",
+            "acento1":"#c07800","acento2":"#9a5e00","acento3":"#e09000",
+            "titulo_grad":"linear-gradient(135deg,#c07800,#e05500,#c07800)",
+            "texto":"#1a0e00","texto2":"#3a2200","texto3":"#806030",
+            "sombra":"rgba(192,120,0,0.15)","sombra2":"rgba(192,120,0,0.08)",
         },
         "menta": {
-            "bg1":"#f0fdf8","bg2":"#e6faf3","bg3":"#d8f5ea",
-            "card":"#ffffff","card2":"#f5fffb",
-            "borde":"#a7e8d0","borde2":"#6dd5b0",
-            "acento1":"#059669","acento2":"#047857","acento3":"#10b981",
-            "titulo_grad":"linear-gradient(135deg,#059669,#0891b2,#059669)",
-            "texto":"#062016","texto2":"#0e4a30","texto3":"#4d9e7a",
-            "sombra":"rgba(5,150,105,0.12)","sombra2":"rgba(5,150,105,0.06)",
+            "bg1":"#e6faf3","bg2":"#d4f5e8","bg3":"#c0eedb",
+            "card":"#f5fffc","card2":"#eafff6",
+            "borde":"#80dbb8","borde2":"#50c898",
+            "acento1":"#047857","acento2":"#065f46","acento3":"#10b981",
+            "titulo_grad":"linear-gradient(135deg,#047857,#0891b2,#047857)",
+            "texto":"#022016","texto2":"#0a3d28","texto3":"#3a8060",
+            "sombra":"rgba(4,120,87,0.15)","sombra2":"rgba(4,120,87,0.08)",
         },
         "rose": {
-            "bg1":"#fff5f7","bg2":"#ffe8ed","bg3":"#ffd8e0",
-            "card":"#ffffff","card2":"#fff8fa",
-            "borde":"#f5b8c8","borde2":"#f092a8",
-            "acento1":"#e11d48","acento2":"#be123c","acento3":"#f43f5e",
-            "titulo_grad":"linear-gradient(135deg,#e11d48,#9333ea,#e11d48)",
-            "texto":"#1f0510","texto2":"#5c1030","texto3":"#b06080",
-            "sombra":"rgba(225,29,72,0.12)","sombra2":"rgba(225,29,72,0.06)",
+            "bg1":"#ffe8ed","bg2":"#ffd4dc","bg3":"#ffbfcc",
+            "card":"#fff8fa","card2":"#ffeff3",
+            "borde":"#f090a8","borde2":"#e06080",
+            "acento1":"#c01040","acento2":"#9a0030","acento3":"#e02858",
+            "titulo_grad":"linear-gradient(135deg,#c01040,#8020b0,#c01040)",
+            "texto":"#1a0010","texto2":"#4a0025","texto3":"#904060",
+            "sombra":"rgba(192,16,64,0.15)","sombra2":"rgba(192,16,64,0.08)",
+        },
+        "noche": {
+            "bg1":"#0a0e1a","bg2":"#0d1222","bg3":"#10162a",
+            "card":"#141828","card2":"#1a2035",
+            "borde":"#2a3560","borde2":"#364480",
+            "acento1":"#6b83f8","acento2":"#8fa0ff","acento3":"#4f6ef7",
+            "titulo_grad":"linear-gradient(135deg,#6b83f8,#a78bfa,#6b83f8)",
+            "texto":"#e8ecff","texto2":"#a8b8f0","texto3":"#5060a0",
+            "sombra":"rgba(107,131,248,0.2)","sombra2":"rgba(107,131,248,0.08)",
+        },
+        "carbon": {
+            "bg1":"#111418","bg2":"#161b22","bg3":"#1c2330",
+            "card":"#1e2530","card2":"#242e3d",
+            "borde":"#2d3f55","borde2":"#3a5070",
+            "acento1":"#10b981","acento2":"#34d399","acento3":"#6ee7b7",
+            "titulo_grad":"linear-gradient(135deg,#10b981,#06b6d4,#10b981)",
+            "texto":"#d8f0e8","texto2":"#90c8b0","texto3":"#3a6050",
+            "sombra":"rgba(16,185,129,0.2)","sombra2":"rgba(16,185,129,0.08)",
+        },
+        "cosmos": {
+            "bg1":"#0d0818","bg2":"#120d22","bg3":"#18102c",
+            "card":"#1a1030","card2":"#201540",
+            "borde":"#3a2060","borde2":"#502888",
+            "acento1":"#a78bfa","acento2":"#c4b0ff","acento3":"#7c3aed",
+            "titulo_grad":"linear-gradient(135deg,#a78bfa,#f472b6,#a78bfa)",
+            "texto":"#f0e8ff","texto2":"#c0a8f0","texto3":"#705898",
+            "sombra":"rgba(167,139,250,0.2)","sombra2":"rgba(167,139,250,0.08)",
         },
     }
     t = _T.get(tema_key, _T["claro"])
@@ -79,7 +106,7 @@ def _get_all_css(tema_key="claro"):
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
 *{{box-sizing:border-box}}
 html,body,[class*="css"]{{font-family:'Inter',sans-serif!important;-webkit-tap-highlight-color:transparent}}
-.stApp{{background:linear-gradient(145deg,{t['bg1']} 0%,{t['bg2']} 50%,{t['bg3']} 100%)!important;min-height:100vh}}
+.stApp{{background:linear-gradient(145deg,{t['bg2']} 0%,{t['bg1']} 40%,{t['bg3']} 100%)!important;min-height:100vh}}
 .main .block-container{{padding:.8rem .9rem 5rem .9rem!important;max-width:460px!important;margin:0 auto!important;background:transparent!important}}
 #MainMenu,footer,header{{visibility:hidden}}[data-testid="stToolbar"]{{display:none}}
 
@@ -120,7 +147,7 @@ html,body,[class*="css"]{{font-family:'Inter',sans-serif!important;-webkit-tap-h
 
 /* ── UPLOADER ── */
 [data-testid="stFileUploader"]{{background:transparent!important;border:none!important}}
-[data-testid="stFileUploader"]>div{{background:{t['card']}!important;border:2px dashed {t['borde']}!important;border-radius:20px!important;padding:1.3rem!important;box-shadow:0 2px 12px {t['sombra2']}!important;transition:border-color .3s!important}}
+[data-testid="stFileUploader"]>div{{background:{t['card2']}!important;border:2px dashed {t['borde2']}!important;border-radius:20px!important;padding:1.3rem!important;box-shadow:0 4px 16px {t['sombra']}!important;transition:border-color .3s!important}}
 [data-testid="stFileUploader"]>div:hover{{border-color:{t['acento1']}!important}}
 [data-testid="stFileUploader"] label{{color:{t['acento1']}!important;font-weight:600!important;font-size:.92rem!important}}
 
@@ -155,8 +182,8 @@ html,body,[class*="css"]{{font-family:'Inter',sans-serif!important;-webkit-tap-h
 [data-testid="stExpander"]{{background:{t['card']}!important;border:1px solid {t['borde']}!important;border-radius:14px!important;box-shadow:0 2px 8px {t['sombra2']}!important;overflow:hidden!important}}
 
 /* ── CHAT ── */
-[data-testid="stChatInput"] textarea{{background:{t['card']}!important;border:2px solid {t['borde']}!important;border-radius:16px!important;color:{t['texto']}!important;font-family:'Inter',sans-serif!important;font-size:.92rem!important;box-shadow:0 2px 8px {t['sombra2']}!important}}
-[data-testid="stChatInput"] textarea:focus{{border-color:{t['acento1']}!important;box-shadow:0 0 0 3px {t['sombra']}!important}}
+[data-testid="stChatInput"] textarea{{background:{t['card2']}!important;border:2px solid {t['borde2']}!important;border-radius:16px!important;color:{t['texto']}!important;font-family:'Inter',sans-serif!important;font-size:.92rem!important;box-shadow:0 2px 8px {t['sombra2']}!important}}
+[data-testid="stChatInput"] textarea:focus{{border-color:{t['acento1']}!important;box-shadow:0 0 0 3px {t['sombra']}!important}}[data-testid="stBottom"]{{background:linear-gradient(transparent,{t['bg1']} 40%)!important;padding-top:1rem!important}}
 [data-testid="stChatMessageContent"]{{font-size:.88rem!important;line-height:1.65!important}}
 [data-testid="stChatMessage"]{{background:{t['card']}!important;border:1px solid {t['borde']}!important;border-radius:14px!important;padding:.7rem!important;margin:.3rem 0!important;box-shadow:0 2px 6px {t['sombra2']}!important}}
 
@@ -324,7 +351,7 @@ with st.sidebar:
     st.markdown(f"<div style='text-align:center;padding:.5rem 0'><span style='font-size:1.5rem'>🏆</span><div style='font-size:.9rem;font-weight:800;color:#34d399'>Oro Asistente</div></div>", unsafe_allow_html=True)
     st.markdown("---")
     st.markdown("**🎨 Tema**")
-    tema_opc = {"☀️ Claro":"claro","🌸 Aurora":"aurora","🌿 Menta":"menta","🌅 Sol":"sol","🌹 Rose":"rose"}
+    tema_opc = {"☀️ Claro":"claro","🌸 Aurora":"aurora","🌿 Menta":"menta","🌅 Sol":"sol","🌹 Rose":"rose","🌑 Noche":"noche","⬛ Carbón":"carbon","🌌 Cosmos":"cosmos"}
     sel = st.selectbox("Tema", list(tema_opc.keys()),
         index=list(tema_opc.values()).index(st.session_state.get("tema","verde")),
         label_visibility="collapsed")
@@ -385,7 +412,7 @@ with st.sidebar:
 _col_tema, _col_mid, _col_lang = st.columns([2, 3, 1])
 
 with _col_tema:
-    _temas_map = {"☀️ Claro":"claro","🌸 Aurora":"aurora","🌿 Menta":"menta","🌅 Sol":"sol","🌹 Rose":"rose"}
+    _temas_map = {"☀️ Claro":"claro","🌸 Aurora":"aurora","🌿 Menta":"menta","🌅 Sol":"sol","🌹 Rose":"rose","🌑 Noche":"noche","⬛ Carbón":"carbon","🌌 Cosmos":"cosmos"}
     _tema_actual = st.session_state.get("tema","claro")
     _tema_label = next((k for k,v in _temas_map.items() if v==_tema_actual), "☀️ Claro")
     _nuevo_tema = st.selectbox(
