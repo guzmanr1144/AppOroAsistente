@@ -26,7 +26,7 @@ st.set_page_config(page_title="Oro Asistente", page_icon="🏆", layout="centere
 # CSS — cacheado por tema
 # ══════════════════════════════════════════════════════════════
 @st.cache_data(show_spinner=False)
-def _get_all_css(tema_key="claro"):
+def _get_all_css(tema_key="noche"):
     _T = {
         "noche": {
             "bg1":"#0a0e1a","bg2":"#0d1222","bg3":"#10162a",
@@ -56,7 +56,7 @@ def _get_all_css(tema_key="claro"):
             "sombra":"rgba(167,139,250,0.2)","sombra2":"rgba(167,139,250,0.08)",
         },
     }
-    t = _T.get(tema_key, _T["claro"])
+    t = _T.get(tema_key, _T["noche"])
     return f"""<style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
 *{{box-sizing:border-box}}
