@@ -315,6 +315,19 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# ── Selector de tema ──
+_temas_map = {"☀️ Claro":"claro","🌸 Aurora":"aurora","🌿 Menta":"menta","🌅 Sol":"sol","🌹 Rose":"rose"}
+_tema_actual = st.session_state.get("tema","claro")
+_tema_label = next((k for k,v in _temas_map.items() if v==_tema_actual), "☀️ Claro")
+_sel_col, _ = st.columns([2,1])
+with _sel_col:
+    _nuevo = st.selectbox("🎨", list(_temas_map.keys()),
+        index=list(_temas_map.keys()).index(_tema_label),
+        label_visibility="collapsed", key="tema_select_main")
+if _temas_map[_nuevo] != _tema_actual:
+    st.session_state.tema = _temas_map[_nuevo]
+    st.rerun()
+
 # ══════════════════════════════════════════════════════════════
 # FUNCIONES UTILITARIAS
 # ══════════════════════════════════════════════════════════════
