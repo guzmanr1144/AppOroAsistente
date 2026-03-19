@@ -166,6 +166,7 @@ _defaults = {
     "imagen_archivo_bytes":None,"imagen_archivo_nombre":"","imagen_archivo_mime":"",
     "historial_versiones":[],"buscar_query":"",
     "resultado_evaluacion":None,
+    "scroll_to":None,
 }
 for k,v in _defaults.items():
     if k not in st.session_state:
@@ -287,6 +288,14 @@ def extraer_json_seguro(texto, es_lista=False):
             except: pass
     return None
 
+
+def _scroll_to(anchor_id):
+    """Hace scroll suave al elemento con ese id."""
+    st.markdown(f'''<script>
+        window.parent.document.getElementById("{anchor_id}") &&
+        window.parent.document.getElementById("{anchor_id}").scrollIntoView({{behavior:"smooth",block:"start"}});
+    </script>''', unsafe_allow_html=True)
+
 def guardar_version(texto, bytes_doc):
     """Guarda snapshot antes de aplicar un cambio."""
     st.session_state.historial_versiones.append({
@@ -399,6 +408,11 @@ def exportar_word(texto, resumen_data=None, archivo_bytes=None, archivo_tipo=Non
     cambios=cambios or []
     if archivo_tipo=="docx" and archivo_bytes and cambios:
         r,_=reemplazar_docx_preservando_formato(archivo_bytes,cambios); return r
+    if archivo_tipo=="xlsx" and archivo_bytes and not resumen_data:
+        # Si no hay resumen, solo aplicar cambios y devolver xlsx
+        if cambios:
+            r,_=reemplazar_xlsx_preservando_formato(archivo_bytes,cambios); return r
+        return archivo_bytes
     if archivo_tipo=="xlsx" and archivo_bytes:
         doc=Document(); doc.styles['Normal'].font.name='Calibri'
         h=doc.add_heading('',0); rn=h.add_run('Reporte desde Excel')
@@ -475,8 +489,10 @@ def exportar_word(texto, resumen_data=None, archivo_bytes=None, archivo_tipo=Non
 
 def exportar_excel(texto, resumen_data=None, archivo_bytes=None, archivo_tipo=None, cambios=None):
     cambios=cambios or []
-    if archivo_tipo=="xlsx" and archivo_bytes and cambios:
-        r,_=reemplazar_xlsx_preservando_formato(archivo_bytes,cambios); return r
+    if archivo_tipo=="xlsx" and archivo_bytes:
+        if cambios:
+            r,_=reemplazar_xlsx_preservando_formato(archivo_bytes,cambios); return r
+        return archivo_bytes  # devolver original si no hay cambios
     if archivo_tipo=="docx" and archivo_bytes:
         bu=archivo_bytes
         if cambios: bu,_=reemplazar_docx_preservando_formato(archivo_bytes,cambios)
@@ -839,6 +855,11 @@ if st.session_state.texto_extraido:
     tipo=st.session_state.archivo_tipo
     texto_activo=st.session_state.texto_corregido if st.session_state.texto_corregido else texto
 
+    # ── Scroll automático ──
+    if st.session_state.get("scroll_to"):
+        _scroll_to(st.session_state.scroll_to)
+        st.session_state.scroll_to = None
+
     # ── File badge ──
     palabras=len(texto.split())
     ext_icon={"docx":"📄","xlsx":"📊","pdf":"📕","word":"📄","excel":"📊","texto":"📝"}.get(tipo,"📎")
@@ -863,12 +884,14 @@ if st.session_state.texto_extraido:
         if st.button("⚡ Analizar",use_container_width=True,key="btn_analizar"):
             st.session_state.generando_resumen=True
             st.session_state.resumen_data=None
+            st.session_state.scroll_to="seccion-resumen"
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
     with be:
         st.markdown('<div class="btn-evaluar">', unsafe_allow_html=True)
         if st.button("🔍 Evaluar",use_container_width=True,key="btn_evaluar"):
             st.session_state.ejecutar_evaluacion=True
+            st.session_state.scroll_to="seccion-evaluacion"
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -940,6 +963,7 @@ if st.session_state.texto_extraido:
             st.session_state.resultado_evaluacion=detectar_anomalias(texto_activo)
 
     if st.session_state.get("resultado_evaluacion"):
+        st.markdown('<div id="seccion-evaluacion"></div>', unsafe_allow_html=True)
         resultado=st.session_state.resultado_evaluacion
         niv=resultado.get("nivel_general","Regular"); puntaje=resultado.get("puntaje",0)
         ncfg={"Excelente":("#10b981","🟢"),"Bueno":("#34d399","🟢"),"Regular":("#f59e0b","🟡"),"Deficiente":("#ef4444","🔴")}
@@ -995,6 +1019,7 @@ if st.session_state.texto_extraido:
         </div>""", unsafe_allow_html=True)
 
     if data:
+        st.markdown('<div id="seccion-resumen"></div>', unsafe_allow_html=True)
         emoji=data.get("emoji_categoria","📋"); titulo_doc=data.get("titulo","Documento analizado")
         st.markdown(f"""<div class="summary-card">
             <div class="summary-card-title"><span>{emoji}</span>{titulo_doc}</div>
@@ -1033,6 +1058,7 @@ if st.session_state.texto_extraido:
 
     # ── Preview cambio ──
     if st.session_state.preview_cambio:
+        st.markdown('<div id="seccion-preview"></div>', unsafe_allow_html=True)
         preview=st.session_state.preview_cambio
         st.markdown("""<div style="background:linear-gradient(135deg,#021008,#031510);border:1px solid #10b981;
             border-radius:16px;padding:.9rem 1rem;margin:.4rem 0">
@@ -1061,18 +1087,21 @@ if st.session_state.texto_extraido:
             if st.button("✅ Confirmar",use_container_width=True,key="confirm_cambio"):
                 # Guardar versión antes de aplicar
                 guardar_version(texto_activo, st.session_state.cambios_aplicados or st.session_state.archivo_bytes)
-                st.session_state.lista_cambios.extend(preview); st.session_state.preview_cambio=None
-                todos_c=st.session_state.lista_cambios; ab_orig=st.session_state.archivo_bytes
-                if tipo=="docx": final_bytes,n=reemplazar_docx_preservando_formato(ab_orig,todos_c)
-                elif tipo=="xlsx": final_bytes,n=reemplazar_xlsx_preservando_formato(ab_orig,todos_c)
-                elif tipo in ("pdf","application/pdf") and PYMUPDF_OK: final_bytes,n=reemplazar_pdf_original(ab_orig,todos_c)
+                st.session_state.lista_cambios.extend(preview)
+                st.session_state.preview_cambio=None
+                # Aplicar SOLO el nuevo cambio sobre el estado actual del archivo
+                base_bytes = st.session_state.cambios_aplicados or st.session_state.archivo_bytes
+                if tipo=="docx": final_bytes,n=reemplazar_docx_preservando_formato(base_bytes,preview)
+                elif tipo=="xlsx": final_bytes,n=reemplazar_xlsx_preservando_formato(base_bytes,preview)
+                elif tipo in ("pdf","application/pdf") and PYMUPDF_OK: final_bytes,n=reemplazar_pdf_original(base_bytes,preview)
                 else:
                     txt_m=texto_activo; n=0
-                    for c2 in todos_c:
+                    for c2 in preview:
                         txt_m,cnt=re.compile(re.escape(c2["buscar"]),re.IGNORECASE).subn(c2["reemplazar"],txt_m); n+=cnt
                     final_bytes=txt_m.encode()
+                # Actualizar texto corregido aplicando solo el nuevo cambio
                 txt_c=texto_activo
-                for c2 in todos_c: txt_c=re.compile(re.escape(c2["buscar"]),re.IGNORECASE).sub(c2["reemplazar"],txt_c)
+                for c2 in preview: txt_c=re.compile(re.escape(c2["buscar"]),re.IGNORECASE).sub(c2["reemplazar"],txt_c)
                 st.session_state.texto_corregido=txt_c
                 st.session_state.cambios_aplicados=final_bytes
                 # NO regenerar resumen automáticamente — evita gastar tokens
