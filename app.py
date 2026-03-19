@@ -924,109 +924,124 @@ def exportar_word_como_pdf(archivo_bytes, cambios=None):
         return None
 
 
-def ordenar_excel(archivo_bytes, instruccion):
+def ordenar_excel(archivo_bytes, instruccion, texto_doc=""):
     """
-    Ordena las filas de un Excel según la instrucción del usuario.
-    Usa valores_only para evitar problemas de celdas combinadas (merge).
-    Arrastra todas las columnas de cada fila.
+    Ordena filas de Excel. Lee solo valores, crea archivo nuevo ordenado.
+    Usa el contenido del documento para identificar la columna correcta.
     """
     try:
-        # IA para identificar columna y dirección
+        # Leer todas las hojas como valores primero
+        wb_read = openpyxl.load_workbook(BytesIO(archivo_bytes), data_only=True, read_only=True)
+        sheets_data = {}
+        for ws in wb_read.worksheets:
+            filas = [list(row) for row in ws.iter_rows(values_only=True)]
+            # Filtrar filas completamente vacías
+            filas = [f for f in filas if any(v is not None and str(v).strip() for v in f)]
+            if filas:
+                sheets_data[ws.title] = filas
+        wb_read.close()
+
+        if not sheets_data:
+            return None, "No se encontraron datos en el archivo."
+
+        # Construir contexto de encabezados para la IA
+        enc_ctx = ""
+        for title, filas in sheets_data.items():
+            if filas:
+                hdrs = [str(v) if v is not None else "" for v in filas[0]]
+                enc_ctx += f"Hoja '{title}' — Columnas: " + ", ".join([f"{chr(65+i)}={h}" for i,h in enumerate(hdrs)]) + "\n"
+
+        # IA con contexto real del documento
         prompt = (
-            f"El usuario quiere ordenar un Excel: \"{instruccion}\"\n"
+            f"El usuario tiene un Excel con esta estructura:\n{enc_ctx}\n"
+            f"Instrucción del usuario: \"{instruccion}\"\n"
+            "Identifica qué columna ordenar y en qué dirección.\n"
+            "La primera fila ES el encabezado (no se ordena).\n"
             "Devuelve SOLO JSON:\n"
-            '{"columna":"letra A/B/C o nombre del encabezado","direccion":"asc o desc","tiene_encabezado":true}'
+            '{"hoja":"nombre de la hoja o ALL para todas","col_letra":"A","col_nombre":"nombre del encabezado","direccion":"asc","tiene_encabezado":true}'
         )
         r = llamar_ia(prompt)
         params = extraer_json_seguro(r) if r else {}
         if not params: params = {}
-        col_param = str(params.get("columna","A")).strip()
-        direccion_asc = params.get("direccion","asc") == "asc"
+
+        col_letra = str(params.get("col_letra","A")).strip().upper()
+        col_nombre = params.get("col_nombre", col_letra)
+        direccion_asc = str(params.get("direccion","asc")).lower() == "asc"
         tiene_enc = params.get("tiene_encabezado", True)
 
-        # Leer SOLO VALORES — evita problemas de merge y read-only
-        wb_read = openpyxl.load_workbook(BytesIO(archivo_bytes), data_only=True, read_only=True)
-        sheets_data = {}
-        for ws in wb_read.worksheets:
-            filas_vals = []
-            for row in ws.iter_rows(values_only=True):
-                filas_vals.append(list(row))
-            sheets_data[ws.title] = filas_vals
-        wb_read.close()
-
-        # Procesar cada hoja
-        sheets_ordenadas = {}
-        col_nombre_final = col_param
-        for sheet_title, filas_vals in sheets_data.items():
-            if not filas_vals: continue
-            encabezado = filas_vals[0] if tiene_enc else None
-            datos = filas_vals[1:] if tiene_enc else filas_vals
-            if not datos: continue
-
-            # Determinar índice de columna
-            from openpyxl.utils import column_index_from_string
+        from openpyxl.utils import column_index_from_string
+        try:
+            col_idx = column_index_from_string(col_letra) - 1
+        except:
             col_idx = 0
-            if col_param.isalpha() and len(col_param) <= 2:
-                try: col_idx = column_index_from_string(col_param.upper()) - 1
-                except: col_idx = 0
-            elif col_param.isdigit():
-                col_idx = int(col_param) - 1
-            elif encabezado:
-                for i, v in enumerate(encabezado):
-                    if v and col_param.lower() in str(v).lower():
-                        col_idx = i
-                        col_nombre_final = str(v)
-                        break
 
-            col_idx = max(0, min(col_idx, len(filas_vals[0]) - 1))
-
-            def sort_key(fila):
-                val = fila[col_idx] if col_idx < len(fila) else None
-                if val is None: return "zzzzzz"
-                # Intentar ordenar numéricamente si es número
-                try: return (0, float(val))
-                except: return (1, str(val).lower().strip())
-
-            datos_ord = sorted(datos, key=sort_key, reverse=not direccion_asc)
-            sheets_ordenadas[sheet_title] = (encabezado, datos_ord)
-
-        # Crear nuevo workbook limpio con los datos ordenados
+        # Crear nuevo workbook con datos ordenados
         wb_new = openpyxl.Workbook()
         wb_new.remove(wb_new.active)
 
-        for sheet_title, (encabezado, datos_ord) in sheets_ordenadas.items():
+        for sheet_title, filas in sheets_data.items():
             ws_new = wb_new.create_sheet(title=sheet_title)
+
+            encabezado = filas[0] if tiene_enc else None
+            datos = filas[1:] if tiene_enc else filas
+
+            if not datos:
+                # Hoja solo con encabezado
+                if encabezado:
+                    for ci, val in enumerate(encabezado, 1):
+                        ws_new.cell(row=1, column=ci, value=val)
+                continue
+
+            # Asegurar col_idx válido
+            max_cols = max(len(f) for f in filas)
+            col_idx_real = min(col_idx, max_cols - 1)
+
+            def sort_key(fila):
+                val = fila[col_idx_real] if col_idx_real < len(fila) else None
+                if val is None: return (2, "")
+                # Número → ordenar numéricamente
+                try: return (0, float(val))
+                except:
+                    return (1, str(val).strip().lower())
+
+            datos_ord = sorted(datos, key=sort_key, reverse=not direccion_asc)
+
+            # Escribir encabezado
             ri = 1
             if encabezado is not None:
                 for ci, val in enumerate(encabezado, 1):
                     cell = ws_new.cell(row=ri, column=ci, value=val)
                     cell.font = Font(bold=True, color="FFFFFF", size=10)
                     cell.fill = PatternFill("solid", fgColor="1E3A5F")
-                    cell.alignment = Alignment(horizontal="center", vertical="center")
+                    cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
                 ri += 1
+
+            # Escribir datos ordenados
             for fila in datos_ord:
-                bg = "F0F4FF" if ri % 2 == 0 else "FFFFFF"
+                bg = "EEF2FF" if ri % 2 == 0 else "FFFFFF"
                 for ci, val in enumerate(fila, 1):
                     cell = ws_new.cell(row=ri, column=ci, value=val)
                     cell.fill = PatternFill("solid", fgColor=bg)
                     cell.font = Font(size=10)
                     cell.alignment = Alignment(vertical="center", wrap_text=True)
+                # Rellenar celdas vacías si la fila tiene menos columnas
+                for ci in range(len(fila)+1, max_cols+1):
+                    ws_new.cell(row=ri, column=ci, value=None)
                 ri += 1
-            # Ajustar anchos
-            for col in ws_new.columns:
-                max_w = max((len(str(c.value or "")) for c in col), default=8)
-                ws_new.column_dimensions[col[0].column_letter].width = min(max_w + 4, 45)
 
-        if not wb_new.sheetnames:
-            return None, "No se encontraron datos para ordenar."
+            # Ajustar anchos de columna
+            for col in ws_new.columns:
+                max_w = max((len(str(c.value or "")) for c in col if c.value), default=8)
+                ws_new.column_dimensions[col[0].column_letter].width = min(max_w + 4, 50)
 
         buf = BytesIO()
         wb_new.save(buf)
         dir_txt = "A → Z" if direccion_asc else "Z → A"
-        return buf.getvalue(), f"✅ Ordenado por **{col_nombre_final}** {dir_txt}"
+        return buf.getvalue(), f"✅ Ordenado por **{col_nombre}** ({col_letra}) {dir_txt}"
 
     except Exception as e:
-        return None, f"Error al ordenar: {e}"
+        return None, f"No pude ordenar: {str(e)}"
+
 
 # ══════════════════════════════════════════════════════════════
 # REEMPLAZOS PRESERVANDO FORMATO
@@ -1667,7 +1682,7 @@ if st.session_state.texto_extraido:
         es_cambio=any(p in entrada.lower() for p in palabras_cambio_es+palabras_cambio_en) and not es_ordenar
         if es_ordenar:
             with st.spinner("📊 Ordenando..."):
-                resultado_ord = ordenar_excel(st.session_state.archivo_bytes, entrada)
+                resultado_ord = ordenar_excel(st.session_state.archivo_bytes, entrada, texto_activo)
             if resultado_ord[0]:
                 st.session_state.cambios_aplicados = resultado_ord[0]
                 # Actualizar texto extraído con el nuevo orden
