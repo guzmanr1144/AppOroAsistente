@@ -621,6 +621,59 @@ def reemplazar_pdf_original(archivo_bytes, cambios):
                 conteo+=1
     buf=BytesIO(); doc.save(buf); doc.close(); return buf.getvalue(),conteo
 
+
+def interpretar_imagen_documento(imagen_bytes, mime_type="image/jpeg", formato_salida="word"):
+    """
+    Extrae texto de una imagen usando Tesseract OCR (gratis, sin tokens).
+    Fallback: si Tesseract no está disponible, intenta con Pillow básico.
+    """
+    try:
+        from PIL import Image
+        import pytesseract
+        import io
+        img = Image.open(io.BytesIO(imagen_bytes))
+        # Mejorar contraste para mejor OCR
+        from PIL import ImageEnhance, ImageFilter
+        img = img.convert('L')  # escala de grises
+        img = ImageEnhance.Contrast(img).enhance(2.0)
+        img = img.filter(ImageFilter.SHARPEN)
+        # Extraer texto con Tesseract — español + inglés
+        texto_raw = pytesseract.image_to_string(img, lang='spa+eng', config='--psm 6')
+        if not texto_raw.strip():
+            return None
+        # Post-procesar según formato
+        lineas = [l for l in texto_raw.split('\n') if l.strip()]
+        if formato_salida == "excel":
+            # Intentar detectar columnas por espacios múltiples
+            resultado = []
+            for linea in lineas:
+                import re
+                cols = re.split(r'\s{2,}', linea.strip())
+                resultado.append(' | '.join(cols))
+            return '\n'.join(resultado)
+        else:
+            return '\n'.join(lineas)
+    except ImportError:
+        # Si no hay Tesseract, usar Gemini Vision solo con el modelo lite (mínimo tokens)
+        try:
+            import base64
+            img_b64 = base64.b64encode(imagen_bytes).decode("utf-8")
+            prompt = (
+                "Extrae TODO el texto de esta imagen exactamente como aparece. "
+                "Sin explicaciones. Solo el texto extraído.\n"
+                "Si hay tabla: usa columna1 | columna2 por fila."
+            )
+            model = genai.GenerativeModel("gemini-3.1-flash-lite-preview")
+            response = model.generate_content([
+                {"mime_type": mime_type, "data": img_b64},
+                prompt
+            ])
+            return response.text.strip()
+        except Exception:
+            return None
+    except Exception:
+        return None
+
 # ─────────────────────────────────────────────────────────
 # UPLOADER
 # ─────────────────────────────────────────────────────────
@@ -634,7 +687,115 @@ st.markdown("""<style>
 [data-testid="stFileUploadDropzone"]>div>button::after{content:"Seleccionar archivo";visibility:visible;position:absolute;left:0;right:0;text-align:center}
 </style>""", unsafe_allow_html=True)
 
-archivo = st.file_uploader("📎 Sube tu archivo", type=["docx","xlsx","pdf"], help="Word, Excel o PDF — máx 200MB", label_visibility="visible")
+# ── Selector de modo de entrada ──
+_modo_col1, _modo_col2 = st.columns(2)
+with _modo_col1:
+    _modo_archivo = st.session_state.get("modo_entrada","archivo") == "archivo"
+    st.markdown(f'<div class="{"nav-tab-activo" if _modo_archivo else "nav-tab-inactivo"}">', unsafe_allow_html=True)
+    if st.button("📎 Archivo", use_container_width=True, key="modo_btn_archivo"):
+        st.session_state.modo_entrada = "archivo"; st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+with _modo_col2:
+    _modo_img = st.session_state.get("modo_entrada","archivo") == "imagen"
+    st.markdown(f'<div class="{"nav-tab-activo" if _modo_img else "nav-tab-inactivo"}">', unsafe_allow_html=True)
+    if st.button("📷 Foto de documento", use_container_width=True, key="modo_btn_imagen"):
+        st.session_state.modo_entrada = "imagen"; st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+archivo = None
+if st.session_state.get("modo_entrada","archivo") == "archivo":
+    archivo = st.file_uploader("📎 Sube tu archivo", type=["docx","xlsx","pdf"], help="Word, Excel o PDF — máx 200MB", label_visibility="visible")
+else:
+    # ── Modo imagen ──
+    st.markdown("""<div style="background:#041208;border:1px dashed #0a3d1a;border-radius:14px;padding:1rem;margin:.5rem 0;text-align:center">
+        <div style="font-size:1.5rem">📷</div>
+        <div style="color:#34d399;font-weight:600;font-size:.88rem;margin:.3rem 0">Foto de documento</div>
+        <div style="color:#065f46;font-size:.75rem">Toma una foto o sube una imagen de cualquier documento, hoja o tabla</div>
+    </div>""", unsafe_allow_html=True)
+
+    imagen_subida = st.file_uploader("📷 Sube la foto", type=["jpg","jpeg","png","webp"], help="Foto de documento — máx 200MB", label_visibility="collapsed")
+
+    if imagen_subida:
+        st.image(imagen_subida, caption="Vista previa", use_container_width=True)
+        fmt_col1, fmt_col2 = st.columns([2,1])
+        with fmt_col1:
+            fmt_salida = st.selectbox(
+                "Convertir a",
+                ["📄 Word (texto estructurado)", "📊 Excel (tabla de datos)", "📝 Texto plano"],
+                label_visibility="collapsed",
+                key="img_formato_sel"
+            )
+        fmt_map = {"📄 Word (texto estructurado)":"word","📊 Excel (tabla de datos)":"excel","📝 Texto plano":"texto"}
+        fmt_key = fmt_map.get(fmt_salida,"word")
+        with fmt_col2:
+            if st.button("🔍 Interpretar", use_container_width=True, key="btn_interpretar_img"):
+                with st.spinner("🧠 Leyendo el documento..."):
+                    img_bytes = imagen_subida.read()
+                    mime = imagen_subida.type or "image/jpeg"
+                    texto_extraido_img = interpretar_imagen_documento(img_bytes, mime, fmt_key)
+                if texto_extraido_img:
+                    st.session_state.texto_extraido    = texto_extraido_img
+                    st.session_state.nombre_archivo    = imagen_subida.name
+                    st.session_state.archivo_tipo      = fmt_key
+                    st.session_state.archivo_bytes     = img_bytes
+                    st.session_state.resumen_data      = None
+                    st.session_state.historial_chat    = []
+                    st.session_state.lista_cambios     = []
+                    st.session_state.cambios_aplicados = None
+                    st.session_state.texto_corregido   = ""
+                    st.session_state.preview_cambio    = None
+                    st.session_state.resumen_error     = False
+                    st.session_state.generando_resumen = False
+                    st.session_state.guia_paso         = 1
+                    st.session_state.guia_vista        = False
+                    st.session_state.imagen_texto      = texto_extraido_img
+                    st.session_state.imagen_formato    = fmt_key
+
+                    # Generar archivo descargable del texto extraído
+                    if fmt_key == "word":
+                        doc_img = Document()
+                        doc_img.styles['Normal'].font.name = 'Calibri'
+                        doc_img.add_heading('Documento extraído de imagen', 0)
+                        for linea in texto_extraido_img.split('\n'):
+                            if linea.strip():
+                                doc_img.add_paragraph(linea.strip())
+                        buf_img = BytesIO(); doc_img.save(buf_img)
+                        st.session_state.imagen_archivo_bytes = buf_img.getvalue()
+                        st.session_state.imagen_archivo_nombre = "Extraido.docx"
+                        st.session_state.imagen_archivo_mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    elif fmt_key == "excel":
+                        wb_img = openpyxl.Workbook(); ws_img = wb_img.active; ws_img.title = "Datos"
+                        for ri, linea in enumerate(texto_extraido_img.split('\n'), 1):
+                            if linea.strip():
+                                cols = [c.strip() for c in linea.split('|')]
+                                for ci, val in enumerate(cols, 1):
+                                    c_cell = ws_img.cell(row=ri, column=ci, value=val)
+                                    if ri == 1:
+                                        c_cell.font = Font(bold=True, color="FFFFFF")
+                                        c_cell.fill = PatternFill("solid", fgColor="1E3A5F")
+                        buf_img = BytesIO(); wb_img.save(buf_img)
+                        st.session_state.imagen_archivo_bytes = buf_img.getvalue()
+                        st.session_state.imagen_archivo_nombre = "Extraido.xlsx"
+                        st.session_state.imagen_archivo_mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    else:
+                        st.session_state.imagen_archivo_bytes = texto_extraido_img.encode()
+                        st.session_state.imagen_archivo_nombre = "Extraido.txt"
+                        st.session_state.imagen_archivo_mime = "text/plain"
+
+                    st.success("✅ Documento extraído correctamente")
+                    st.rerun()
+                else:
+                    st.markdown('<div class="warn-box">⚠️ No se pudo interpretar la imagen. Intenta con una foto más nítida.</div>', unsafe_allow_html=True)
+
+    # Mostrar botón de descarga si hay imagen procesada
+    if st.session_state.get("imagen_archivo_bytes"):
+        st.download_button(
+            f"📥 Descargar {st.session_state.get('imagen_archivo_nombre','Extraido')}",
+            st.session_state.imagen_archivo_bytes,
+            st.session_state.get('imagen_archivo_nombre','Extraido'),
+            mime=st.session_state.get('imagen_archivo_mime','application/octet-stream'),
+            use_container_width=True
+        )
 
 if archivo and archivo.name != st.session_state.nombre_archivo:
     with st.spinner("📖 Cargando..."):
@@ -707,6 +868,46 @@ if st.session_state.texto_extraido:
             st.session_state.ejecutar_evaluacion = True
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
+
+    # ── Visor del documento ──
+    with st.expander("👁 Ver contenido del documento", expanded=False):
+        texto_mostrar = st.session_state.texto_corregido if st.session_state.texto_corregido else texto
+        lineas = [l for l in texto_mostrar.split('\n') if l.strip()]
+        if tipo == "xlsx":
+            filas_tabla = [[c.strip() for c in l.split('|') if c.strip()] for l in lineas if '|' in l]
+            if filas_tabla:
+                max_cols = max(len(f) for f in filas_tabla)
+                hdr = "".join([f'<th style="background:#0a3d1a;color:#34d399;padding:.4rem .6rem;font-size:.75rem;text-align:left">{i+1}</th>' for i in range(max_cols)])
+                tbody = ""
+                for ri, fila in enumerate(filas_tabla):
+                    bg = "#041208" if ri%2==0 else "#051a0c"
+                    cds = "".join([f'<td style="padding:.35rem .6rem;font-size:.78rem;color:#d1fae5;border-bottom:1px solid #0a3d1a;white-space:nowrap">{v}</td>' for v in fila])
+                    cds += "".join([f'<td style="padding:.35rem .6rem;background:{bg}"></td>' for _ in range(max_cols-len(fila))])
+                    tbody += f'<tr style="background:{bg}">{cds}</tr>'
+                st.markdown(
+                    f'<div style="overflow-x:auto;border-radius:10px;border:1px solid #0a3d1a">'
+                    f'<table style="width:100%;border-collapse:collapse">'
+                    f'<thead><tr>{hdr}</tr></thead><tbody>{tbody}</tbody></table></div>',
+                    unsafe_allow_html=True)
+            else:
+                st.text(texto_mostrar[:3000])
+        else:
+            doc_html = ""
+            for i, linea in enumerate(lineas[:100], 1):
+                bg = "#041208" if i%2==0 else "#051a0c"
+                ls = linea.replace("<","&lt;").replace(">","&gt;")
+                doc_html += (
+                    f'<div style="display:flex;gap:.6rem;padding:.3rem .5rem;background:{bg};border-bottom:1px solid #0a3d1a">'
+                    f'<span style="color:#065f46;font-size:.65rem;min-width:1.8rem;text-align:right;padding-top:.05rem">{i}</span>'
+                    f'<span style="color:#d1fae5;font-size:.78rem;word-break:break-word">{ls}</span></div>'
+                )
+            if len(lineas) > 100:
+                doc_html += f'<div style="color:#065f46;font-size:.72rem;padding:.4rem;text-align:center">... {len(lineas)-100} líneas más</div>'
+            st.markdown(
+                f'<div style="border-radius:10px;border:1px solid #0a3d1a;overflow:hidden;max-height:350px;overflow-y:auto">{doc_html}</div>',
+                unsafe_allow_html=True)
+        if st.session_state.texto_corregido:
+            st.markdown('<div class="info-box" style="margin-top:.5rem">✏️ Mostrando versión con cambios aplicados</div>', unsafe_allow_html=True)
 
     # Ejecutar evaluación si se pidió
     if st.session_state.get("ejecutar_evaluacion"):
