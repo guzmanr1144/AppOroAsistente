@@ -174,7 +174,7 @@ html,body,[class*="css"]{{font-family:'Inter',sans-serif!important;-webkit-tap-h
 /* ── CHAT PLACEHOLDER ── */
 .chat-placeholder{{text-align:center;padding:1.2rem .8rem;background:{t['card']};border:1.5px dashed {t['borde2']};border-radius:18px;margin:.4rem 0;box-shadow:0 2px 8px {t['sombra2']}}}
 .chip{{display:inline-block;background:{t['bg2']};border:1px solid {t['borde']};border-radius:20px;padding:.22rem .65rem;font-size:.68rem;color:{t['acento1']};font-weight:600;margin:.15rem;cursor:default;transition:all .2s}}
-.chip:hover{{background:{t['borde']};border-color:{t['acento1']}}}
+.chip:hover{{background:{t['borde']};border-color:{t['acento1']}}}[data-testid="stChatInputContainer"]{{padding:.6rem 0!important}}[data-testid="stChatInput"]{{margin-top:.4rem!important}}
 
 /* ── EMPTY STATE ── */
 .empty-state{{text-align:center;padding:3rem 1rem;animation:fadeUp .5s ease}}
@@ -208,12 +208,90 @@ _defaults = {
     "historial_versiones":[],"buscar_query":"",
     "resultado_evaluacion":None,
     "scroll_to":None,
+    "idioma":"es",
+    "vista_activa":None,
 }
 for k,v in _defaults.items():
     if k not in st.session_state:
         st.session_state[k] = v
 
-st.markdown(_get_all_css(st.session_state.get("tema","verde")), unsafe_allow_html=True)
+st.markdown(_get_all_css(st.session_state.get("tema","claro")), unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════════════════════
+# TRADUCCIONES
+# ══════════════════════════════════════════════════════════════
+_TXT = {
+    "es": {
+        "analizar":"⚡ Analizar","evaluar":"🔍 Evaluar","ver_doc":"👁 Ver documento",
+        "analizar_doc":"⚡ Analizar documento","evaluar_doc":"🔍 Evaluar documento ahora",
+        "exportar":"📥 Exportar informe","regen":"🔄 Regenerar resumen",
+        "confirmar":"✅ Confirmar","cancelar":"❌ Cancelar",
+        "descargar_corregido":"📥 Descargar corregido",
+        "limpiar_cambios":"🗑️ Limpiar todos los cambios",
+        "chat_placeholder":"✍️ Escribe un cambio o una pregunta...",
+        "chat_titulo":"Conversa sobre el documento",
+        "chat_hint":"Edita, pregunta o pide cambios en lenguaje natural",
+        "chip1":"✏️ cambia X por Y","chip2":"➕ agrega dato a persona",
+        "chip3":"❓ ¿cuántos hay?","chip4":"📝 resume en 3 puntos",
+        "analizando":"🧠 Analizando...","evaluando":"🔎 Evaluando calidad...",
+        "procesando":"🔍 Procesando...","pensando":"🤔 Pensando...",
+        "cargando":"📖 Cargando...","interpretando":"🧠 Leyendo...",
+        "reintentar":"🔄 Reintentar","cerrar_eval":"✕ Cerrar evaluación",
+        "hallazgo":"💡 Hallazgo:","recomendacion":"💡 Recomendación:",
+        "antes":"Antes","despues":"Después",
+        "version":"↩️ Deshacer último cambio",
+        "idioma_doc":"El programa responde en español sin importar el idioma del documento.",
+        "subir":"📎 Sube tu archivo","foto":"📷 Foto de documento",
+        "interpretar":"🔍 Interpretar","archivo":"📎 Archivo",
+        "palabras":"palabras","cambios":"cambio(s)","versiones":"versión(es)",
+        "no_encontrado":"no encontrado en el documento",
+        "listo_analizar":"Toca ⚡ Analizar para generar el resumen inteligente",
+        "sin_problemas":"¡Sin problemas detectados! El documento está bien 🎉",
+        "prompt_idioma":"Responde SIEMPRE en español, sin importar el idioma del documento.",
+        "word":"📄 Word","excel":"📊 Excel","pdf":"📕 PDF",
+        "word_corregido":"📄 Word corregido","excel_corregido":"📊 Excel corregido",
+        "pdf_corregido":"📕 PDF corregido","exportar_word":"📄 Exportar como Word",
+        "cambiar_tema":"🎨 Tema","cambiar_idioma":"🌐 EN",
+    },
+    "en": {
+        "analizar":"⚡ Analyze","evaluar":"🔍 Evaluate","ver_doc":"👁 View document",
+        "analizar_doc":"⚡ Analyze document","evaluar_doc":"🔍 Evaluate document now",
+        "exportar":"📥 Export report","regen":"🔄 Regenerate summary",
+        "confirmar":"✅ Confirm","cancelar":"❌ Cancel",
+        "descargar_corregido":"📥 Download corrected",
+        "limpiar_cambios":"🗑️ Clear all changes",
+        "chat_placeholder":"✍️ Write a change or ask a question...",
+        "chat_titulo":"Chat about the document",
+        "chat_hint":"Edit, ask questions or request changes in natural language",
+        "chip1":"✏️ change X to Y","chip2":"➕ add data to person",
+        "chip3":"❓ how many are there?","chip4":"📝 summarize in 3 points",
+        "analizando":"🧠 Analyzing...","evaluando":"🔎 Evaluating quality...",
+        "procesando":"🔍 Processing...","pensando":"🤔 Thinking...",
+        "cargando":"📖 Loading...","interpretando":"🧠 Reading...",
+        "reintentar":"🔄 Retry","cerrar_eval":"✕ Close evaluation",
+        "hallazgo":"💡 Finding:","recomendacion":"💡 Recommendation:",
+        "antes":"Before","despues":"After",
+        "version":"↩️ Undo last change",
+        "idioma_doc":"The program responds in English regardless of the document language.",
+        "subir":"📎 Upload your file","foto":"📷 Photo of document",
+        "interpretar":"🔍 Interpret","archivo":"📎 File",
+        "palabras":"words","cambios":"change(s)","versiones":"version(s)",
+        "no_encontrado":"not found in document",
+        "listo_analizar":"Tap ⚡ Analyze to generate the smart summary",
+        "sin_problemas":"No issues detected! The document looks good 🎉",
+        "prompt_idioma":"Always respond in English, regardless of the document language.",
+        "word":"📄 Word","excel":"📊 Excel","pdf":"📕 PDF",
+        "word_corregido":"📄 Corrected Word","excel_corregido":"📊 Corrected Excel",
+        "pdf_corregido":"📕 Corrected PDF","exportar_word":"📄 Export as Word",
+        "cambiar_tema":"🎨 Theme","cambiar_idioma":"🌐 ES",
+    },
+}
+
+def T(key):
+    """Get translated text."""
+    lang = st.session_state.get("idioma","es")
+    return _TXT.get(lang,_TXT["es"]).get(key, _TXT["es"].get(key,""))
 
 # ══════════════════════════════════════════════════════════════
 # GEMINI
@@ -287,7 +365,7 @@ with st.sidebar:
             st.markdown("---")
             st.markdown("**⏮ Versiones**")
             st.caption(f"{len(st.session_state.historial_versiones)} versión(es) guardada(s)")
-            if st.button("↩️ Deshacer último cambio", use_container_width=True):
+            if st.button(T("version"), use_container_width=True):
                 v = st.session_state.historial_versiones.pop()
                 st.session_state.texto_corregido = v["texto"]
                 st.session_state.cambios_aplicados = v["bytes"]
@@ -302,8 +380,29 @@ with st.sidebar:
     st.caption("Oro Asistente v3.1")
 
 # ══════════════════════════════════════════════════════════════
-# HEADER
+# TOP BAR — tema izquierda, idioma derecha
 # ══════════════════════════════════════════════════════════════
+_col_tema, _col_mid, _col_lang = st.columns([2, 3, 1])
+
+with _col_tema:
+    _temas_map = {"☀️ Claro":"claro","🌸 Aurora":"aurora","🌿 Menta":"menta","🌅 Sol":"sol","🌹 Rose":"rose"}
+    _tema_actual = st.session_state.get("tema","claro")
+    _tema_label = next((k for k,v in _temas_map.items() if v==_tema_actual), "☀️ Claro")
+    _nuevo_tema = st.selectbox(
+        "tema", list(_temas_map.keys()),
+        index=list(_temas_map.keys()).index(_tema_label),
+        label_visibility="collapsed", key="tema_sel")
+    if _temas_map[_nuevo_tema] != _tema_actual:
+        st.session_state.tema = _temas_map[_nuevo_tema]; st.rerun()
+
+with _col_lang:
+    _lang_actual = st.session_state.get("idioma","es")
+    _lang_label = "🌐 EN" if _lang_actual=="es" else "🌐 ES"
+    if st.button(_lang_label, key="btn_lang", use_container_width=True):
+        st.session_state.idioma = "en" if _lang_actual=="es" else "es"
+        st.rerun()
+
+# ── Header ──
 st.markdown("""
 <div class="oro-header">
     <div class="oro-logo-wrap">
@@ -314,19 +413,6 @@ st.markdown("""
     <div class="oro-badge">✦ ANALIZA &nbsp;·&nbsp; EDITA &nbsp;·&nbsp; EXPORTA ✦</div>
 </div>
 """, unsafe_allow_html=True)
-
-# ── Selector de tema ──
-_temas_map = {"☀️ Claro":"claro","🌸 Aurora":"aurora","🌿 Menta":"menta","🌅 Sol":"sol","🌹 Rose":"rose"}
-_tema_actual = st.session_state.get("tema","claro")
-_tema_label = next((k for k,v in _temas_map.items() if v==_tema_actual), "☀️ Claro")
-_sel_col, _ = st.columns([2,1])
-with _sel_col:
-    _nuevo = st.selectbox("🎨", list(_temas_map.keys()),
-        index=list(_temas_map.keys()).index(_tema_label),
-        label_visibility="collapsed", key="tema_select_main")
-if _temas_map[_nuevo] != _tema_actual:
-    st.session_state.tema = _temas_map[_nuevo]
-    st.rerun()
 
 # ══════════════════════════════════════════════════════════════
 # FUNCIONES UTILITARIAS
@@ -365,8 +451,9 @@ def guardar_version(texto, bytes_doc):
 # FUNCIONES IA
 # ══════════════════════════════════════════════════════════════
 def solicitar_resumen_estructurado(texto):
+    idioma_prompt = T("prompt_idioma")
     prompt = (
-        "Analista experto en documentos. Devuelve SOLO JSON válido:\n"
+        f"Analista experto en documentos. {idioma_prompt} Devuelve SOLO JSON válido:\n"
         '{"titulo":"...","emoji_categoria":"📋","resumen_ejecutivo":"max 3 oraciones amigables",'
         '"metricas":{"Clave":"Valor"},"puntos_clave":["punto"],"hallazgo_destacado":"observación"}\n\n'
         f"DOCUMENTO:\n{texto[:12000]}"
@@ -390,8 +477,9 @@ def extraer_cambio_con_regex(instruccion):
 
 def solicitar_cambios(instruccion, texto_doc=""):
     ctx = f"\n\nCONTENIDO DEL DOCUMENTO:\n{texto_doc[:4000]}" if texto_doc else ""
+    idioma_prompt = T("prompt_idioma")
     prompt = (
-        f"Asistente de edición de documentos.\nINSTRUCCIÓN: \"{instruccion}\"{ctx}\n\n"
+        f"Asistente de edición de documentos. {idioma_prompt}\nINSTRUCCIÓN: \"{instruccion}\"{ctx}\n\n"
         "REGLAS:\n1. cambia X por Y → buscar=X, reemplazar=Y\n"
         "2. agrega DATO a PERSONA → buscar=PERSONA exacto, reemplazar='PERSONA DATO'\n"
         "3. completa campo de X con Y → buscar=X, reemplazar='X Y'\n"
@@ -411,15 +499,17 @@ def solicitar_cambios(instruccion, texto_doc=""):
 
 def preguntar_al_documento(pregunta, texto):
     ctx = "\n".join([f"{m['rol']}: {m['texto']}" for m in st.session_state.historial_chat[-6:]])
+    idioma_prompt = T("prompt_idioma")
     prompt = (
-        f"Asistente experto en documentos.\nDOCUMENTO:\n{texto[:10000]}\n\n"
+        f"Asistente experto en documentos. {idioma_prompt}\nDOCUMENTO:\n{texto[:10000]}\n\n"
         f"CONVERSACIÓN:\n{ctx}\n\nPREGUNTA: {pregunta}\nResponde conciso y directo en español."
     )
     return llamar_ia(prompt) or "No pude procesar tu pregunta."
 
 def detectar_anomalias(texto):
+    idioma_prompt = T("prompt_idioma")
     prompt = (
-        "Analiza el documento. Devuelve SOLO JSON:\n"
+        f"Analiza el documento. {idioma_prompt} Devuelve SOLO JSON:\n"
         '{"nivel_general":"Excelente/Bueno/Regular/Deficiente","puntaje":85,'
         '"criticos":["..."],"altos":["..."],"medios":["..."],"leves":["..."],'
         '"recomendacion":"..."}\n\n'
@@ -825,7 +915,7 @@ else:
         fmt_key = fmt_map.get(fmt_sel.split(" ",1)[-1].strip(),"word")
         with fc2:
             if st.button("🔍 Interpretar",use_container_width=True,key="btn_interpretar"):
-                with st.spinner("🧠 Leyendo..."):
+                with st.spinner(T("interpretando")):
                     img_bytes=img_sub.read()
                     mime=img_sub.type or "image/jpeg"
                     texto_img=interpretar_imagen_documento(img_bytes,mime,fmt_key)
@@ -876,7 +966,7 @@ else:
 
 # Procesar archivo subido
 if archivo and archivo.name != st.session_state.nombre_archivo:
-    with st.spinner("📖 Cargando..."):
+    with st.spinner(T("cargando")):
         contenido=archivo.read()
         for k,v in [("archivo_bytes",contenido),("nombre_archivo",archivo.name),
                     ("archivo_tipo",archivo.name.split(".")[-1].lower()),
@@ -949,22 +1039,27 @@ if st.session_state.texto_extraido:
     ba,be = st.columns(2)
     with ba:
         st.markdown('<div class="btn-analizar">', unsafe_allow_html=True)
-        if st.button("⚡ Analizar",use_container_width=True,key="btn_analizar"):
+        if st.button(T("analizar"),use_container_width=True,key="btn_analizar"):
             st.session_state.generando_resumen=True
             st.session_state.resumen_data=None
+            st.session_state.vista_activa="resumen"
+            st.session_state.resultado_evaluacion=None
             st.session_state.scroll_to="seccion-resumen"
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
     with be:
         st.markdown('<div class="btn-evaluar">', unsafe_allow_html=True)
-        if st.button("🔍 Evaluar",use_container_width=True,key="btn_evaluar"):
+        if st.button(T("evaluar"),use_container_width=True,key="btn_evaluar"):
             st.session_state.ejecutar_evaluacion=True
+            st.session_state.vista_activa="evaluacion"
+            st.session_state.resumen_data=None
+            st.session_state.generando_resumen=False
             st.session_state.scroll_to="seccion-evaluacion"
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
     # ── Visor del documento ──
-    with st.expander("👁 Ver documento", expanded=False):
+    with st.expander(T("ver_doc"), expanded=False):
         txt_mostrar=st.session_state.texto_corregido if st.session_state.texto_corregido else texto
         # Búsqueda dentro del documento
         bq=st.text_input("🔍 Buscar en el documento",
@@ -1027,7 +1122,7 @@ if st.session_state.texto_extraido:
     # ── Evaluación ──
     if st.session_state.get("ejecutar_evaluacion"):
         st.session_state.ejecutar_evaluacion=False
-        with st.spinner("🔎 Evaluando calidad..."):
+        with st.spinner(T("evaluando")):
             st.session_state.resultado_evaluacion=detectar_anomalias(texto_activo)
 
     if st.session_state.get("resultado_evaluacion"):
@@ -1054,16 +1149,16 @@ if st.session_state.texto_extraido:
                 rows="".join([f'<div style="color:#d1fae5;font-size:.77rem;padding:.2rem 0;border-bottom:1px solid {cbrd}">• {it}</div>' for it in items_e])
                 st.markdown(f'<div style="background:{cbg};border:1px solid {cbrd};border-left:4px solid {cfg2};border-radius:12px;padding:.7rem .9rem;margin:.35rem 0"><div style="color:{cfg2};font-weight:700;font-size:.82rem;margin-bottom:.3rem">{label}</div>{rows}</div>', unsafe_allow_html=True)
         if not hay:
-            st.markdown('<div class="info-box">✅ ¡Sin problemas detectados! El documento está bien 🎉</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="info-box">✅ {T("sin_problemas")}</div>', unsafe_allow_html=True)
         rec=resultado.get("recomendacion","")
         if rec: st.markdown(f'<div class="hallazgo-card">💡 <strong>Recomendación:</strong> {rec}</div>', unsafe_allow_html=True)
-        if st.button("✕ Cerrar evaluación",use_container_width=True):
+        if st.button(T("cerrar_eval"),use_container_width=True):
             st.session_state.resultado_evaluacion=None; st.rerun()
         st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
 
     # ── Resumen ──
     if st.session_state.generando_resumen:
-        with st.spinner("🧠 Analizando..."):
+        with st.spinner(T("analizando")):
             txt_r=st.session_state.texto_corregido if st.session_state.texto_corregido else texto
             data_nueva=solicitar_resumen_estructurado(txt_r)
         st.session_state.generando_resumen=False
@@ -1076,14 +1171,14 @@ if st.session_state.texto_extraido:
 
     if st.session_state.get("resumen_error"):
         st.markdown('<div class="warn-box">⚠️ No se pudo generar el resumen. Intenta de nuevo.</div>', unsafe_allow_html=True)
-        if st.button("🔄 Reintentar",use_container_width=True):
+        if st.button(T("reintentar"),use_container_width=True):
             st.session_state.resumen_error=False; st.session_state.generando_resumen=True; st.rerun()
 
     data=st.session_state.resumen_data
     if not data and not st.session_state.generando_resumen and not st.session_state.get("resumen_error"):
-        st.markdown("""<div style="text-align:center;padding:1.2rem 0 .6rem">
+        st.markdown(f"""<div style="text-align:center;padding:1.2rem 0 .6rem">
             <div style="font-size:2rem">🧠</div>
-            <div style="color:#34d399;font-weight:700;font-size:.88rem;margin-top:.3rem">Toca ⚡ Analizar para generar el resumen inteligente</div>
+            <div style="font-weight:700;font-size:.88rem;margin-top:.3rem;color:#6b83f8">{T('listo_analizar')}</div>
         </div>""", unsafe_allow_html=True)
 
     if data:
@@ -1107,19 +1202,19 @@ if st.session_state.texto_extraido:
         if hall: st.markdown(f'<div class="hallazgo-card">💡 <strong>Hallazgo:</strong> {hall}</div>',unsafe_allow_html=True)
 
         st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
-        st.markdown('<div class="section-title">📥 Exportar informe</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="section-title">{T("exportar")}</div>', unsafe_allow_html=True)
         ab=st.session_state.archivo_bytes; ca=st.session_state.lista_cambios
         ec1,ec2,ec3=st.columns(3)
         with ec1:
-            st.download_button("📄 Word",exportar_word(texto_activo,data,archivo_bytes=ab,archivo_tipo=tipo,cambios=ca),
+            st.download_button(T("word"),exportar_word(texto_activo,data,archivo_bytes=ab,archivo_tipo=tipo,cambios=ca),
                 "Informe.docx",mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",use_container_width=True)
         with ec2:
-            st.download_button("📊 Excel",exportar_excel(texto_activo,data,archivo_bytes=ab,archivo_tipo=tipo,cambios=ca),
+            st.download_button(T("excel"),exportar_excel(texto_activo,data,archivo_bytes=ab,archivo_tipo=tipo,cambios=ca),
                 "Informe.xlsx",mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",use_container_width=True)
         with ec3:
-            st.download_button("📕 PDF",exportar_pdf(texto_activo,data),
+            st.download_button(T("pdf"),exportar_pdf(texto_activo,data),
                 "Informe.pdf",mime="application/pdf",use_container_width=True)
-        if st.button("🔄 Regenerar resumen",use_container_width=True):
+        if st.button(T("regen"),use_container_width=True):
             st.session_state.generando_resumen=True; st.session_state.resumen_data=None; st.rerun()
 
     st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
@@ -1128,9 +1223,9 @@ if st.session_state.texto_extraido:
     if st.session_state.preview_cambio:
         st.markdown('<div id="seccion-preview"></div>', unsafe_allow_html=True)
         preview=st.session_state.preview_cambio
-        st.markdown("""<div style="background:linear-gradient(135deg,#021008,#031510);border:1px solid #10b981;
-            border-radius:16px;padding:.9rem 1rem;margin:.4rem 0">
-            <div style="color:#34d399;font-weight:700;font-size:.85rem;margin-bottom:.5rem">👁 Vista previa del cambio</div>""",
+        st.markdown("""<div style="background:#f0fdf4;border:1px solid #86efac;
+            border-radius:16px;padding:.9rem 1rem;margin:.4rem 0;box-shadow:0 2px 8px rgba(5,150,105,.1)">
+            <div style="color:#065f46;font-weight:700;font-size:.85rem;margin-bottom:.5rem">👁 Vista previa del cambio</div>""",
             unsafe_allow_html=True)
         for c in preview:
             bq2=c["buscar"][:50]+("..." if len(c["buscar"])>50 else "")
@@ -1140,19 +1235,19 @@ if st.session_state.texto_extraido:
                 ini=max(0,idx-35); fin=min(len(texto_activo),idx+len(c["buscar"])+35)
                 ca2=texto_activo[ini:idx].replace("<","&lt;"); cd=texto_activo[idx+len(c["buscar"]):fin].replace("<","&lt;")
                 st.markdown(
-                    f'<div style="background:#1a0505;border-radius:8px;padding:.5rem .7rem;margin:.3rem 0;font-size:.76rem">'
-                    f'<span style="color:#6b7280;font-size:.6rem;text-transform:uppercase;display:block;margin-bottom:.2rem">Antes</span>'
-                    f'<span style="color:#fca5a5;font-family:JetBrains Mono,monospace">...{ca2}<mark style="background:#7f1d1d;color:#fca5a5;border-radius:3px;padding:0 3px">{bq2}</mark>{cd}...</span></div>'
-                    f'<div style="background:#021008;border-radius:8px;padding:.5rem .7rem;margin:.3rem 0;font-size:.76rem">'
-                    f'<span style="color:#6b7280;font-size:.6rem;text-transform:uppercase;display:block;margin-bottom:.2rem">Después</span>'
-                    f'<span style="color:#86efac;font-family:JetBrains Mono,monospace">...{ca2}<mark style="background:#14532d;color:#86efac;border-radius:3px;padding:0 3px">{rq2}</mark>{cd}...</span></div>',
+                    f'<div style="background:#fff1f1;border:1px solid #fecaca;border-radius:8px;padding:.5rem .7rem;margin:.3rem 0;font-size:.76rem">'
+                    f'<span style="color:#9ca3af;font-size:.6rem;text-transform:uppercase;display:block;margin-bottom:.2rem">{T("antes")}</span>'
+                    f'<span style="color:#7f1d1d;font-family:JetBrains Mono,monospace">...{ca2}<mark style="background:#fee2e2;color:#991b1b;border-radius:3px;padding:0 3px;font-weight:700">{bq2}</mark>{cd}...</span></div>'
+                    f'<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:.5rem .7rem;margin:.3rem 0;font-size:.76rem">'
+                    f'<span style="color:#9ca3af;font-size:.6rem;text-transform:uppercase;display:block;margin-bottom:.2rem">{T("despues")}</span>'
+                    f'<span style="color:#14532d;font-family:JetBrains Mono,monospace">...{ca2}<mark style="background:#dcfce7;color:#166534;border-radius:3px;padding:0 3px;font-weight:700">{rq2}</mark>{cd}...</span></div>',
                     unsafe_allow_html=True)
             else:
                 st.markdown(f'<div class="warn-box">⚠️ "{bq2}" no encontrado en el documento</div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
         cs,cn3=st.columns(2)
         with cs:
-            if st.button("✅ Confirmar",use_container_width=True,key="confirm_cambio"):
+            if st.button(T("confirmar"),use_container_width=True,key="confirm_cambio"):
                 # Guardar versión antes de aplicar
                 guardar_version(texto_activo, st.session_state.cambios_aplicados or st.session_state.archivo_bytes)
                 st.session_state.lista_cambios.extend(preview)
@@ -1178,7 +1273,7 @@ if st.session_state.texto_extraido:
                     "texto":f"✅ Listo — cambié **{preview[0]['buscar']}** → **{preview[0]['reemplazar']}**. ¿Algo más?"})
                 st.rerun()
         with cn3:
-            if st.button("❌ Cancelar",use_container_width=True,key="cancel_cambio"):
+            if st.button(T("cancelar"),use_container_width=True,key="cancel_cambio"):
                 st.session_state.preview_cambio=None; st.session_state.edicion_counter+=1; st.rerun()
 
     # ── Descargar corregido ──
@@ -1186,18 +1281,18 @@ if st.session_state.texto_extraido:
         with st.expander(f"📥 Descargar corregido · {len(st.session_state.lista_cambios)} cambio(s)"):
             fb=st.session_state.cambios_aplicados
             if tipo=="docx":
-                st.download_button("📄 Word corregido",fb,"Corregido.docx",
+                st.download_button(T("word_corregido"),fb,"Corregido.docx",
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",use_container_width=True)
             elif tipo=="xlsx":
-                st.download_button("📊 Excel corregido",fb,"Corregido.xlsx",
+                st.download_button(T("excel_corregido"),fb,"Corregido.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",use_container_width=True)
             elif tipo=="pdf" and PYMUPDF_OK:
-                st.download_button("📕 PDF corregido",fb,"Corregido.pdf",mime="application/pdf",use_container_width=True)
+                st.download_button(T("pdf_corregido"),fb,"Corregido.pdf",mime="application/pdf",use_container_width=True)
             wc=exportar_word(st.session_state.texto_corregido or texto,None)
-            st.download_button("📄 Exportar como Word",wc,"Exportado.docx",
+            st.download_button(T("exportar_word"),wc,"Exportado.docx",
                 mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",use_container_width=True)
             st.markdown('<div class="btn-peligro">', unsafe_allow_html=True)
-            if st.button("🗑️ Limpiar todos los cambios",use_container_width=True):
+            if st.button(T("limpiar_cambios"),use_container_width=True):
                 st.session_state.lista_cambios=[]; st.session_state.cambios_aplicados=None
                 st.session_state.texto_corregido=""; st.session_state.preview_cambio=None
                 st.session_state.historial_versiones=[]; st.rerun()
@@ -1213,32 +1308,38 @@ if st.session_state.texto_extraido:
     if not st.session_state.historial_chat and not st.session_state.preview_cambio:
         st.markdown(f"""<div class="chat-placeholder">
             <div style="font-size:1.6rem">💬</div>
-            <div style="color:#34d399;font-weight:700;font-size:.88rem;margin:.25rem 0">Conversa sobre el documento</div>
-            <div style="color:#166534;font-size:.73rem;margin-bottom:.6rem">Edita, pregunta o pide cambios en lenguaje natural</div>
+            <div style="font-weight:700;font-size:.95rem;margin:.25rem 0;color:#1a1f36">{T('chat_titulo')}</div>
+            <div style="font-size:.76rem;margin-bottom:.7rem;color:#8896b3">{T('chat_hint')}</div>
             <div>
-                <span class="chip">✏️ cambia X por Y</span>
-                <span class="chip">➕ agrega dato a persona</span>
-                <span class="chip">❓ ¿cuántos hay?</span>
-                <span class="chip">📝 resume en 3 puntos</span>
+                <span class="chip">{T('chip1')}</span>
+                <span class="chip">{T('chip2')}</span>
+                <span class="chip">{T('chip3')}</span>
+                <span class="chip">{T('chip4')}</span>
             </div>
         </div>""", unsafe_allow_html=True)
 
-    entrada=st.chat_input("✍️ Escribe un cambio o una pregunta...", key=f"chat_{st.session_state.edicion_counter}")
+    entrada=st.chat_input(T("chat_placeholder"), key=f"chat_{st.session_state.edicion_counter}")
     if entrada:
         st.session_state.historial_chat.append({"rol":"Usuario","texto":entrada})
         if st.session_state.get("guia_paso")==2: st.session_state.guia_paso=3
-        palabras_cambio=["cambia","reemplaza","sustituye","corrige","agrega","añade","borra","elimina","pon","escribe","modifica","quita","actualiza","completa"]
-        es_cambio=any(p in entrada.lower() for p in palabras_cambio)
+        palabras_cambio_es=["cambia","reemplaza","sustituye","corrige","agrega","añade","borra","elimina","pon","escribe","modifica","quita","actualiza","completa"]
+        palabras_cambio_en=["change","replace","substitute","correct","add","delete","remove","put","write","modify","update","complete"]
+        es_cambio=any(p in entrada.lower() for p in palabras_cambio_es+palabras_cambio_en)
         if es_cambio:
-            with st.spinner("🔍 Procesando..."):
+            with st.spinner(T("procesando")):
                 nuevos=solicitar_cambios(entrada,texto_activo)
             if nuevos:
                 st.session_state.preview_cambio=nuevos
-                st.session_state.historial_chat.append({"rol":"Asistente","texto":"Encontré el cambio 👆 Revisa la vista previa y confirma si es correcto."})
+                st.session_state.vista_activa="preview"
+                st.session_state.resultado_evaluacion=None
+                st.session_state.scroll_to="seccion-preview"
+                msg = "Found the change 👆 Review the preview above and confirm." if st.session_state.get("idioma")=="en" else "Encontré el cambio 👆 Revisa la vista previa arriba y confirma."
+                st.session_state.historial_chat.append({"rol":"Asistente","texto":msg})
             else:
-                st.session_state.historial_chat.append({"rol":"Asistente","texto":"No encontré qué cambiar. Intenta: *cambia 'palabra original' por 'palabra nueva'*"})
+                msg = "Couldn't find what to change. Try: *change 'original word' to 'new word'*" if st.session_state.get("idioma")=="en" else "No encontré qué cambiar. Intenta: *cambia 'palabra original' por 'palabra nueva'*"
+                st.session_state.historial_chat.append({"rol":"Asistente","texto":msg})
         else:
-            with st.spinner("🤔 Pensando..."):
+            with st.spinner(T("pensando")):
                 resp=preguntar_al_documento(entrada,texto_activo)
             st.session_state.historial_chat.append({"rol":"Asistente","texto":resp})
         st.rerun()
