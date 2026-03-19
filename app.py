@@ -28,51 +28,6 @@ st.set_page_config(page_title="Oro Asistente", page_icon="🏆", layout="centere
 @st.cache_data(show_spinner=False)
 def _get_all_css(tema_key="claro"):
     _T = {
-        "claro": {
-            "bg1":"#eef2ff","bg2":"#e0e9ff","bg3":"#d4dfff",
-            "card":"#ffffff","card2":"#f3f6ff",
-            "borde":"#b8caf8","borde2":"#93aff5",
-            "acento1":"#4f6ef7","acento2":"#3b5bf0","acento3":"#6b83f8",
-            "titulo_grad":"linear-gradient(135deg,#4f6ef7,#7c3aed,#4f6ef7)",
-            "texto":"#0f1429","texto2":"#2d3a6b","texto3":"#6474a8",
-            "sombra":"rgba(79,110,247,0.15)","sombra2":"rgba(79,110,247,0.08)",
-        },
-        "aurora": {
-            "bg1":"#ede8ff","bg2":"#e3daff","bg3":"#d8cfff",
-            "card":"#f9f7ff","card2":"#f0ecff",
-            "borde":"#c4b0f5","borde2":"#a990f0",
-            "acento1":"#7c3aed","acento2":"#6d28d9","acento3":"#8b5cf6",
-            "titulo_grad":"linear-gradient(135deg,#7c3aed,#ec4899,#7c3aed)",
-            "texto":"#18082e","texto2":"#3d1a6e","texto3":"#8060aa",
-            "sombra":"rgba(124,58,237,0.15)","sombra2":"rgba(124,58,237,0.08)",
-        },
-        "sol": {
-            "bg1":"#fff8e0","bg2":"#fff2c0","bg3":"#ffeba0",
-            "card":"#fffef5","card2":"#fffbe8",
-            "borde":"#f0c840","borde2":"#e8b020",
-            "acento1":"#c07800","acento2":"#9a5e00","acento3":"#e09000",
-            "titulo_grad":"linear-gradient(135deg,#c07800,#e05500,#c07800)",
-            "texto":"#1a0e00","texto2":"#3a2200","texto3":"#806030",
-            "sombra":"rgba(192,120,0,0.15)","sombra2":"rgba(192,120,0,0.08)",
-        },
-        "menta": {
-            "bg1":"#e6faf3","bg2":"#d4f5e8","bg3":"#c0eedb",
-            "card":"#f5fffc","card2":"#eafff6",
-            "borde":"#80dbb8","borde2":"#50c898",
-            "acento1":"#047857","acento2":"#065f46","acento3":"#10b981",
-            "titulo_grad":"linear-gradient(135deg,#047857,#0891b2,#047857)",
-            "texto":"#022016","texto2":"#0a3d28","texto3":"#3a8060",
-            "sombra":"rgba(4,120,87,0.15)","sombra2":"rgba(4,120,87,0.08)",
-        },
-        "rose": {
-            "bg1":"#ffe8ed","bg2":"#ffd4dc","bg3":"#ffbfcc",
-            "card":"#fff8fa","card2":"#ffeff3",
-            "borde":"#f090a8","borde2":"#e06080",
-            "acento1":"#c01040","acento2":"#9a0030","acento3":"#e02858",
-            "titulo_grad":"linear-gradient(135deg,#c01040,#8020b0,#c01040)",
-            "texto":"#1a0010","texto2":"#4a0025","texto3":"#904060",
-            "sombra":"rgba(192,16,64,0.15)","sombra2":"rgba(192,16,64,0.08)",
-        },
         "noche": {
             "bg1":"#0a0e1a","bg2":"#0d1222","bg3":"#10162a",
             "card":"#141828","card2":"#1a2035",
@@ -230,7 +185,7 @@ _defaults = {
     "texto_modificado":"","generando_resumen":False,"resumen_error":False,
     "preview_cambio":None,"edicion_counter":0,"texto_corregido":"",
     "guia_paso":0,"guia_vista":False,"ejecutar_evaluacion":False,
-    "tema":"claro","modo_entrada":"archivo",
+    "tema":"noche","modo_entrada":"archivo",
     "imagen_archivo_bytes":None,"imagen_archivo_nombre":"","imagen_archivo_mime":"",
     "historial_versiones":[],"buscar_query":"",
     "resultado_evaluacion":None,
@@ -242,7 +197,7 @@ for k,v in _defaults.items():
     if k not in st.session_state:
         st.session_state[k] = v
 
-st.markdown(_get_all_css(st.session_state.get("tema","claro")), unsafe_allow_html=True)
+st.markdown(_get_all_css(st.session_state.get("tema","noche")), unsafe_allow_html=True)
 
 
 # ══════════════════════════════════════════════════════════════
@@ -353,7 +308,7 @@ with st.sidebar:
     st.markdown("**🎨 Tema**")
     tema_opc = {"☀️ Claro":"claro","🌸 Aurora":"aurora","🌿 Menta":"menta","🌅 Sol":"sol","🌹 Rose":"rose","🌑 Noche":"noche","⬛ Carbón":"carbon","🌌 Cosmos":"cosmos"}
     sel = st.selectbox("Tema", list(tema_opc.keys()),
-        index=list(tema_opc.values()).index(st.session_state.get("tema","verde")),
+        index=list(tema_opc.values()).index(st.session_state.get("tema","noche")),
         label_visibility="collapsed")
     if tema_opc[sel] != st.session_state.tema:
         st.session_state.tema = tema_opc[sel]; st.rerun()
@@ -412,8 +367,8 @@ with st.sidebar:
 _col_tema, _col_mid, _col_lang = st.columns([2, 3, 1])
 
 with _col_tema:
-    _temas_map = {"☀️ Claro":"claro","🌸 Aurora":"aurora","🌿 Menta":"menta","🌅 Sol":"sol","🌹 Rose":"rose","🌑 Noche":"noche","⬛ Carbón":"carbon","🌌 Cosmos":"cosmos"}
-    _tema_actual = st.session_state.get("tema","claro")
+    _temas_map = {"🌑 Noche":"noche","⬛ Carbón":"carbon","🌌 Cosmos":"cosmos"}
+    _tema_actual = st.session_state.get("tema","noche")
     _tema_label = next((k for k,v in _temas_map.items() if v==_tema_actual), "☀️ Claro")
     _nuevo_tema = st.selectbox(
         "tema", list(_temas_map.keys()),
@@ -545,31 +500,92 @@ def detectar_anomalias(texto):
     r = llamar_ia(prompt)
     return extraer_json_seguro(r) if r else None
 
-def interpretar_imagen_documento(imagen_bytes, mime_type="image/jpeg", formato_salida="word"):
+def detectar_tipo_imagen(texto_raw):
+    """Detecta si el contenido extraído es tabla o documento de texto."""
+    lineas = [l for l in texto_raw.split('\n') if l.strip()]
+    if not lineas: return "word"
+    # Detectar tabla: muchas líneas con 2+ columnas separadas por espacios/tabs
+    lineas_con_cols = sum(1 for l in lineas if len(re.split(r'\s{2,}|\t', l.strip())) >= 2)
+    ratio_tabla = lineas_con_cols / max(len(lineas), 1)
+    # Si más del 50% de las líneas tienen múltiples columnas → probablemente tabla
+    if ratio_tabla >= 0.5:
+        return "excel"
+    return "word"
+
+def interpretar_imagen_documento(imagen_bytes, mime_type="image/jpeg", formato_salida="auto"):
+    """
+    Extrae texto de imagen con Tesseract (gratis) o Gemini Vision (fallback).
+    Si formato_salida="auto", detecta automáticamente si es tabla o documento.
+    Preserva el contenido tal como aparece en la imagen.
+    """
+    texto_raw = None
+
+    # Intentar Tesseract primero (sin tokens)
     try:
         from PIL import Image, ImageEnhance, ImageFilter
         import pytesseract, io
-        img = Image.open(io.BytesIO(imagen_bytes)).convert('L')
-        img = ImageEnhance.Contrast(img).enhance(2.0)
-        img = img.filter(ImageFilter.SHARPEN)
-        texto_raw = pytesseract.image_to_string(img, lang='spa+eng', config='--psm 6')
-        if not texto_raw.strip(): return None
-        lineas = [l for l in texto_raw.split('\n') if l.strip()]
-        if formato_salida == "excel":
-            return '\n'.join([' | '.join(re.split(r'\s{2,}', l.strip())) for l in lineas])
-        return '\n'.join(lineas)
+        img = Image.open(io.BytesIO(imagen_bytes))
+        # Preprocesar para mejor OCR
+        img_gray = img.convert('L')
+        img_contrast = ImageEnhance.Contrast(img_gray).enhance(2.0)
+        img_sharp = img_contrast.filter(ImageFilter.SHARPEN)
+        texto_raw = pytesseract.image_to_string(img_sharp, lang='spa+eng', config='--psm 6')
+        if not texto_raw.strip():
+            texto_raw = None
     except ImportError:
+        texto_raw = None
+    except Exception:
+        texto_raw = None
+
+    # Fallback: Gemini Vision solo con modelo lite
+    if not texto_raw:
         try:
             import base64
             img_b64 = base64.b64encode(imagen_bytes).decode("utf-8")
             model = genai.GenerativeModel("gemini-3.1-flash-lite-preview")
+            prompt = (
+                "Eres un OCR experto. Extrae TODO el contenido de esta imagen EXACTAMENTE como aparece.\n"
+                "REGLAS IMPORTANTES:\n"
+                "- Copia el texto tal como está, sin cambiar nada\n"
+                "- Si hay una tabla: reproduce cada fila con columnas separadas por | (pipe)\n"
+                "- Si hay un documento/oficio: copia párrafo por párrafo\n"
+                "- Preserva la estructura: encabezados, secciones, filas\n"
+                "- Si hay texto ilegible escribe [ilegible]\n"
+                "Devuelve SOLO el contenido, sin explicaciones."
+            )
             resp = model.generate_content([
                 {"mime_type": mime_type, "data": img_b64},
-                "Extrae TODO el texto de esta imagen. Solo el texto, sin explicaciones. Tablas: usa col1 | col2 por fila."
+                prompt
             ])
-            return resp.text.strip()
-        except: return None
-    except: return None
+            texto_raw = resp.text.strip()
+        except Exception:
+            return None, "word"
+
+    if not texto_raw:
+        return None, "word"
+
+    # Auto-detectar tipo si no se especificó
+    if formato_salida == "auto":
+        tipo_detectado = detectar_tipo_imagen(texto_raw)
+    else:
+        tipo_detectado = formato_salida
+
+    # Formatear según tipo
+    lineas = [l for l in texto_raw.split('\n') if l.strip()]
+    if tipo_detectado == "excel":
+        # Normalizar columnas usando separación por espacios múltiples o pipes
+        filas_formateadas = []
+        for linea in lineas:
+            if '|' in linea:
+                cols = [c.strip() for c in linea.split('|') if c.strip()]
+            else:
+                cols = re.split(r'\s{2,}|\t', linea.strip())
+                cols = [c.strip() for c in cols if c.strip()]
+            if cols:
+                filas_formateadas.append(' | '.join(cols))
+        return '\n'.join(filas_formateadas), "excel"
+    else:
+        return '\n'.join(lineas), "word"
 
 # ══════════════════════════════════════════════════════════════
 # EXPORTADORES
@@ -795,6 +811,198 @@ def exportar_pdf(texto, resumen_data=None):
     raw=pdf.output()
     return bytes(raw) if isinstance(raw,(bytes,bytearray)) else raw.encode('latin-1') if isinstance(raw,str) else bytes(raw)
 
+
+def exportar_excel_como_pdf(archivo_bytes, cambios=None):
+    """Convierte Excel a PDF tabla real usando fpdf."""
+    cambios = cambios or []
+    try:
+        # Aplicar cambios si hay
+        bytes_usar = archivo_bytes
+        if cambios:
+            bytes_usar, _ = reemplazar_xlsx_preservando_formato(archivo_bytes, cambios)
+        wb = openpyxl.load_workbook(BytesIO(bytes_usar), data_only=True, read_only=True)
+        pdf = FPDF(orientation='L')  # landscape para tablas anchas
+        pdf.set_margins(8, 8, 8)
+        pdf.set_auto_page_break(auto=True, margin=12)
+        zona = pytz.timezone('America/Caracas')
+        fecha = datetime.now(zona).strftime('%d/%m/%Y %I:%M %p')
+        for sheet in wb.worksheets:
+            pdf.add_page()
+            # Encabezado de hoja
+            pdf.set_fill_color(30, 58, 95)
+            pdf.set_text_color(255, 255, 255)
+            pdf.set_font("Helvetica", 'B', 11)
+            pdf.cell(0, 8, safe_text(f"Hoja: {sheet.title}  |  {fecha}"),
+                     new_x="LMARGIN", new_y="NEXT", fill=True)
+            pdf.ln(2)
+            # Recoger filas
+            filas = []
+            for row in sheet.iter_rows(values_only=True):
+                fila = [str(c) if c is not None else "" for c in row]
+                if any(v.strip() for v in fila):
+                    filas.append(fila)
+            if not filas:
+                pdf.set_text_color(100, 100, 100)
+                pdf.set_font("Helvetica", 'I', 9)
+                pdf.cell(0, 6, "(Hoja vacía)", new_x="LMARGIN", new_y="NEXT")
+                continue
+            n_cols = max(len(f) for f in filas)
+            page_w = pdf.w - 16  # margen total
+            col_w = min(page_w / n_cols, 55)
+            # Filas
+            for ri, fila in enumerate(filas):
+                if ri == 0:
+                    pdf.set_fill_color(30, 58, 95)
+                    pdf.set_text_color(255, 255, 255)
+                    pdf.set_font("Helvetica", 'B', 8)
+                elif ri % 2 == 0:
+                    pdf.set_fill_color(245, 248, 255)
+                    pdf.set_text_color(20, 20, 40)
+                    pdf.set_font("Helvetica", '', 8)
+                else:
+                    pdf.set_fill_color(255, 255, 255)
+                    pdf.set_text_color(20, 20, 40)
+                    pdf.set_font("Helvetica", '', 8)
+                for ci in range(n_cols):
+                    val = fila[ci] if ci < len(fila) else ""
+                    pdf.cell(col_w, 6, safe_text(val[:30]),
+                             border=1, fill=True)
+                pdf.ln()
+        wb.close()
+        raw = pdf.output()
+        return bytes(raw) if isinstance(raw, (bytes, bytearray)) else raw.encode('latin-1')
+    except Exception as e:
+        return None
+
+def exportar_word_como_pdf(archivo_bytes, cambios=None):
+    """Convierte DOCX a PDF preservando texto via fpdf."""
+    cambios = cambios or []
+    try:
+        bytes_usar = archivo_bytes
+        if cambios:
+            bytes_usar, _ = reemplazar_docx_preservando_formato(archivo_bytes, cambios)
+        doc = Document(BytesIO(bytes_usar))
+        pdf = FPDF()
+        pdf.set_margins(15, 15, 15)
+        pdf.add_page()
+        pdf.set_auto_page_break(auto=True, margin=15)
+        zona = pytz.timezone('America/Caracas')
+        fecha = datetime.now(zona).strftime('%d/%m/%Y %I:%M %p')
+        # Encabezado
+        pdf.set_fill_color(30, 58, 95)
+        pdf.set_text_color(255, 255, 255)
+        pdf.set_font("Helvetica", 'B', 12)
+        pdf.cell(0, 8, safe_text("DOCUMENTO WORD — ORO ASISTENTE"),
+                 new_x="LMARGIN", new_y="NEXT", fill=True)
+        pdf.set_font("Helvetica", '', 8)
+        pdf.cell(0, 6, safe_text(f"Generado: {fecha}"),
+                 new_x="LMARGIN", new_y="NEXT", fill=True)
+        pdf.ln(4)
+        pdf.set_text_color(20, 20, 40)
+        # Paragraphs
+        for para in doc.paragraphs:
+            txt = para.text.strip()
+            if not txt:
+                pdf.ln(2); continue
+            style = para.style.name if para.style else ""
+            if "Heading 1" in style or "Título 1" in style:
+                pdf.set_font("Helvetica", 'B', 13)
+                pdf.set_text_color(30, 58, 95)
+                pdf.multi_cell(0, 7, safe_text(txt)); pdf.ln(1)
+                pdf.set_text_color(20, 20, 40)
+            elif "Heading 2" in style or "Título 2" in style:
+                pdf.set_font("Helvetica", 'B', 11)
+                pdf.set_text_color(50, 80, 150)
+                pdf.multi_cell(0, 6, safe_text(txt)); pdf.ln(1)
+                pdf.set_text_color(20, 20, 40)
+            else:
+                pdf.set_font("Helvetica", '', 10)
+                pdf.multi_cell(0, 5, safe_text(txt))
+        raw = pdf.output()
+        return bytes(raw) if isinstance(raw, (bytes, bytearray)) else raw.encode('latin-1')
+    except Exception as e:
+        return None
+
+
+def ordenar_excel(archivo_bytes, instruccion):
+    """
+    Ordena las filas de un Excel según la instrucción del usuario.
+    Detecta la columna y dirección (A-Z o Z-A).
+    Arrastra todas las columnas de cada fila.
+    Devuelve (bytes, mensaje_resultado).
+    """
+    try:
+        # Usar IA para identificar columna y dirección
+        prompt = (
+            f"El usuario quiere ordenar un Excel con esta instrucción: \"{instruccion}\"\n"
+            "Devuelve SOLO JSON con:\n"
+            '{"columna":"nombre exacto o número de columna (ej: A, B, 1, 2, o nombre del encabezado)",'
+            '"direccion":"asc o desc",'
+            '"tiene_encabezado":true}'
+        )
+        r = llamar_ia(prompt)
+        params = extraer_json_seguro(r) if r else None
+        if not params:
+            params = {"columna": "A", "direccion": "asc", "tiene_encabezado": True}
+
+        wb = openpyxl.load_workbook(BytesIO(archivo_bytes))
+        for ws in wb.worksheets:
+            # Leer todas las filas
+            filas = list(ws.iter_rows(values_only=False))
+            if not filas: continue
+
+            tiene_enc = params.get("tiene_encabezado", True)
+            encabezado = filas[0] if tiene_enc else None
+            datos = filas[1:] if tiene_enc else filas
+
+            if not datos: continue
+
+            # Determinar índice de columna
+            col_param = str(params.get("columna", "A")).strip()
+            col_idx = 0  # default primera columna
+
+            # Por letra (A, B, C...)
+            if col_param.isalpha() and len(col_param) <= 2:
+                from openpyxl.utils import column_index_from_string
+                try:
+                    col_idx = column_index_from_string(col_param.upper()) - 1
+                except: col_idx = 0
+
+            # Por número
+            elif col_param.isdigit():
+                col_idx = int(col_param) - 1
+
+            # Por nombre de encabezado
+            elif encabezado:
+                for i, cell in enumerate(encabezado):
+                    if cell.value and col_param.lower() in str(cell.value).lower():
+                        col_idx = i; break
+
+            col_idx = max(0, min(col_idx, ws.max_column - 1))
+            direccion = params.get("direccion", "asc") == "asc"
+
+            # Ordenar — extraer valores y estilos
+            def sort_key(fila):
+                val = fila[col_idx].value
+                if val is None: return ("z" * 100, )
+                return (str(val).lower().strip(),)
+
+            datos_ordenados = sorted(datos, key=sort_key, reverse=not direccion)
+
+            # Reescribir valores en el sheet
+            fila_inicio = 2 if tiene_enc else 1
+            for ri, fila_orig in enumerate(datos_ordenados):
+                for ci, cell_orig in enumerate(fila_orig):
+                    cell_dest = ws.cell(row=fila_inicio + ri, column=ci + 1)
+                    cell_dest.value = cell_orig.value
+
+        buf = BytesIO(); wb.save(buf)
+        col_nombre = params.get("columna", "A")
+        dir_txt = "A → Z" if params.get("direccion","asc") == "asc" else "Z → A"
+        return buf.getvalue(), f"✅ Ordenado por columna **{col_nombre}** {dir_txt}"
+    except Exception as e:
+        return None, f"Error al ordenar: {e}"
+
 # ══════════════════════════════════════════════════════════════
 # REEMPLAZOS PRESERVANDO FORMATO
 # ══════════════════════════════════════════════════════════════
@@ -898,96 +1106,120 @@ st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
 st.markdown("""<style>
 [data-testid="stFileUploaderDropzoneInstructions"]>div>span::after{content:"Arrastra aquí o toca para subir"}
 [data-testid="stFileUploaderDropzoneInstructions"]>div>span{font-size:0!important}
-[data-testid="stFileUploaderDropzoneInstructions"]>div>small::after{content:"Máx 200MB • DOCX · XLSX · PDF"}
+[data-testid="stFileUploaderDropzoneInstructions"]>div>small::after{content:"Máx 200MB • DOCX · XLSX · PDF · JPG · PNG"}
 [data-testid="stFileUploaderDropzoneInstructions"]>div>small{font-size:0!important}
 [data-testid="stFileUploadDropzone"]>div>button{visibility:hidden;position:relative}
-[data-testid="stFileUploadDropzone"]>div>button::after{content:"Seleccionar archivo";visibility:visible;position:absolute;left:0;right:0;text-align:center}
+[data-testid="stFileUploadDropzone"]>div>button::after{content:"Seleccionar archivo o foto";visibility:visible;position:absolute;left:0;right:0;text-align:center}
 </style>""", unsafe_allow_html=True)
 
-# Tabs modo
-m1,m2 = st.columns(2)
-with m1:
-    modo_arch = st.session_state.get("modo_entrada","archivo")=="archivo"
-    st.markdown(f'<div class="{"nav-tab-activo" if modo_arch else "nav-tab-inactivo"}">', unsafe_allow_html=True)
-    if st.button("📎 Archivo",use_container_width=True,key="modo_archivo"):
-        st.session_state.modo_entrada="archivo"; st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
-with m2:
-    modo_img = st.session_state.get("modo_entrada","archivo")=="imagen"
-    st.markdown(f'<div class="{"nav-tab-activo" if modo_img else "nav-tab-inactivo"}">', unsafe_allow_html=True)
-    if st.button("📷 Foto de documento",use_container_width=True,key="modo_imagen"):
-        st.session_state.modo_entrada="imagen"; st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
+# Uploader unificado — acepta documentos E imágenes
+archivo_unificado = st.file_uploader(
+    "📎 Sube tu archivo o foto de documento",
+    type=["docx","xlsx","pdf","jpg","jpeg","png","webp"],
+    help="Word, Excel, PDF o foto de documento — máx 200MB",
+    label_visibility="visible"
+)
 
+# Separar según tipo
 archivo = None
-if st.session_state.get("modo_entrada","archivo") == "archivo":
-    archivo = st.file_uploader("📎 Sube tu archivo", type=["docx","xlsx","pdf"],
-        help="Word, Excel o PDF — máx 200MB", label_visibility="visible")
-else:
-    st.markdown("""<div style="background:linear-gradient(135deg,#041208,#062510);border:2px dashed #0d4a1f;
-        border-radius:20px;padding:1.2rem;margin:.5rem 0;text-align:center">
-        <div style="font-size:2rem">📷</div>
-        <div style="color:#34d399;font-weight:700;font-size:.9rem;margin:.3rem 0">Foto de documento</div>
-        <div style="color:#166534;font-size:.75rem">Sube una foto de cualquier documento, tabla o formulario</div>
-    </div>""", unsafe_allow_html=True)
-    img_sub = st.file_uploader("Foto", type=["jpg","jpeg","png","webp"],
-        help="Foto del documento", label_visibility="collapsed")
+img_sub = None
+if archivo_unificado:
+    ext = archivo_unificado.name.split(".")[-1].lower()
+    if ext in ("jpg","jpeg","png","webp"):
+        img_sub = archivo_unificado
+    else:
+        archivo = archivo_unificado
     if img_sub:
         st.image(img_sub, use_container_width=True)
-        fc1,fc2 = st.columns([2,1])
-        with fc1:
-            fmt_sel = st.selectbox("Convertir a",
-                ["📄 Word","📊 Excel","📝 Texto plano"], label_visibility="collapsed", key="img_fmt")
-        fmt_map = {"📄 Word":"word","📊 Excel":"excel","📝 Texto plano":"texto"}
-        fmt_key = fmt_map.get(fmt_sel.split(" ",1)[-1].strip(),"word")
-        with fc2:
-            if st.button("🔍 Interpretar",use_container_width=True,key="btn_interpretar"):
-                with st.spinner(T("interpretando")):
-                    img_bytes=img_sub.read()
-                    mime=img_sub.type or "image/jpeg"
-                    texto_img=interpretar_imagen_documento(img_bytes,mime,fmt_key)
-                if texto_img:
-                    for k,v in [("texto_extraido",texto_img),("nombre_archivo",img_sub.name),
-                                ("archivo_tipo",fmt_key),("archivo_bytes",img_bytes),
-                                ("resumen_data",None),("historial_chat",[]),("lista_cambios",[]),
-                                ("cambios_aplicados",None),("texto_corregido",""),("preview_cambio",None),
-                                ("resumen_error",False),("generando_resumen",False),
-                                ("guia_paso",1),("guia_vista",False),("historial_versiones",[]),
-                                ("resultado_evaluacion",None)]:
-                        st.session_state[k]=v
-                    # Generar archivo
-                    if fmt_key=="word":
-                        di=Document(); di.styles['Normal'].font.name='Calibri'
-                        di.add_heading('Documento extraído de imagen',0)
-                        for l in texto_img.split('\n'):
-                            if l.strip(): di.add_paragraph(l.strip())
-                        bi=BytesIO(); di.save(bi)
-                        st.session_state.imagen_archivo_bytes=bi.getvalue()
-                        st.session_state.imagen_archivo_nombre="Extraido.docx"
-                        st.session_state.imagen_archivo_mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    elif fmt_key=="excel":
-                        wi=openpyxl.Workbook(); wsi=wi.active; wsi.title="Datos"
-                        for ri,l in enumerate(texto_img.split('\n'),1):
-                            if l.strip():
-                                cols=[c.strip() for c in l.split('|')]
-                                for ci2,val in enumerate(cols,1):
-                                    cc=wsi.cell(row=ri,column=ci2,value=val)
-                                    if ri==1: cc.font=Font(bold=True,color="FFFFFF"); cc.fill=PatternFill("solid",fgColor="1E3A5F")
-                        bxi=BytesIO(); wi.save(bxi)
-                        st.session_state.imagen_archivo_bytes=bxi.getvalue()
-                        st.session_state.imagen_archivo_nombre="Extraido.xlsx"
-                        st.session_state.imagen_archivo_mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    else:
-                        st.session_state.imagen_archivo_bytes=texto_img.encode()
-                        st.session_state.imagen_archivo_nombre="Extraido.txt"
-                        st.session_state.imagen_archivo_mime="text/plain"
-                    st.success("✅ Documento extraído correctamente"); st.rerun()
+
+        # Modo: auto-detectar o manual
+        _modo_img = st.radio("",
+            ["🤖 Auto-detectar tipo","📄 Forzar Word","📊 Forzar Excel"],
+            horizontal=True, label_visibility="collapsed", key="img_modo")
+
+        if st.button("🔍 Interpretar y convertir", use_container_width=True, key="btn_interpretar"):
+            with st.spinner(T("interpretando")):
+                img_bytes = img_sub.read()
+                mime = img_sub.type or "image/jpeg"
+                fmt_force = "auto" if "Auto" in _modo_img else ("word" if "Word" in _modo_img else "excel")
+                resultado_img = interpretar_imagen_documento(img_bytes, mime, fmt_force)
+
+            if resultado_img and resultado_img[0]:
+                texto_img, tipo_img = resultado_img
+                tipo_archivo = tipo_img  # "word" o "excel"
+
+                # Mostrar tipo detectado
+                tipo_label = "📊 Tabla/Excel" if tipo_img == "excel" else "📄 Documento/Word"
+                st.markdown(f'<div class="info-box">🤖 Tipo detectado: <strong>{tipo_label}</strong></div>', unsafe_allow_html=True)
+
+                # Guardar en session state
+                for k,v in [("texto_extraido",texto_img),("nombre_archivo",img_sub.name),
+                            ("archivo_tipo",tipo_img),("archivo_bytes",img_bytes),
+                            ("resumen_data",None),("historial_chat",[]),("lista_cambios",[]),
+                            ("cambios_aplicados",None),("texto_corregido",""),("preview_cambio",None),
+                            ("resumen_error",False),("generando_resumen",False),
+                            ("guia_paso",1),("guia_vista",False),("historial_versiones",[]),
+                            ("resultado_evaluacion",None)]:
+                    st.session_state[k] = v
+
+                # Generar archivo del tipo correcto
+                if tipo_img == "excel":
+                    # Tabla → Excel con formato
+                    wi = openpyxl.Workbook(); wsi = wi.active; wsi.title = "Datos"
+                    ri_real = 0
+                    for l in texto_img.split('\n'):
+                        if not l.strip(): continue
+                        ri_real += 1
+                        cols = [c.strip() for c in l.split('|') if c.strip()]
+                        for ci2, val in enumerate(cols, 1):
+                            cc = wsi.cell(row=ri_real, column=ci2, value=val)
+                            if ri_real == 1:
+                                cc.font = Font(bold=True, color="FFFFFF", size=10)
+                                cc.fill = PatternFill("solid", fgColor="1E3A5F")
+                                cc.alignment = Alignment(horizontal="center", vertical="center")
+                            else:
+                                bg = "F0F4FF" if ri_real % 2 == 0 else "FFFFFF"
+                                cc.fill = PatternFill("solid", fgColor=bg)
+                                cc.font = Font(size=10)
+                                cc.alignment = Alignment(wrap_text=True, vertical="center")
+                    # Ajustar anchos
+                    for col in wsi.columns:
+                        max_w = max((len(str(cell.value or "")) for cell in col), default=10)
+                        wsi.column_dimensions[col[0].column_letter].width = min(max_w + 4, 40)
+                    bxi = BytesIO(); wi.save(bxi)
+                    st.session_state.imagen_archivo_bytes = bxi.getvalue()
+                    st.session_state.imagen_archivo_nombre = img_sub.name.rsplit(".",1)[0] + ".xlsx"
+                    st.session_state.imagen_archivo_mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 else:
-                    st.markdown('<div class="warn-box">⚠️ No pude leer la imagen. Intenta con una foto más nítida.</div>', unsafe_allow_html=True)
+                    # Documento → Word preservando estructura
+                    di = Document(); di.styles['Normal'].font.name = 'Calibri'
+                    di.styles['Normal'].font.size = Pt(11)
+                    for section in di.sections:
+                        section.top_margin = Inches(1.0); section.bottom_margin = Inches(1.0)
+                        section.left_margin = Inches(1.2); section.right_margin = Inches(1.2)
+                    for l in texto_img.split('\n'):
+                        if not l.strip(): di.add_paragraph(); continue
+                        # Detectar si parece un título (línea corta, toda mayúsculas o con patrón de encabezado)
+                        if len(l.strip()) < 60 and (l.strip().isupper() or l.strip().startswith(('REPÚBLICA','MINISTERIO','OFICIO','MEMO','CIRCULAR','ACTA','RESOLUCIÓN','DECRETO'))):
+                            h = di.add_heading(l.strip(), level=1)
+                            h.runs[0].font.color.rgb = RGBColor(0x1E, 0x3A, 0x8A)
+                        else:
+                            p = di.add_paragraph(l.strip())
+                            p.paragraph_format.space_after = Pt(4)
+                    bi = BytesIO(); di.save(bi)
+                    st.session_state.imagen_archivo_bytes = bi.getvalue()
+                    st.session_state.imagen_archivo_nombre = img_sub.name.rsplit(".",1)[0] + ".docx"
+                    st.session_state.imagen_archivo_mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+
+                st.rerun()
+            else:
+                st.markdown('<div class="warn-box">⚠️ No pude leer la imagen. Intenta con una foto más nítida y con buena iluminación.</div>', unsafe_allow_html=True)
+
     if st.session_state.get("imagen_archivo_bytes"):
-        st.download_button(f"📥 {st.session_state.get('imagen_archivo_nombre','Descargar')}",
-            st.session_state.imagen_archivo_bytes,
-            st.session_state.get('imagen_archivo_nombre','Extraido'),
+        _nom = st.session_state.get('imagen_archivo_nombre','Extraido')
+        _ico = "📊" if _nom.endswith(".xlsx") else "📄"
+        st.download_button(f"{_ico} Descargar {_nom}",
+            st.session_state.imagen_archivo_bytes, _nom,
             mime=st.session_state.get('imagen_archivo_mime','application/octet-stream'),
             use_container_width=True)
 
@@ -1232,15 +1464,69 @@ if st.session_state.texto_extraido:
         st.markdown(f'<div class="section-title">{T("exportar")}</div>', unsafe_allow_html=True)
         ab=st.session_state.archivo_bytes; ca=st.session_state.lista_cambios
         ec1,ec2,ec3=st.columns(3)
-        with ec1:
-            st.download_button(T("word"),exportar_word(texto_activo,data,archivo_bytes=ab,archivo_tipo=tipo,cambios=ca),
-                "Informe.docx",mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",use_container_width=True)
-        with ec2:
-            st.download_button(T("excel"),exportar_excel(texto_activo,data,archivo_bytes=ab,archivo_tipo=tipo,cambios=ca),
-                "Informe.xlsx",mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",use_container_width=True)
-        with ec3:
-            st.download_button(T("pdf"),exportar_pdf(texto_activo,data),
-                "Informe.pdf",mime="application/pdf",use_container_width=True)
+
+        if tipo == "xlsx":
+            # EXCEL → Excel corregido | Word informe | PDF tabla
+            with ec1:
+                _xls_out = reemplazar_xlsx_preservando_formato(ab, ca)[0] if ca else ab
+                st.download_button("📊 Excel", _xls_out, "Documento.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True)
+            with ec2:
+                st.download_button("📄 Word", exportar_word(texto_activo, data, archivo_bytes=ab, archivo_tipo=tipo, cambios=ca),
+                    "Informe.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    use_container_width=True)
+            with ec3:
+                _pdf_xls = exportar_excel_como_pdf(ab, ca)
+                if _pdf_xls:
+                    st.download_button("📕 PDF", _pdf_xls, "Documento.pdf",
+                        mime="application/pdf", use_container_width=True)
+                else:
+                    st.download_button("📕 PDF", exportar_pdf(texto_activo, data), "Informe.pdf",
+                        mime="application/pdf", use_container_width=True)
+
+        elif tipo == "docx":
+            # WORD → Word corregido | Excel tablas | PDF del Word
+            with ec1:
+                _doc_out = reemplazar_docx_preservando_formato(ab, ca)[0] if ca else ab
+                st.download_button("📄 Word", _doc_out, "Documento.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    use_container_width=True)
+            with ec2:
+                st.download_button("📊 Excel", exportar_excel(texto_activo, data, archivo_bytes=ab, archivo_tipo=tipo, cambios=ca),
+                    "Tablas.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True)
+            with ec3:
+                _pdf_doc = exportar_word_como_pdf(ab, ca)
+                if _pdf_doc:
+                    st.download_button("📕 PDF", _pdf_doc, "Documento.pdf",
+                        mime="application/pdf", use_container_width=True)
+                else:
+                    st.download_button("📕 PDF", exportar_pdf(texto_activo, data), "Informe.pdf",
+                        mime="application/pdf", use_container_width=True)
+
+        else:
+            # PDF u otros → Word informe | Excel datos | PDF original/corregido
+            with ec1:
+                st.download_button("📄 Word", exportar_word(texto_activo, data, archivo_bytes=ab, archivo_tipo=tipo, cambios=ca),
+                    "Informe.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    use_container_width=True)
+            with ec2:
+                st.download_button("📊 Excel", exportar_excel(texto_activo, data, archivo_bytes=ab, archivo_tipo=tipo, cambios=ca),
+                    "Datos.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True)
+            with ec3:
+                if tipo == "pdf" and PYMUPDF_OK and ca:
+                    _pdf_corr, _ = reemplazar_pdf_original(ab, ca)
+                    st.download_button("📕 PDF", _pdf_corr, "Documento.pdf",
+                        mime="application/pdf", use_container_width=True)
+                elif tipo == "pdf" and ab:
+                    st.download_button("📕 PDF", ab, "Documento.pdf",
+                        mime="application/pdf", use_container_width=True)
+                else:
+                    st.download_button("📕 PDF", exportar_pdf(texto_activo, data), "Informe.pdf",
+                        mime="application/pdf", use_container_width=True)
+
         if st.button(T("regen"),use_container_width=True):
             st.session_state.generando_resumen=True; st.session_state.resumen_data=None; st.rerun()
 
@@ -1351,8 +1637,32 @@ if st.session_state.texto_extraido:
         if st.session_state.get("guia_paso")==2: st.session_state.guia_paso=3
         palabras_cambio_es=["cambia","reemplaza","sustituye","corrige","agrega","añade","borra","elimina","pon","escribe","modifica","quita","actualiza","completa"]
         palabras_cambio_en=["change","replace","substitute","correct","add","delete","remove","put","write","modify","update","complete"]
-        es_cambio=any(p in entrada.lower() for p in palabras_cambio_es+palabras_cambio_en)
-        if es_cambio:
+        palabras_ordenar=["ordena","ordenar","ordena por","sort","organiza","organizar","alfabético","alfabeticamente","de mayor a menor","de menor a mayor","ascendente","descendente","a-z","z-a","a la z","la z"]
+        es_ordenar = any(p in entrada.lower() for p in palabras_ordenar) and tipo=="xlsx"
+        es_cambio=any(p in entrada.lower() for p in palabras_cambio_es+palabras_cambio_en) and not es_ordenar
+        if es_ordenar:
+            with st.spinner("📊 Ordenando..."):
+                resultado_ord = ordenar_excel(st.session_state.archivo_bytes, entrada)
+            if resultado_ord[0]:
+                st.session_state.cambios_aplicados = resultado_ord[0]
+                # Actualizar texto extraído con el nuevo orden
+                wb_ord = openpyxl.load_workbook(BytesIO(resultado_ord[0]), data_only=True, read_only=True)
+                txt_ord = ""
+                for s in wb_ord.worksheets:
+                    for r in s.iter_rows(values_only=True):
+                        linea = " | ".join([str(c) for c in r if c is not None and str(c).strip()])
+                        if linea.strip(): txt_ord += linea + "\n"
+                wb_ord.close()
+                st.session_state.texto_extraido = txt_ord
+                st.session_state.texto_corregido = txt_ord
+                st.session_state.archivo_bytes = resultado_ord[0]
+                st.session_state.edicion_counter += 1
+                guardar_version(texto_activo, st.session_state.archivo_bytes)
+                st.session_state.historial_chat.append({"rol":"Asistente","texto": resultado_ord[1] + "\n\nYa puedes descargarlo con los cambios."})
+            else:
+                st.session_state.historial_chat.append({"rol":"Asistente","texto": "No pude ordenar el archivo. " + resultado_ord[1]})
+
+        elif es_cambio:
             with st.spinner(T("procesando")):
                 nuevos=solicitar_cambios(entrada,texto_activo)
             if nuevos:
