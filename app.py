@@ -406,8 +406,7 @@ st.markdown("""
 # FUNCIONES UTILITARIAS
 # ══════════════════════════════════════════════════════════════
 def extraer_json_seguro(texto, es_lista=False):
-    t = texto.replace("```json","").replace("
-```","").strip()
+    t = texto.replace("```json","").replace("```","").strip()
     c1,c2 = ("[","]") if es_lista else ("{","}")
     ini=t.find(c1); fin=t.rfind(c2)+1
     if ini!=-1 and fin>0:
