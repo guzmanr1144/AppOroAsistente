@@ -1132,7 +1132,8 @@ def reemplazar_pdf_original(archivo_bytes, cambios):
                           "Times-Roman" if "times" in fn or "serif" in fn else
                           "Courier" if "courier" in fn or "mono" in fn else "Helvetica")
                 try:
-                    pix=pagina.get_pixmap(clip=rect,dpi=72); s=pix.pixel(pix.width//2,pix.height//2); bg=(s[0]/255,s[1]/255,s[2]/255)
+                    # CORRECCIÓN: Tomamos el color de la esquina (0,0) para no chocar con la tinta
+                    pix=pagina.get_pixmap(clip=rect,dpi=72); s=pix.pixel(0,0); bg=(s[0]/255,s[1]/255,s[2]/255)
                 except: bg=(1.,1.,1.)
                 pagina.add_redact_annot(rect,fill=bg); pagina.apply_redactions()
                 pagina.insert_text(fitz.Point(rect.x0,rect.y1-1.5),reemplazar,fontname=use_font,fontsize=font_size,color=color)
@@ -1183,7 +1184,7 @@ if archivo_unificado:
                 mime = img_sub.type or "image/jpeg"
                 fmt_force = "auto" if "Auto" in _modo_img else ("word" if "Word" in _modo_img else "excel")
                 resultado_img = interpretar_imagen_documento(img_bytes, mime, fmt_force)
-
+                                                                                                                                                                                                                                
             if resultado_img and resultado_img[0]:
                 texto_img, tipo_img = resultado_img
                 tipo_archivo = tipo_img  # "word" o "excel"
