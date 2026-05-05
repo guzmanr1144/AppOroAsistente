@@ -284,7 +284,7 @@ try:
 except Exception as e:
     st.error(f"🔑 Error configurando la IA: {e}"); st.stop()
 
-# CORRECCIÓN 1: Modelos actualizados
+# CORRECCIÓN: Modelos actualizados
 MODELOS_FALLBACK = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
 
 def llamar_ia(prompt, es_json=False):
@@ -405,8 +405,10 @@ st.markdown("""
 # ══════════════════════════════════════════════════════════════
 # FUNCIONES UTILITARIAS
 # ══════════════════════════════════════════════════════════════
+# CORRECCIÓN: Syntax Error solucionado
 def extraer_json_seguro(texto, es_lista=False):
-    t = texto.replace("```json","").replace("```","").strip()
+    t = texto.replace("```json","").replace("
+```","").strip()
     c1,c2 = ("[","]") if es_lista else ("{","}")
     ini=t.find(c1); fin=t.rfind(c2)+1
     if ini!=-1 and fin>0:
@@ -415,7 +417,6 @@ def extraer_json_seguro(texto, es_lista=False):
             try: return ast.literal_eval(t[ini:fin])
             except: pass
     return None
-
 
 def _scroll_to(anchor_id):
     """Hace scroll suave al elemento con ese id."""
@@ -543,7 +544,7 @@ def interpretar_imagen_documento(imagen_bytes, mime_type="image/jpeg", formato_s
     except Exception:
         texto_raw = None
 
-    # Fallback: Gemini Vision solo con modelo lite
+    # Fallback: Gemini Vision
     if not texto_raw:
         try:
             import base64
@@ -1112,7 +1113,7 @@ def reemplazar_xlsx_preservando_formato(archivo_bytes, cambios):
                         nv,n=regex.subn(rv,cell.value); cell.value=nv; conteo+=n
     buf=BytesIO(); wb.save(buf); return buf.getvalue(),conteo
 
-# CORRECCIÓN 2: Muestreo de color desde la coordenada (0,0)
+# CORRECCIÓN 3: Reemplazo "quirúrgico" en PDF sin parche de color y con ajuste de línea
 def reemplazar_pdf_original(archivo_bytes, cambios):
     if not PYMUPDF_OK: return archivo_bytes,0
     doc=fitz.open(stream=archivo_bytes,filetype="pdf"); conteo=0
@@ -1138,12 +1139,23 @@ def reemplazar_pdf_original(archivo_bytes, cambios):
                           "Helvetica-Oblique" if "italic" in fn or italic else
                           "Times-Roman" if "times" in fn or "serif" in fn else
                           "Courier" if "courier" in fn or "mono" in fn else "Helvetica")
+                
+                # 1. Marcamos el recuadro para borrar, PERO sin ponerle ningún color de fondo (sin parche)
+                pagina.add_redact_annot(rect) 
+                
                 try:
-                    pix=pagina.get_pixmap(clip=rect,dpi=72); s=pix.pixel(0,0); bg=(s[0]/255,s[1]/255,s[2]/255)
-                except: bg=(1.,1.,1.)
-                pagina.add_redact_annot(rect,fill=bg); pagina.apply_redactions()
-                pagina.insert_text(fitz.Point(rect.x0,rect.y1-1.5),reemplazar,fontname=use_font,fontsize=font_size,color=color)
+                    # 2. Magia: Le decimos que borre SOLO el texto, ignorando imágenes (0) y gráficos/fondos (0)
+                    pagina.apply_redactions(images=0, graphics=0) 
+                except:
+                    pagina.apply_redactions()
+
+                # 3. Ajustamos la altura (baseline) para que no quede "caído" respecto a las demás palabras
+                baseline = rect.y1 - (rect.height * 0.15)
+                
+                # 4. Insertamos el texto nuevo directamente sobre el fondo limpio original
+                pagina.insert_text(fitz.Point(rect.x0, baseline), reemplazar, fontname=use_font, fontsize=font_size, color=color)
                 conteo+=1
+                
     buf=BytesIO(); doc.save(buf); doc.close(); return buf.getvalue(),conteo
 
 # ══════════════════════════════════════════════════════════════
