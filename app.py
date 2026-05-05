@@ -400,4 +400,4 @@ st.markdown("""
 # FUNCIONES UTILITARIAS
 # ══════════════════════════════════════════════════════════════
 def extraer_json_seguro(texto, es_lista=False):
-    t = texto.replace("
+    t = texto.replace("\n", " ")
