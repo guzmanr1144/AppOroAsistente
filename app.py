@@ -1739,4 +1739,4 @@ else:
 
 zona_horaria=pytz.timezone('America/Caracas')
 hora=datetime.now(zona_horaria).strftime('%I:%M %p')
-st.markdown(f"<p class='oro-footer'>🏆 Oro Asistente v3.1 · {hora} VET</p>", unsafe_allow_html=True) este es el codigo original ahora que hago
+st.markdown(f"<p class='oro-footer'>🏆 Oro Asistente v3.1 · {hora} VET</p>", unsafe_allow_html=True)
