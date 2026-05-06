@@ -105,15 +105,26 @@ try:
     genai.configure(api_key=st.secrets["LLAVE_GEMINI"])
 except: st.error("🔑 Error: Falta LLAVE_GEMINI en secrets")
 
+MODELOS_FALLBACK = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+
 def llamar_ia(prompt):
-    for modelo in ["gemini-1.5-flash", "gemini-2.0-flash"]:
+    errores = []
+    for modelo in MODELOS_FALLBACK:
         try:
             return genai.GenerativeModel(modelo).generate_content(prompt).text
-        except: continue
+        except Exception as e:
+            errores.append(f"{modelo}: {str(e)}")
+            continue
+            
+    # Si todos los modelos fallan, muestra el error real en la interfaz en vez de caerse
+    st.error(f"⚠️ Error de conexión con IA: {errores}")
     return None
 
 def extraer_json_seguro(texto, es_lista=False):
-    t = texto.replace("```json","").replace("```","").strip()
+    # ESCUDO: Si el texto viene vacío o nulo (porque la IA falló), detenemos el proceso
+    if not texto: return None
+    
+    t = str(texto).replace("```json","").replace("```","").strip()
     ini=t.find("[" if es_lista else "{"); fin=t.rfind("]" if es_lista else "}")+1
     if ini!=-1 and fin>0:
         try: return json.loads(t[ini:fin], strict=False)
@@ -134,7 +145,6 @@ def reemplazar_docx_preservando_formato(archivo_bytes, cambios):
     for c in cambios:
         buscar, reemplazar = str(c["buscar"]), str(c["reemplazar"])
         regex=re.compile(re.escape(buscar), re.IGNORECASE)
-        # Procesar párrafos y tablas
         elementos = list(doc.paragraphs)
         for t in doc.tables:
             for r in t.rows:
@@ -198,7 +208,7 @@ if archivo_subido and archivo_subido.name != st.session_state.nombre_archivo:
             texto = "\n".join([p.text for p in doc.paragraphs if p.text.strip()])
             for t in doc.tables:
                 for row in t.rows:
-                    celdas = [c.text.strip() for c in row.cells] # Sin borrar duplicados
+                    celdas = [c.text.strip() for c in row.cells]
                     if any(celdas): texto += "\n" + " | ".join(celdas)
         elif st.session_state.archivo_tipo == "xlsx":
             wb = openpyxl.load_workbook(BytesIO(st.session_state.archivo_bytes), data_only=True)
@@ -225,7 +235,7 @@ if st.session_state.texto_extraido:
     
     st.markdown(f'<div class="file-badge"><b>{st.session_state.nombre_archivo}</b></div>', unsafe_allow_html=True)
     
-    # Muestra Vista Previa (Restaurada)
+    # Muestra Vista Previa
     if st.session_state.preview_cambio:
         preview = st.session_state.preview_cambio
         st.markdown('<div class="info-box">👁️ Vista previa del cambio</div>', unsafe_allow_html=True)
