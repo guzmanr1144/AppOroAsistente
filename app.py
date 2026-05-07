@@ -23,7 +23,7 @@ import pytz
 st.set_page_config(page_title="Oro Asistente", page_icon="🏆", layout="centered", initial_sidebar_state="collapsed")
 
 # ══════════════════════════════════════════════════════════════
-# CSS — RESTAURADO COMPLETAMENTE
+# CSS — RESTAURADO Y CACHEADO
 # ══════════════════════════════════════════════════════════════
 @st.cache_data(show_spinner=False)
 def _get_all_css(tema_key="noche"):
@@ -94,7 +94,6 @@ html,body,[class*="css"]{{font-family:'Inter',sans-serif!important;-webkit-tap-h
 .tag{{background:{t['bg2']};color:{t['acento2']}!important;border:1px solid {t['borde']};border-radius:20px;padding:.28rem .7rem;font-size:.7rem;font-weight:600;transition:all .2s}}
 .hallazgo-card{{background:linear-gradient(135deg,{t['bg2']},{t['card']});border:1px solid {t['borde']};border-left:4px solid {t['acento1']};border-radius:14px;padding:.85rem 1rem;color:{t['texto2']}!important;font-size:.82rem;margin:.6rem 0;line-height:1.65;box-shadow:0 2px 8px {t['sombra2']}}}
 .info-box{{background:#f0fdf4;border:1px solid #86efac;border-radius:12px;padding:.75rem 1rem;color:#166534;font-size:.83rem;margin:.5rem 0}}
-.warn-box{{background:#fffbeb;border:1px solid #fcd34d;border-radius:12px;padding:.75rem 1rem;color:#92400e;font-size:.83rem;margin:.5rem 0}}
 .chat-placeholder{{text-align:center;padding:1.2rem .8rem;background:{t['card']};border:1.5px dashed {t['borde2']};border-radius:18px;margin:.4rem 0}}
 .chip{{display:inline-block;background:{t['bg2']};border:1px solid {t['borde']};border-radius:20px;padding:.22rem .65rem;font-size:.68rem;color:{t['acento1']};font-weight:600;margin:.15rem}}
 .oro-divider{{height:1px;background:linear-gradient(90deg,transparent,{t['borde2']},transparent);margin:.9rem 0}}
@@ -109,10 +108,12 @@ _defaults = {
     "historial_chat":[],"cambios_aplicados":None,"archivo_tipo":"","lista_cambios":[],
     "texto_corregido":"","generando_resumen":False,"resumen_error":False,
     "preview_cambio":None,"edicion_counter":0,"tema":"noche","idioma":"es",
-    "historial_versiones":[], "buscar_query":"", "resultado_evaluacion":None, "scroll_to":None
+    "historial_versiones":[], "buscar_query":"", "resultado_evaluacion":None, "scroll_to":None,
+    "imagen_archivo_bytes":None, "imagen_archivo_nombre":"", "imagen_archivo_mime":""
 }
 for k,v in _defaults.items():
-    if k not in st.session_state: st.session_state[k] = v
+    if k not in st.session_state:
+        st.session_state[k] = v
 
 st.markdown(_get_all_css(st.session_state.tema), unsafe_allow_html=True)
 
@@ -123,7 +124,8 @@ _TXT = {
         "chip1":"✏️ cambia X por Y","chip2":"➕ agrega dato a persona","chip3":"❓ ¿cuántos hay?","chip4":"📝 resume en 3 puntos",
         "confirmar":"✅ Confirmar","cancelar":"❌ Cancelar","antes":"Antes","despues":"Después",
         "analizando":"🧠 Analizando...","procesando":"🧠 Procesando...","cargando":"📖 Cargando...","pensando":"🤔 Pensando...",
-        "regen":"🔄 Regenerar resumen", "exportar":"📥 Exportar informe", "prompt_idioma":"Responde SIEMPRE en español.",
+        "interpretando":"🧠 Leyendo imagen...","regen":"🔄 Regenerar resumen", "exportar":"📥 Exportar informe", 
+        "prompt_idioma":"Responde SIEMPRE en español.",
         "listo_analizar":"Toca ⚡ Analizar para generar el resumen inteligente"
     }
 }
@@ -145,24 +147,33 @@ def llamar_ia(prompt):
 def extraer_json_seguro(texto, es_lista=False):
     if not texto: return None
     t = str(texto).replace("```json","").replace("```","").strip()
-    ini=t.find("[" if es_lista else "{"); fin=t.rfind("]" if es_lista else "}")+1
+    c1,c2 = ("[","]") if es_lista else ("{","}")
+    ini=t.find(c1); fin=t.rfind(c2)+1
     if ini!=-1 and fin>0:
         try: return json.loads(t[ini:fin], strict=False)
-        except: return None
+        except:
+            try: return ast.literal_eval(t[ini:fin])
+            except: pass
     return None
+
+def safe_text(t):
+    if not t: return ""
+    rep = {"\u2013":"-", "\u2014":"-", "\u201c":'"', "\u201d":'"', "\u2018":"'", "\u2019":"'"}
+    for k, v in rep.items(): t = t.replace(k, v)
+    return str(t).encode('latin-1','replace').decode('latin-1')
 
 def solicitar_resumen_estructurado(texto):
     idioma_prompt = T("prompt_idioma")
     prompt = (
         f"Analista experto. {idioma_prompt} Devuelve SOLO JSON:\n"
         '{"titulo":"...","emoji_categoria":"📋","resumen_ejecutivo":"max 3 oraciones",'
-        '"metricas":{"Clave":"Valor"},"puntos_clave":["punto"],"hallazgo_destacado":"observación"}\n\n'
+        '"metricas":{"Indicador":"Valor Numérico"},"puntos_clave":["punto"],"hallazgo_destacado":"observación"}\n\n'
         f"DOCUMENTO:\n{texto[:10000]}"
     )
     r = llamar_ia(prompt)
     return extraer_json_seguro(r)
 
-# MOTORES DE REEMPLAZO QUIRÚRGICO
+# MOTORES DE REEMPLAZO
 def reemplazar_docx_preservando_formato(archivo_bytes, cambios):
     doc=Document(BytesIO(archivo_bytes)); conteo=0
     for c in cambios:
@@ -187,11 +198,34 @@ def reemplazar_xlsx_preservando_formato(archivo_bytes, cambios):
                         cell.value, n = regex.subn(rv, cell.value); conteo += n
     buf=BytesIO(); wb.save(buf); return buf.getvalue(), conteo
 
+def reemplazar_pdf_original(archivo_bytes, cambios):
+    if not PYMUPDF_OK: return archivo_bytes, 0
+    doc=fitz.open(stream=archivo_bytes, filetype="pdf"); conteo=0
+    for c in cambios:
+        buscar, reemplazar = str(c["buscar"]).strip(), str(c["reemplazar"]).strip()
+        for pagina in doc:
+            instancias=pagina.search_for(buscar)
+            if not instancias: continue
+            bloques=pagina.get_text("dict")["blocks"]
+            for rect in instancias:
+                f_size=11.0; f_name="helv"; col=(0,0,0)
+                for b in bloques:
+                    for line in b.get("lines", []):
+                        for span in line.get("spans", []):
+                            if buscar.lower() in span["text"].lower():
+                                f_size=span.get("size", 11.0)
+                                ci=span.get("color", 0); col=(((ci>>16)&0xFF)/255, ((ci>>8)&0xFF)/255, (ci&0xFF)/255)
+                                break
+                pagina.add_redact_annot(rect); pagina.apply_redactions(images=0, graphics=0)
+                pagina.insert_text(fitz.Point(rect.x0, rect.y1 - (rect.height*0.15)), reemplazar, fontname=f_name, fontsize=f_size, color=col)
+                conteo+=1
+    buf=BytesIO(); doc.save(buf); doc.close(); return buf.getvalue(), conteo
+
 # ══════════════════════════════════════════════════════════════
 # INTERFAZ PRINCIPAL
 # ══════════════════════════════════════════════════════════════
 st.markdown('<div class="oro-header"><div class="oro-title">Oro Asistente</div></div>', unsafe_allow_html=True)
-archivo_subido = st.file_uploader("📎 Sube tu archivo", type=["docx","xlsx","pdf"])
+archivo_subido = st.file_uploader("📎 Sube tu archivo o foto", type=["docx","xlsx","pdf","jpg","jpeg","png"])
 
 if archivo_subido and archivo_subido.name != st.session_state.nombre_archivo:
     with st.spinner(T("cargando")):
@@ -199,7 +233,14 @@ if archivo_subido and archivo_subido.name != st.session_state.nombre_archivo:
         st.session_state.nombre_archivo = archivo_subido.name
         st.session_state.archivo_tipo = archivo_subido.name.split(".")[-1].lower()
         texto = ""
-        if st.session_state.archivo_tipo == "docx":
+        if st.session_state.archivo_tipo in ["jpg","jpeg","png"]:
+            with st.spinner(T("interpretando")):
+                import base64
+                img_b64 = base64.b64encode(st.session_state.archivo_bytes).decode("utf-8")
+                model = genai.GenerativeModel("gemini-1.5-flash")
+                resp = model.generate_content([{"mime_type": archivo_subido.type, "data": img_b64}, "Extrae todo el texto de esta imagen de forma estructurada."])
+                texto = resp.text if resp else "Imagen sin texto legible."
+        elif st.session_state.archivo_tipo == "docx":
             doc = Document(BytesIO(st.session_state.archivo_bytes))
             texto = "\n".join([p.text for p in doc.paragraphs if p.text.strip()])
             for t in doc.tables:
@@ -210,10 +251,17 @@ if archivo_subido and archivo_subido.name != st.session_state.nombre_archivo:
                 for r in s.iter_rows(values_only=True):
                     l = " | ".join([str(c) for c in r if c is not None])
                     if l.strip(): texto += l + "\n"
-        st.session_state.texto_extraido = texto
+        elif st.session_state.archivo_tipo == "pdf":
+            reader = PyPDF2.PdfReader(BytesIO(st.session_state.archivo_bytes))
+            for p in reader.pages: texto += (p.extract_text() or "") + "\n"
+        
+        st.session_state.texto_extraido = texto if texto else "Documento vacío o ilegible."
+        st.session_state.resumen_data = None
+        st.session_state.historial_chat = []
         st.rerun()
 
-if st.session_state.texto_extraido:
+# MOSTRAR INTERFAZ SI HAY NOMBRE DE ARCHIVO
+if st.session_state.nombre_archivo:
     texto_activo = st.session_state.texto_corregido if st.session_state.texto_corregido else st.session_state.texto_extraido
     st.markdown(f'<div class="file-badge"><b>{st.session_state.nombre_archivo}</b></div>', unsafe_allow_html=True)
 
@@ -227,30 +275,26 @@ if st.session_state.texto_extraido:
     with be:
         if st.button(T("evaluar")): st.info("🔍 Próximamente evaluación avanzada.")
 
-    # RESUMEN INTELIGENTE (RESTAURADO CON MÉTRICAS Y TAGS)
+    # RESUMEN INTELIGENTE (CUADROS, TAGS Y HALLAZGOS)
     if st.session_state.resumen_data:
         data = st.session_state.resumen_data
         st.markdown(f'<div class="summary-card"><div class="summary-card-title">{data.get("titulo")}</div>{data.get("resumen_ejecutivo")}</div>', unsafe_allow_html=True)
         
-        # MÉTRICAS NUMÉRICAS (PILLS)
         met = data.get("metricas", {})
         if met:
             pills = '<div class="metrics-grid">'
             for k, v in list(met.items())[:4]:
                 pills += f'<div class="metric-pill"><div class="metric-pill-label">{k}</div><div class="metric-pill-value">{v}</div></div>'
-            pills += '</div>'
-            st.markdown(pills, unsafe_allow_html=True)
+            pills += '</div>'; st.markdown(pills, unsafe_allow_html=True)
             
-        # PUNTOS CLAVE (TAGS)
         pts = data.get("puntos_clave", [])
         if pts:
             st.markdown('<div class="tags-wrap">' + "".join([f'<span class="tag">✓ {p}</span>' for p in pts]) + '</div>', unsafe_allow_html=True)
             
-        # HALLAZGO
         h = data.get("hallazgo_destacado", "")
         if h: st.markdown(f'<div class="hallazgo-card">💡 <b>Hallazgo:</b> {h}</div>', unsafe_allow_html=True)
 
-    # VISTA PREVIA DE CAMBIO
+    # VISTA PREVIA
     if st.session_state.preview_cambio:
         preview = st.session_state.preview_cambio
         st.markdown('<div class="info-box">👁️ Vista previa</div>', unsafe_allow_html=True)
@@ -268,8 +312,10 @@ if st.session_state.texto_extraido:
         with c1:
             if st.button(T("confirmar")):
                 b_in = st.session_state.cambios_aplicados or st.session_state.archivo_bytes
-                if st.session_state.archivo_tipo == "docx": res, _ = reemplazar_docx_preservando_formato(b_in, preview)
-                elif st.session_state.archivo_tipo == "xlsx": res, _ = reemplazar_xlsx_preservando_formato(b_in, preview)
+                tipo = st.session_state.archivo_tipo
+                if tipo == "docx": res, _ = reemplazar_docx_preservando_formato(b_in, preview)
+                elif tipo == "xlsx": res, _ = reemplazar_xlsx_preservando_formato(b_in, preview)
+                elif tipo == "pdf": res, _ = reemplazar_pdf_original(b_in, preview)
                 st.session_state.cambios_aplicados = res
                 st.session_state.texto_corregido = texto_activo.replace(preview[0]["buscar"], preview[0]["reemplazar"])
                 st.session_state.preview_cambio = None
@@ -277,7 +323,7 @@ if st.session_state.texto_extraido:
         with c2:
             if st.button(T("cancelar")): st.session_state.preview_cambio = None; st.rerun()
 
-    # CHAT & ENTRADA
+    # CHAT
     for m in st.session_state.historial_chat:
         with st.chat_message("user" if m["rol"]=="Usuario" else "assistant"): st.write(m["texto"])
 
@@ -295,6 +341,6 @@ if st.session_state.texto_extraido:
     if st.session_state.cambios_aplicados:
         st.download_button("📥 Descargar corregido", st.session_state.cambios_aplicados, f"corregido_{st.session_state.nombre_archivo}", use_container_width=True)
 else:
-    st.markdown('<div style="text-align:center;padding:4rem 1rem">🏆 Sube un archivo para comenzar</div>', unsafe_allow_html=True)
+    st.markdown('<div style="text-align:center;padding:4rem 1rem">🏆 Sube un archivo o foto para comenzar</div>', unsafe_allow_html=True)
 
-st.markdown(f"<p class='oro-footer'>🏆 Oro Asistente v3.4 · Restaurado</p>", unsafe_allow_html=True)
+st.markdown(f"<p class='oro-footer'>🏆 Oro Asistente v3.5 · Mejorado</p>", unsafe_allow_html=True)
