@@ -26,8 +26,7 @@ st.set_page_config(page_title="Oro Asistente", page_icon="🏆", layout="centere
 # CSS — cacheado por tema
 # ══════════════════════════════════════════════════════════════
 @st.cache_data(show_spinner=False)
-def _get_all_css(tema_key="noche"):
-    _T = {
+def _get_all_css(tema_key="noche"): _T = {
         "noche": {
             "bg1":"#0a0e1a","bg2":"#0d1222","bg3":"#10162a",
             "card":"#141828","card2":"#1a2035",
