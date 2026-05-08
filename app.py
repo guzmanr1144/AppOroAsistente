@@ -13,9 +13,9 @@ import PyPDF2
 from fpdf import FPDF
 try:
 import fitz
-    PYMUPDF_OK = True
+PYMUPDF_OK = True
 except ImportError:
-    PYMUPDF_OK = False
+PYMUPDF_OK = False
 from io import BytesIO
 from datetime import datetime
 import pytz
