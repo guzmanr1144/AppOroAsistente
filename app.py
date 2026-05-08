@@ -12,7 +12,7 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 import PyPDF2
 from fpdf import FPDF
 try:
-    import fitz
+import fitz
     PYMUPDF_OK = True
 except ImportError:
     PYMUPDF_OK = False
