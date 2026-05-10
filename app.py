@@ -57,44 +57,11 @@ html,body,[class*="css"]{{font-family:'Outfit',sans-serif!important;-webkit-tap-
 [data-testid="stFileUploader"]{{background:transparent!important;border:none!important}}
 [data-testid="stFileUploader"]>div{{background:linear-gradient(135deg,{t['card']},{t['card2']})!important;border:2px dashed {t['borde']}!important;border-radius:20px!important;padding:1.5rem!important}}
 [data-testid="stFileUploader"] label{{color:{t['acento2']}!important;font-weight:600!important;font-size:1rem!important}}
-.file-badge{{display:flex;align-items:center;gap:.8rem;background:{t['card']}!important;border:1px solid {t['borde']}!important;border-radius:16px;padding:1rem 1.2rem;margin:.8rem 0}}
-.file-icon{{font-size:2rem}}.file-info-name{{color:{t['texto']}!important;font-weight:600;font-size:.9rem;word-break:break-all}}
-.file-info-stats{{color:{t['texto3']}!important;font-size:.75rem;margin-top:.2rem}}
 .summary-card{{background:{t['card2']}!important;border:1px solid {t['borde2']}!important;border-left:4px solid {t['acento1']}!important;border-radius:18px;padding:1.2rem;margin:.8rem 0;color:{t['texto2']}!important;line-height:1.7;font-size:.9rem}}
-.summary-card-title{{color:{t['acento2']}!important;font-size:1rem;font-weight:700;margin-bottom:.6rem}}
-.metrics-grid{{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin:.8rem 0}}
-.metric-pill{{background:{t['card']}!important;border:1px solid {t['borde']}!important;border-radius:14px;padding:.8rem 1rem;text-align:center}}
-.metric-pill-label{{color:{t['texto3']}!important;font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em}}
-.metric-pill-value{{color:{t['texto']}!important;font-size:1.2rem;font-weight:800;margin-top:.2rem;font-family:'JetBrains Mono',monospace}}
-.tags-wrap{{display:flex;flex-wrap:wrap;gap:.4rem;margin:.6rem 0}}
-.tag{{background:{t['card']}!important;color:{t['acento2']}!important;border:1px solid {t['borde']}!important;border-radius:20px;padding:.35rem .8rem;font-size:.75rem;font-weight:500}}
-.hallazgo-card{{background:{t['card']}!important;border:1px solid #14532d;border-left:4px solid {t['acento1']}!important;border-radius:14px;padding:1rem 1.1rem;color:{t['texto2']}!important;font-size:.85rem;margin:.8rem 0;line-height:1.6}}
 .stButton>button{{background:{t['card']}!important;color:{t['texto3']}!important;border:1px solid {t['borde']}!important;border-radius:14px!important;font-weight:600!important;font-size:.82rem!important;min-height:3.2rem!important;width:100%!important;transition:all .15s!important;font-family:'Outfit',sans-serif!important}}
 .stButton>button:hover{{border-color:{t['acento1']}!important;color:{t['acento2']}!important}}
-.stButton>button:active{{transform:scale(.96)!important}}
-.nav-tab-activo>button{{background:linear-gradient(135deg,#065f46,#10b981)!important;color:white!important;border:none!important;font-weight:700!important;box-shadow:0 4px 15px rgba(16,185,129,.3)!important}}
-.nav-tab-inactivo>button{{background:{t['card']}!important;color:#2d6a4f!important;border:1.5px solid #0a3d1a!important}}
-.nav-tab-activo>button,.nav-tab-inactivo>button{{height:3rem!important;border-radius:12px!important;font-size:.85rem!important;width:100%!important}}
-[data-testid="stDownloadButton"]>button{{background:linear-gradient(135deg,#065f46,#059669)!important;color:white!important;border:none!important;border-radius:14px!important;font-weight:700!important;height:3rem!important;width:100%!important}}
-.section-title{{color:{t['texto']}!important;font-size:1.05rem;font-weight:700;margin:1.2rem 0 .5rem;display:flex;align-items:center;gap:.5rem}}
-.info-box{{background:#052e16;border:1px solid #15803d;border-radius:12px;padding:.9rem 1rem;color:#4ade80;font-size:.88rem;margin:.6rem 0}}
-.warn-box{{background:#1c1003;border:1px solid #b45309;border-radius:12px;padding:.9rem 1rem;color:#fbbf24;font-size:.88rem;margin:.6rem 0}}
-.cambio-item{{background:{t['card']}!important;border:1px solid {t['borde']}!important;border-radius:10px;padding:.6rem .9rem;margin:.3rem 0;font-size:.82rem;font-family:'JetBrains Mono',monospace;display:flex;align-items:center;gap:.5rem}}
-.cambio-num{{color:#4b6080;font-size:.7rem;min-width:1.2rem}}.cambio-arrow{{color:#f59e0b}}
-[data-testid="stExpander"]{{background:{t['card']}!important;border:1px solid {t['borde']}!important;border-radius:14px!important}}
-[data-testid="stChatInput"] textarea{{background:{t['card']}!important;border:2px solid {t['borde']}!important;border-radius:14px!important;color:{t['texto']}!important;font-family:'Outfit',sans-serif!important;font-size:.95rem!important}}
-.oro-divider{{height:1px;background:linear-gradient(90deg,transparent,{t['borde']},transparent);margin:1.2rem 0}}
-.empty-state{{text-align:center;padding:3rem 1rem}}
-.empty-icon{{font-size:4rem;margin-bottom:1rem;opacity:.5}}.empty-title{{color:#374151;font-size:1rem;font-weight:600}}
-.empty-hint{{color:#1f2937;font-size:.8rem;margin-top:.4rem}}
-.format-badges{{display:flex;justify-content:center;gap:.5rem;margin-top:1rem}}
-.format-badge{{background:#111827;border:1px solid #1f2937;border-radius:8px;padding:.3rem .7rem;color:#374151;font-size:.75rem;font-family:'JetBrains Mono',monospace}}
-.oro-footer{{text-align:center;font-size:.72rem;color:#1f2937;padding:.5rem 0}}
 [data-testid="stSidebar"]{{background:{t['bg1']}!important}}
 </style>"""
-
-
-
 
 # ==========================================
 # SESSION STATE
@@ -109,7 +76,6 @@ for key, val in {
     "archivo_tipo": "",
     "lista_cambios": [],
     "texto_modificado": "",
-    "generando_resumen": False,
     "resumen_error": False,
     "tab_activa": "resumen",
     "tema": "verde",
@@ -119,8 +85,6 @@ for key, val in {
 }.items():
     if key not in st.session_state:
         st.session_state[key] = val
-
-# ── CSS dinámico según tema ──
 
 st.markdown(_get_all_css(st.session_state.get("tema","verde")), unsafe_allow_html=True)
 
@@ -134,7 +98,6 @@ except Exception as e:
     st.error(f"🔑 Error configurando la IA: {e}")
     st.stop()
 
-# Modelos en orden de preferencia — el sistema prueba cada uno automáticamente
 MODELOS_FALLBACK = [
     "gemini-3.1-flash-lite-preview",
     "gemini-3.1-flash-preview",
@@ -142,11 +105,6 @@ MODELOS_FALLBACK = [
 ]
 
 def llamar_ia(prompt, es_json=False):
-    """
-    Llama a la IA probando los modelos en orden.
-    Si uno falla, pasa automáticamente al siguiente.
-    El usuario nunca ve qué modelo se está usando.
-    """
     for modelo in MODELOS_FALLBACK:
         try:
             model = genai.GenerativeModel(modelo)
@@ -159,10 +117,8 @@ def llamar_ia(prompt, es_json=False):
             continue
     return None
 
-# Sidebar mínimo — solo para info interna si hace falta
 with st.sidebar:
     st.caption("Oro Asistente v2")
-
 
 # ==========================================
 # HEADER
@@ -176,10 +132,11 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# UTILIDADES JSON
+# UTILIDADES JSON & FUNCIONES IA
 # ==========================================
 def extraer_json_seguro(texto, es_lista=False):
-    t = texto.replace("```json", "").replace("```", "").strip()
+    t = texto.replace("```json", "").replace("
+```", "").strip()
     c1, c2 = ("[", "]") if es_lista else ("{", "}")
     inicio = t.find(c1)
     fin = t.rfind(c2) + 1
@@ -193,9 +150,6 @@ def extraer_json_seguro(texto, es_lista=False):
                 pass
     return None
 
-# ==========================================
-# FUNCIONES IA
-# ==========================================
 def solicitar_resumen_estructurado(texto):
     prompt = (
         "Eres un analista profesional experto en documentos de cualquier tipo. Analiza este documento y devuelve SOLO un JSON.\n"
@@ -213,347 +167,12 @@ def solicitar_resumen_estructurado(texto):
         return extraer_json_seguro(resultado)
     return None
 
-def solicitar_informe_word(texto):
-    prompt = (
-        "Eres un analista experto en documentos de cualquier índole. Escribe un informe ejecutivo profesional. "
-        "Usa párrafos cortos y claros, sin asteriscos ni markdown. "
-        "Incluye: introducción, hallazgos principales, análisis y conclusión.\n\n"
-        f"DATOS:\n{texto[:12000]}"
-    )
-    return llamar_ia(prompt) or "No se pudo generar el informe."
-
-def extraer_cambio_con_regex(instruccion):
-    """
-    Fallback: detecta patrones comunes sin necesidad de IA.
-    Soporta variantes como:
-      - cambia 'X' por 'Y'
-      - reemplaza X por Y
-      - X → Y  /  X -> Y
-      - sustituye X con Y
-    """
-    patrones = [
-        r"(?:cambia|reemplaza|sustituye|cambie|reemplaz[ao])\s+['\"]?(.+?)['\"]?\s+(?:por|con|a)\s+['\"]?(.+?)['\"]?\s*$",
-        r"['\"](.+?)['\"]\s*(?:→|->|=>|por|con)\s*['\"]?(.+?)['\"]?\s*$",
-        r"(.+?)\s*(?:→|->|=>)\s*(.+)",
-    ]
-    texto = instruccion.strip()
-    for pat in patrones:
-        m = re.search(pat, texto, re.IGNORECASE)
-        if m:
-            buscar = m.group(1).strip().strip("'\"")
-            reemplazar = m.group(2).strip().strip("'\"")
-            if buscar and reemplazar:
-                return [{"buscar": buscar, "reemplazar": reemplazar}]
-    return []
-
-def solicitar_cambios(instruccion, texto_doc=""):
-    """
-    Interpreta instrucciones de edición en lenguaje natural.
-    Soporta: reemplazar, agregar datos, completar campos vacíos.
-    Devuelve lista de {buscar, reemplazar} para aplicar en el documento.
-    """
-    contexto_doc = f"\n\nFRAGMENTO DEL DOCUMENTO (para contexto):\n{texto_doc[:3000]}" if texto_doc else ""
-    prompt = (
-        "Eres un asistente experto en edición de documentos.\n"
-        "El usuario quiere modificar su documento con esta instrucción.\n\n"
-        f"INSTRUCCIÓN: \"{instruccion}\"\n"
-        f"{contexto_doc}\n\n"
-        "REGLAS:\n"
-        "- Si dice 'cambia X por Y' o 'reemplaza X con Y': buscar=X, reemplazar=Y\n"
-        "- Si dice 'agrega el número XXXX a Juan Pérez': buscar el texto exacto de Juan Pérez "
-        "en el documento y reemplazarlo por 'Juan Pérez XXXX' (o donde corresponda en la fila/línea)\n"
-        "- Si dice 'agrega X a la fila/celda de Y': buscar el texto de Y y agregar X al final\n"
-        "- Si dice 'completa el campo de Y con X': igual, buscar Y y añadir X\n"
-        "- SIEMPRE usa texto que realmente exista en el documento como 'buscar'\n"
-        "- Si hay múltiples personas/cambios, incluye TODOS en el array\n"
-        "- NO inventes texto que no esté en el documento\n\n"
-        "Responde ÚNICAMENTE con JSON array (sin texto adicional):\n"
-        '[{"buscar": "texto_exacto_del_doc", "reemplazar": "texto_nuevo_completo"}]'
-    )
-    resp = llamar_ia(prompt)
-    if resp:
-        resultado = extraer_json_seguro(resp, es_lista=True)
-        if resultado and isinstance(resultado, list):
-            validos = [
-                c for c in resultado
-                if isinstance(c, dict)
-                and "buscar" in c and "reemplazar" in c
-                and str(c["buscar"]).strip()
-                and str(c["reemplazar"]).strip()
-                and c["buscar"] != c["reemplazar"]
-            ]
-            if validos:
-                return validos
-    return extraer_cambio_con_regex(instruccion)
-
-def preguntar_al_documento(pregunta, texto):
-    historial = st.session_state.historial_chat
-    contexto = "\n".join([f"{m['rol']}: {m['texto']}" for m in historial[-6:]])
-    prompt = (
-        f"Eres un asistente experto en análisis de documentos de cualquier tipo.\n"
-        f"DOCUMENTO:\n{texto[:10000]}\n\n"
-        f"CONVERSACIÓN PREVIA:\n{contexto}\n\n"
-        f"PREGUNTA: {pregunta}\n"
-        "Responde de forma concisa y directa en español."
-    )
-    return llamar_ia(prompt) or "No pude procesar tu pregunta."
-
-def detectar_anomalias(texto):
-    prompt = (
-        "Analiza este documento en detalle. Detecta todos los problemas que encuentres.\n"
-        "Clasifica cada problema por nivel de gravedad:\n"
-        "- CRITICO: errores graves que cambian el significado o hacen el documento inválido\n"
-        "- ALTO: errores importantes como datos incorrectos, incoherencias lógicas\n"
-        "- MEDIO: errores ortográficos, de formato, datos duplicados\n"
-        "- LEVE: sugerencias de mejora, redacción mejorable\n\n"
-        "Devuelve SOLO este JSON (sin texto extra):\n"
-        '{"nivel_general": "Excelente/Bueno/Regular/Deficiente",'
-        '"puntaje": 85,'
-        '"criticos": ["descripción del problema"],'
-        '"altos": ["descripción del problema"],'
-        '"medios": ["descripción del problema"],'
-        '"leves": ["descripción del problema"],'
-        '"recomendacion": "recomendación principal en una oración"}\n\n'
-        f"DOCUMENTO:\n{texto[:12000]}"
-    )
-    resp = llamar_ia(prompt)
-    if resp:
-        return extraer_json_seguro(resp)
-    return None
-
 # ==========================================
 # EXPORTADORES
 # ==========================================
-def exportar_word(texto, resumen_data=None, archivo_bytes=None, archivo_tipo=None, cambios=None):
-    """
-    Genera Word profesional con conversion cruzada.
-    - DOCX original: aplica cambios preservando formato.
-    - XLSX original: convierte cada hoja en tabla Word real.
-    - PDF/texto: genera informe con resumen estructurado.
-    """
-    zona = pytz.timezone('America/Caracas')
-    fecha = datetime.now(zona).strftime('%d de %B de %Y, %I:%M %p')
-    cambios = cambios or []
-
-    if archivo_tipo == "docx" and archivo_bytes and cambios:
-        resultado, _ = reemplazar_docx_preservando_formato(archivo_bytes, cambios)
-        return resultado
-
-    if archivo_tipo == "xlsx" and archivo_bytes:
-        doc = Document()
-        doc.styles['Normal'].font.name = 'Calibri'
-        titulo_h = doc.add_heading('', 0)
-        r = titulo_h.add_run('Reporte Exportado desde Excel')
-        r.font.color.rgb = RGBColor(0x1E, 0x40, 0xAF)
-        r.font.size = Pt(20)
-        doc.add_paragraph().add_run(f'Generado: {fecha}').font.size = Pt(9)
-        doc.add_paragraph()
-        bytes_usar = archivo_bytes
-        if cambios:
-            bytes_usar, _ = reemplazar_xlsx_preservando_formato(archivo_bytes, cambios)
-        wb = openpyxl.load_workbook(BytesIO(bytes_usar), data_only=True)
-        for sheet in wb.worksheets:
-            doc.add_heading(f'Hoja: {sheet.title}', level=1)
-            filas = [f for f in sheet.iter_rows(values_only=True) if any(c is not None for c in f)]
-            if not filas:
-                doc.add_paragraph('(Hoja vacia)')
-                continue
-            n_cols = max(len(f) for f in filas)
-            tabla = doc.add_table(rows=len(filas), cols=n_cols)
-            tabla.style = 'Table Grid'
-            for i, fila in enumerate(filas):
-                for j in range(n_cols):
-                    val = fila[j] if j < len(fila) else ""
-                    cell = tabla.cell(i, j)
-                    cell.text = str(val) if val is not None else ""
-                    if i == 0:
-                        for run in cell.paragraphs[0].runs:
-                            run.font.bold = True
-            doc.add_paragraph()
-        buf = BytesIO()
-        doc.save(buf)
-        return buf.getvalue()
-
-    doc = Document()
-    # Márgenes más ajustados
-    for section in doc.sections:
-        section.top_margin    = Inches(0.8)
-        section.bottom_margin = Inches(0.8)
-        section.left_margin   = Inches(1.0)
-        section.right_margin  = Inches(1.0)
-
-    sty = doc.styles['Normal']
-    sty.font.name = 'Calibri'
-    sty.font.size = Pt(11)
-
-    # ── Encabezado con banda azul ──
-    tabla_hdr = doc.add_table(rows=1, cols=1)
-    tabla_hdr.style = 'Table Grid'
-    cell_hdr = tabla_hdr.cell(0, 0)
-    cell_hdr.paragraphs[0].clear()
-    run_hdr = cell_hdr.paragraphs[0].add_run(
-        resumen_data.get("titulo", "INFORME EJECUTIVO") if resumen_data else "INFORME EJECUTIVO"
-    )
-    run_hdr.font.bold = True
-    run_hdr.font.size = Pt(16)
-    run_hdr.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
-    cell_hdr.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
-    # Fondo azul
-    tc = cell_hdr._tc
-    tcPr = tc.get_or_add_tcPr()
-    shd = OxmlElement('w:shd')
-    shd.set(qn('w:val'), 'clear')
-    shd.set(qn('w:color'), 'auto')
-    shd.set(qn('w:fill'), '1E3A5F')
-    tcPr.append(shd)
-    doc.add_paragraph()
-
-    # Fecha pequeña
-    p_fecha = doc.add_paragraph()
-    r_fecha = p_fecha.add_run(f'Generado: {fecha}')
-    r_fecha.font.size = Pt(9)
-    r_fecha.font.color.rgb = RGBColor(0x6B, 0x72, 0x80)
-    p_fecha.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-    doc.add_paragraph()
-
-    if resumen_data:
-        # Resumen ejecutivo en caja gris clara
-        if resumen_data.get("resumen_ejecutivo"):
-            t_res = doc.add_table(rows=1, cols=1)
-            t_res.style = 'Table Grid'
-            c_res = t_res.cell(0, 0)
-            c_res.paragraphs[0].clear()
-            r_res = c_res.paragraphs[0].add_run(resumen_data["resumen_ejecutivo"])
-            r_res.font.size = Pt(10)
-            r_res.font.italic = True
-            tcPr2 = c_res._tc.get_or_add_tcPr()
-            shd2 = OxmlElement('w:shd')
-            shd2.set(qn('w:val'), 'clear')
-            shd2.set(qn('w:color'), 'auto')
-            shd2.set(qn('w:fill'), 'EFF6FF')
-            tcPr2.append(shd2)
-            doc.add_paragraph()
-
-        if resumen_data.get("metricas"):
-            h2 = doc.add_heading('Métricas Clave', level=1)
-            h2.runs[0].font.color.rgb = RGBColor(0x1E, 0x40, 0xAF)
-            tabla_m = doc.add_table(rows=1, cols=2)
-            tabla_m.style = 'Table Grid'
-            hdr = tabla_m.rows[0].cells
-            for ci, txt in enumerate(['Indicador', 'Valor']):
-                hdr[ci].paragraphs[0].clear()
-                r = hdr[ci].paragraphs[0].add_run(txt)
-                r.font.bold = True
-                r.font.color.rgb = RGBColor(0xFF,0xFF,0xFF)
-                hdr[ci].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
-                tcPr_h = hdr[ci]._tc.get_or_add_tcPr()
-                shd_h = OxmlElement('w:shd')
-                shd_h.set(qn('w:val'), 'clear'); shd_h.set(qn('w:color'), 'auto')
-                shd_h.set(qn('w:fill'), '1E40AF')
-                tcPr_h.append(shd_h)
-            for idx, (k, v) in enumerate(resumen_data["metricas"].items()):
-                row_m = tabla_m.add_row().cells
-                row_m[0].text = str(k)
-                row_m[1].text = str(v)
-                fill = 'F8FAFC' if idx % 2 == 0 else 'FFFFFF'
-                for ci2 in range(2):
-                    tcPr_d = row_m[ci2]._tc.get_or_add_tcPr()
-                    shd_d = OxmlElement('w:shd')
-                    shd_d.set(qn('w:val'),'clear'); shd_d.set(qn('w:color'),'auto')
-                    shd_d.set(qn('w:fill'), fill)
-                    tcPr_d.append(shd_d)
-            doc.add_paragraph()
-
-        if resumen_data.get("puntos_clave"):
-            h3 = doc.add_heading('Puntos Clave', level=1)
-            h3.runs[0].font.color.rgb = RGBColor(0x1E, 0x40, 0xAF)
-            for punto in resumen_data["puntos_clave"]:
-                p_b = doc.add_paragraph(style='List Bullet')
-                p_b.add_run(punto).font.size = Pt(11)
-
-        if resumen_data.get("hallazgo_destacado"):
-            doc.add_paragraph()
-            h4 = doc.add_heading('💡 Hallazgo Destacado', level=1)
-            h4.runs[0].font.color.rgb = RGBColor(0x1E, 0x40, 0xAF)
-            t_hall = doc.add_table(rows=1, cols=1)
-            t_hall.style = 'Table Grid'
-            c_hall = t_hall.cell(0,0)
-            c_hall.paragraphs[0].clear()
-            r_hall = c_hall.paragraphs[0].add_run(resumen_data["hallazgo_destacado"])
-            r_hall.font.italic = True
-            r_hall.font.size = Pt(10)
-            tcPr_hall = c_hall._tc.get_or_add_tcPr()
-            shd_hall = OxmlElement('w:shd')
-            shd_hall.set(qn('w:val'),'clear'); shd_hall.set(qn('w:color'),'auto')
-            shd_hall.set(qn('w:fill'), 'F0FDF4')
-            tcPr_hall.append(shd_hall)
-        doc.add_page_break()
-
-    h_cont = doc.add_heading('Contenido del Documento', level=1)
-    h_cont.runs[0].font.color.rgb = RGBColor(0x1E, 0x40, 0xAF)
-    for linea in texto.split('\n'):
-        linea_limpia = linea.strip().replace('*', '').replace('#', '')
-        if linea_limpia:
-            p = doc.add_paragraph(linea_limpia)
-            p.paragraph_format.space_after = Pt(2)
-    buf = BytesIO()
-    doc.save(buf)
-    return buf.getvalue()
-
 def exportar_excel(texto, resumen_data=None, archivo_bytes=None, archivo_tipo=None, cambios=None):
-    """
-    Genera Excel profesional con conversion cruzada.
-    - XLSX original: aplica cambios y devuelve el archivo original formateado.
-    - DOCX original: extrae cada tabla como hoja separada.
-    - PDF/texto: vuelca lineas en una hoja con resumen.
-    """
     cambios = cambios or []
-
-    if archivo_tipo == "xlsx" and archivo_bytes and cambios:
-        resultado, _ = reemplazar_xlsx_preservando_formato(archivo_bytes, cambios)
-        return resultado
-
-    if archivo_tipo == "docx" and archivo_bytes:
-        bytes_usar = archivo_bytes
-        if cambios:
-            bytes_usar, _ = reemplazar_docx_preservando_formato(archivo_bytes, cambios)
-        wb = openpyxl.Workbook()
-        wb.remove(wb.active)
-        doc_src = Document(BytesIO(bytes_usar))
-        azul = "1E3A5F"
-        blanco = "FFFFFF"
-        gris = "F8FAFC"
-        for i, tabla in enumerate(doc_src.tables):
-            ws = wb.create_sheet(title=f"Tabla_{i+1}")
-            filas_limpias = []
-            for row in tabla.rows:
-                vistas = set()
-                fila = []
-                for cell in row.cells:
-                    if cell._tc not in vistas:
-                        vistas.add(cell._tc)
-                        fila.append(cell.text.strip())
-                if any(fila):
-                    filas_limpias.append(fila)
-            for r_idx, fila in enumerate(filas_limpias, 1):
-                for c_idx, val in enumerate(fila, 1):
-                    cell = ws.cell(row=r_idx, column=c_idx, value=val)
-                    if r_idx == 1:
-                        cell.fill = PatternFill("solid", fgColor=azul)
-                        cell.font = Font(color=blanco, bold=True, size=10)
-                    else:
-                        cell.fill = PatternFill("solid", fgColor=gris if r_idx%2==0 else blanco)
-                        cell.font = Font(size=10)
-                    cell.alignment = Alignment(wrap_text=True, vertical="center")
-            for col in ws.columns:
-                ws.column_dimensions[col[0].column_letter].width = 22
-        if not wb.sheetnames:
-            ws = wb.create_sheet("Datos")
-            ws.cell(1, 1, "No se encontraron tablas estructuradas en el documento.")
-        buf = BytesIO()
-        wb.save(buf)
-        return buf.getvalue()
-
+    
     wb = openpyxl.Workbook()
     azul_oscuro = "1E3A5F"
     azul_medio  = "2563EB"
@@ -640,733 +259,61 @@ def exportar_excel(texto, resumen_data=None, archivo_bytes=None, archivo_tipo=No
         if resumen_data.get("hallazgo_destacado"):
             fila += 1
             ws_res.merge_cells(f"A{fila}:D{fila}")
-            header_cell(ws_res, fila, 1, "HALLAZGO DESTACADO", bg="F59E0B", fg=blanco, size=11)
+            header_cell(ws_res, fila, 1, "HALLAZGO DESTACADO", bg="1E40AF", size=11)
             fila += 1
             ws_res.merge_cells(f"A{fila}:D{fila+1}")
             cell = ws_res.cell(row=fila, column=1, value=resumen_data["hallazgo_destacado"])
-            cell.fill = PatternFill("solid", fgColor="FFFBEB")
-            cell.font = Font(italic=True, size=11, color="92400E")
+            cell.fill = PatternFill("solid", fgColor="F0FDF4")
+            cell.font = Font(italic=True, size=11)
             cell.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
-            ws_res.row_dimensions[fila].height = 45
-
-    for col in ['A','B','C','D']:
-        ws_res.column_dimensions[col].width = 28
-
-    ws_data = wb.create_sheet("Datos")
-    header_cell(ws_data, 1, 1, "Contenido Extraido del Documento", bg=azul_oscuro, size=12)
-    ws_data.merge_cells("A1:B1")
-    ws_data.column_dimensions['A'].width = 120
-    for i, linea in enumerate(texto.split('\n'), start=2):
-        if linea.strip():
-            cell = ws_data.cell(row=i, column=1, value=linea.strip())
-            cell.alignment = Alignment(wrap_text=True, vertical="center")
-            cell.fill = PatternFill("solid", fgColor=gris_claro if i%2==0 else blanco)
-            ws_data.row_dimensions[i].height = 18
+            cell.border = thin
+            ws_res.row_dimensions[fila].height = 40
+            fila += 2
 
     buf = BytesIO()
     wb.save(buf)
     return buf.getvalue()
 
-def safe_text(t):
-    """Convierte texto a latin-1 seguro para fpdf versión antigua."""
-    return str(t).encode('latin-1', 'replace').decode('latin-1')
-
-def pdf_seccion_header(pdf, titulo, r, g, b):
-    """Dibuja un encabezado de sección con fondo de color."""
-    pdf.set_fill_color(r, g, b)
-    pdf.set_text_color(255, 255, 255)
-    pdf.set_font("Helvetica", 'B', 11)
-    pdf.cell(190, 8, safe_text(titulo), border=0, new_x="LMARGIN", new_y="NEXT", fill=True)
-    pdf.ln(2)
-    pdf.set_text_color(30, 30, 30)
-
-def exportar_pdf(texto, resumen_data=None):
-    """Genera PDF compatible con fpdf (versión clásica)."""
-    pdf = FPDF()
-    pdf.set_margins(10, 10, 10)
-    pdf.add_page()
-    pdf.set_auto_page_break(auto=True, margin=15)
-
-    # ---- Encabezado ----
-    pdf.set_fill_color(30, 58, 95)
-    pdf.rect(0, 0, 210, 32, 'F')
-    pdf.set_text_color(255, 255, 255)
-    pdf.set_font("Helvetica", 'B', 16)
-    pdf.set_xy(10, 8)
-    pdf.cell(190, 10, "INFORME EJECUTIVO - ORO ASISTENTE", new_x="LMARGIN", new_y="NEXT", align='C')
-    zona = pytz.timezone('America/Caracas')
-    fecha = datetime.now(zona).strftime('%d/%m/%Y %I:%M %p')
-    pdf.set_font("Helvetica", '', 9)
-    pdf.set_xy(10, 20)
-    pdf.cell(190, 8, safe_text(f"Generado: {fecha}"), new_x="LMARGIN", new_y="NEXT", align='C')
-    pdf.set_xy(10, 35)
-    pdf.set_text_color(30, 30, 30)
-
-    if resumen_data:
-        # Título del documento
-        titulo_doc = resumen_data.get("titulo", "")
-        if titulo_doc:
-            pdf.set_fill_color(37, 99, 235)
-            pdf.set_text_color(255, 255, 255)
-            pdf.set_font("Helvetica", 'B', 12)
-            pdf.cell(190, 10, safe_text(titulo_doc[:90]), border=0, new_x="LMARGIN", new_y="NEXT", align='C', fill=True)
-            pdf.ln(3)
-            pdf.set_text_color(30, 30, 30)
-
-        # Resumen ejecutivo
-        res_ej = resumen_data.get("resumen_ejecutivo", "")
-        if res_ej:
-            pdf.set_font("Helvetica", 'I', 10)
-            pdf.multi_cell(190, 6, safe_text(res_ej))
-            pdf.ln(4)
-
-        # Métricas
-        metricas = resumen_data.get("metricas", {})
-        if metricas:
-            pdf_seccion_header(pdf, "  METRICAS CLAVE", 30, 58, 95)
-            toggle = False
-            for k, v in metricas.items():
-                r_bg, g_bg, b_bg = (245, 247, 250) if toggle else (255, 255, 255)
-                pdf.set_fill_color(r_bg, g_bg, b_bg)
-                pdf.set_font("Helvetica", 'B', 10)
-                pdf.cell(85, 8, safe_text(f"  {k}"), border=0, fill=True)
-                pdf.set_font("Helvetica", '', 10)
-                pdf.cell(105, 8, safe_text(str(v)), border=0, new_x="LMARGIN", new_y="NEXT", fill=True)
-                toggle = not toggle
-            pdf.ln(4)
-
-        # Puntos clave
-        puntos = resumen_data.get("puntos_clave", [])
-        if puntos:
-            pdf_seccion_header(pdf, "  PUNTOS CLAVE", 30, 64, 175)
-            pdf.set_font("Helvetica", '', 10)
-            for i, punto in enumerate(puntos, 1):
-                pdf.multi_cell(190, 7, safe_text(f"  {i}. {punto}"))
-            pdf.ln(4)
-
-        # Hallazgo
-        hallazgo = resumen_data.get("hallazgo_destacado", "")
-        if hallazgo:
-            pdf_seccion_header(pdf, "  HALLAZGO DESTACADO", 180, 120, 10)
-            pdf.set_font("Helvetica", 'I', 10)
-            pdf.multi_cell(190, 7, safe_text(f"  {hallazgo}"))
-            pdf.ln(4)
-
-        pdf.add_page()
-
-    # ---- Contenido del documento ----
-    pdf_seccion_header(pdf, "  CONTENIDO DEL DOCUMENTO", 30, 58, 95)
-    pdf.set_font("Helvetica", '', 9)
-    for linea in texto.split('\n'):
-        linea = linea.strip()
-        if linea:
-            pdf.multi_cell(190, 5, safe_text(linea))
-
-    raw = pdf.output()
-    if isinstance(raw, (bytes, bytearray)):
-        return bytes(raw)
-    return raw.encode('latin-1') if isinstance(raw, str) else bytes(raw)
-
-
 # ==========================================
-# REEMPLAZOS PRESERVANDO FORMATO
+# INTERFAZ Y LÓGICA PRINCIPAL
 # ==========================================
-def reemplazar_docx_preservando_formato(archivo_bytes, cambios):
-    """Reemplaza texto en DOCX iterando runs para preservar formato."""
-    doc = Document(BytesIO(archivo_bytes))
-    conteo = 0
-    
-    for c in cambios:
-        buscar = str(c["buscar"])
-        reemplazar = str(c["reemplazar"])
-        if not buscar or buscar.lower() == reemplazar.lower():
-            continue
-        regex = re.compile(re.escape(buscar), re.IGNORECASE)
-        
-        def reemplazar_en_parrafo(parrafo):
-            nonlocal conteo
-            texto_completo = parrafo.text
-            if not regex.search(texto_completo):
-                return
-            nuevo_texto, n = regex.subn(reemplazar, texto_completo)
-            conteo += n
-            # Preservar formato del primer run, limpiar el resto
-            if parrafo.runs:
-                parrafo.runs[0].text = nuevo_texto
-                for run in parrafo.runs[1:]:
-                    run.text = ""
-        
-        for parrafo in doc.paragraphs:
-            reemplazar_en_parrafo(parrafo)
-        
-        for tabla in doc.tables:
-            for fila in tabla.rows:
-                for celda in fila.cells:
-                    for parrafo in celda.paragraphs:
-                        reemplazar_en_parrafo(parrafo)
-    
-    buf = BytesIO()
-    doc.save(buf)
-    return buf.getvalue(), conteo
 
+archivo = st.file_uploader("Sube tu documento", type=["txt", "pdf"])
 
-def reemplazar_xlsx_preservando_formato(archivo_bytes, cambios):
-    """Reemplaza texto en XLSX preservando estilos."""
-    wb = openpyxl.load_workbook(BytesIO(archivo_bytes))
-    conteo = 0
-    
-    for c in cambios:
-        buscar = str(c["buscar"])
-        reemplazar_val = str(c["reemplazar"])
-        if not buscar or buscar.lower() == reemplazar_val.lower():
-            continue
-        regex = re.compile(re.escape(buscar), re.IGNORECASE)
-        
-        for sheet in wb.worksheets:
-            for row in sheet.iter_rows():
-                for cell in row:
-                    if cell.value and isinstance(cell.value, str):
-                        if regex.search(cell.value):
-                            nuevo, n = regex.subn(reemplazar_val, cell.value)
-                            cell.value = nuevo
-                            conteo += n
-    
-    buf = BytesIO()
-    wb.save(buf)
-    return buf.getvalue(), conteo
+if archivo:
+    if st.session_state.nombre_archivo != archivo.name:
+        st.session_state.nombre_archivo = archivo.name
+        # Lectura básica del texto para que funcione el ejemplo
+        if archivo.name.endswith(".txt"):
+            st.session_state.texto_extraido = archivo.getvalue().decode("utf-8", errors="ignore")
+        elif archivo.name.endswith(".pdf"):
+            try:
+                pdf_reader = PyPDF2.PdfReader(archivo)
+                st.session_state.texto_extraido = "\n".join([page.extract_text() for page in pdf_reader.pages])
+            except Exception as e:
+                st.session_state.texto_extraido = "Error extrayendo PDF."
+        st.session_state.resumen_data = None 
 
-
-
-
-def reemplazar_pdf_original(archivo_bytes, cambios):
-    """
-    Edita el PDF original preservando formato exacto (fuente, tamaño, bold, color).
-    Usa redact de pymupdf para borrar y reinsertar con los mismos atributos.
-    """
-    if not PYMUPDF_OK:
-        return archivo_bytes, 0
-
-    doc = fitz.open(stream=archivo_bytes, filetype="pdf")
-    conteo = 0
-
-    for c in cambios:
-        buscar   = str(c["buscar"]).strip()
-        reemplazar = str(c["reemplazar"]).strip()
-        if not buscar or buscar.lower() == reemplazar.lower():
-            continue
-
-        for pagina in doc:
-            instancias = pagina.search_for(buscar, quads=False)
-            if not instancias:
-                continue
-
-            # Extraer dict completo de la página para leer atributos de span
-            bloques_dict = pagina.get_text("dict")["blocks"]
-
-            for rect in instancias:
-                # ── Buscar el span que contiene el texto ──
-                font_size  = 11.0
-                font_name  = "helv"
-                color      = (0.0, 0.0, 0.0)
-                bold       = False
-                italic     = False
-                # Color de fondo del área (para el redact)
-                bg_color   = None
-
-                for bloque in bloques_dict:
-                    for linea in bloque.get("lines", []):
-                        for span in linea.get("spans", []):
-                            if buscar.lower() in span["text"].lower():
-                                font_size = span.get("size", 11.0)
-                                font_name = span.get("font", "helv")
-                                ci = span.get("color", 0)
-                                color = (
-                                    ((ci >> 16) & 0xFF) / 255,
-                                    ((ci >> 8)  & 0xFF) / 255,
-                                    (ci & 0xFF) / 255,
-                                )
-                                flags = span.get("flags", 0)
-                                bold   = bool(flags & 2**4)
-                                italic = bool(flags & 2**1)
-                                # Color de fondo del span si lo tiene
-                                origin = span.get("origin", rect.tl)
-                                break
-
-                # ── Determinar fuente compatible ──
-                fn_lower = font_name.lower()
-                if "bold" in fn_lower and "italic" in fn_lower:
-                    use_font = "Times-BoldItalic"
-                elif "bold" in fn_lower or bold:
-                    use_font = "Helvetica-Bold"
-                elif "italic" in fn_lower or italic:
-                    use_font = "Helvetica-Oblique"
-                elif "times" in fn_lower or "serif" in fn_lower:
-                    use_font = "Times-Roman"
-                elif "courier" in fn_lower or "mono" in fn_lower:
-                    use_font = "Courier"
+    # BOTÓN CORREGIDO (UN SOLO CLIC)
+    if st.button("🚀 Analizar Documento"):
+        if st.session_state.texto_extraido:
+            with st.spinner("Analizando con IA..."):
+                resultado = solicitar_resumen_estructurado(st.session_state.texto_extraido)
+                if resultado:
+                    st.session_state.resumen_data = resultado
+                    st.rerun() # Esto recarga y muestra de inmediato
                 else:
-                    use_font = "Helvetica"
+                    st.error("Hubo un problema al generar el análisis.")
 
-                # ── 1. Redact: borra el texto original con el fondo correcto ──
-                # Detectar color de fondo real del área
-                try:
-                    pix = pagina.get_pixmap(clip=rect, dpi=72)
-                    # Pixel central del área
-                    cx = pix.width  // 2
-                    cy = pix.height // 2
-                    sample = pix.pixel(cx, cy)
-                    bg = (sample[0]/255, sample[1]/255, sample[2]/255)
-                except Exception:
-                    bg = (1.0, 1.0, 1.0)
-
-                pagina.add_redact_annot(rect, fill=bg)
-                pagina.apply_redactions()
-
-                # ── 2. Reinsertar texto nuevo con los mismos atributos ──
-                # Calcular posición Y: baseline es bottom del rect menos pequeño margen
-                baseline_y = rect.y1 - 1.5
-                pagina.insert_text(
-                    fitz.Point(rect.x0, baseline_y),
-                    reemplazar,
-                    fontname=use_font,
-                    fontsize=font_size,
-                    color=color,
-                )
-                conteo += 1
-
-    buf = BytesIO()
-    doc.save(buf)
-    doc.close()
-    return buf.getvalue(), conteo
-
-
-# ==========================================
-# SUBIDA DE ARCHIVO
-# ==========================================
-
-
-st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
-
-# CSS para traducir el uploader al español
-st.markdown("""
-<style>
-[data-testid="stFileUploaderDropzoneInstructions"] > div > span::after {
-    content: "Arrastra tu archivo aquí";
-}
-[data-testid="stFileUploaderDropzoneInstructions"] > div > span {
-    font-size: 0 !important;
-}
-[data-testid="stFileUploaderDropzoneInstructions"] > div > small::after {
-    content: "Límite 200MB por archivo • DOCX, XLSX, PDF";
-}
-[data-testid="stFileUploaderDropzoneInstructions"] > div > small {
-    font-size: 0 !important;
-}
-[data-testid="stFileUploadDropzone"] > div > button {
-    visibility: hidden;
-    position: relative;
-}
-[data-testid="stFileUploadDropzone"] > div > button::after {
-    content: "Seleccionar archivo";
-    visibility: visible;
-    position: absolute;
-    left: 0; right: 0;
-    text-align: center;
-}
-</style>
-""", unsafe_allow_html=True)
-
-archivo = st.file_uploader(
-    "📎 Toca aquí para subir tu archivo",
-    type=["docx", "xlsx", "pdf"],
-    help="Word, Excel o PDF — máx 200MB",
-    label_visibility="visible"
-)
-
-if archivo and archivo.name != st.session_state.nombre_archivo:
-    with st.spinner("📖 Cargando archivo..."):
-        contenido = archivo.read()
-        st.session_state.archivo_bytes     = contenido
-        st.session_state.nombre_archivo    = archivo.name
-        st.session_state.archivo_tipo      = archivo.name.split(".")[-1].lower()
-        st.session_state.resumen_data      = None
-        st.session_state.historial_chat    = []
-        st.session_state.lista_cambios     = []
-        st.session_state.cambios_aplicados = None
-        st.session_state.texto_corregido   = ""
-        st.session_state.preview_cambio    = None
-        st.session_state.resumen_error     = False
-        st.session_state.generando_resumen = False
-        texto = ""
-        try:
-            if archivo.name.endswith(".docx"):
-                doc = Document(BytesIO(contenido))
-                partes = [p.text for p in doc.paragraphs if p.text.strip()]
-                for t in doc.tables:
-                    for row in t.rows:
-                        celdas = list(dict.fromkeys([c.text.strip() for c in row.cells]))
-                        if any(celdas):
-                            partes.append(" | ".join(celdas))
-                texto = "\n".join(partes)
-            elif archivo.name.endswith(".xlsx"):
-                wb = openpyxl.load_workbook(BytesIO(contenido), data_only=True, read_only=True)
-                for s in wb.worksheets:
-                    for r in s.iter_rows(values_only=True):
-                        linea = " | ".join([str(c) for c in r if c is not None and str(c).strip()])
-                        if linea.strip():
-                            texto += linea + "\n"
-                wb.close()
-            elif archivo.name.endswith(".pdf"):
-                reader = PyPDF2.PdfReader(BytesIO(contenido))
-                for p in reader.pages:
-                    t = p.extract_text()
-                    if t:
-                        texto += t + "\n"
-            st.session_state.texto_extraido    = texto
-            st.session_state.generando_resumen = False
-            # NO auto-generar resumen — el usuario lo pide cuando quiera
-        except Exception as e:
-            st.error(f"Error leyendo el archivo: {e}")
-
-
-
-
-
-# ==========================================
-# PANEL PRINCIPAL
-# ==========================================
-if not st.session_state.get("texto_extraido") and st.session_state.get("generando_resumen"):
-    st.session_state.generando_resumen = False
-
-if st.session_state.texto_extraido:
-    texto = st.session_state.texto_extraido
-    tipo  = st.session_state.archivo_tipo
-    texto_activo = st.session_state.texto_corregido if st.session_state.texto_corregido else texto
-
-    # ── File badge ──
-    palabras  = len(texto.split())
-    ext_icons = {"docx":"📄","xlsx":"📊","pdf":"📕"}
-    ext_icon  = ext_icons.get(tipo,"📎")
-    cambios_n = len(st.session_state.lista_cambios)
-    badge_extra = f' &nbsp;·&nbsp; ✏️ <strong style="color:#10b981">{cambios_n} cambio(s)</strong>' if cambios_n else ""
-    st.markdown(f"""
-    <div class="file-badge">
-        <div class="file-icon">{ext_icon}</div>
-        <div>
-            <div class="file-info-name">{st.session_state.nombre_archivo}</div>
-            <div class="file-info-stats">📝 {palabras:,} palabras{badge_extra}</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # ── Navegación 3 tabs ──
-    _nav_defs = [
-        ("resumen",   "📊 Resumen"),
-        ("asistente", "✍️ Asistente"),
-        ("evaluar",   "🔍 Evaluar"),
-    ]
-    _activa = st.session_state.get("tab_activa", "resumen")
-    if _activa not in ("resumen","asistente","evaluar"):
-        _activa = "resumen"
-
-    _cols = st.columns(3)
-    for _i, (_key, _label) in enumerate(_nav_defs):
-        with _cols[_i]:
-            _clase = "nav-tab-activo" if _activa == _key else "nav-tab-inactivo"
-            st.markdown(f'<div class="{_clase}">', unsafe_allow_html=True)
-            if st.button(_label, key=f"navbtn_{_key}", use_container_width=True):
-                st.session_state.tab_activa = _key
-                st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
-    nav = _activa
-
-    # ══════════════════════════════════════════
-    # TAB 1 — RESUMEN
-    # ══════════════════════════════════════════
-    if nav == "resumen":
-
-        if st.session_state.generando_resumen:
-            with st.spinner("🧠 Analizando documento..."):
-                txt_r = st.session_state.texto_corregido if st.session_state.texto_corregido else texto
-                data_nueva = solicitar_resumen_estructurado(txt_r)
-            st.session_state.generando_resumen = False
-            if data_nueva:
-                st.session_state.resumen_data  = data_nueva
-                st.session_state.resumen_error = False
-            else:
-                st.session_state.resumen_error = True
-            st.rerun()
-
-        if st.session_state.get("resumen_error"):
-            st.markdown('<div class="warn-box">⚠️ No se pudo generar el resumen. Intenta de nuevo.</div>', unsafe_allow_html=True)
-            if st.button("🔄 Reintentar", use_container_width=True):
-                st.session_state.resumen_error = False
-                st.session_state.generando_resumen = True
-                st.rerun()
-
-        data = st.session_state.resumen_data
-
-        if not data and not st.session_state.generando_resumen and not st.session_state.get("resumen_error"):
-            st.markdown("""
-            <div style="text-align:center;padding:2rem 0 1rem">
-                <div style="font-size:3rem">🧠</div>
-                <div style="color:#34d399;font-weight:700;font-size:1rem;margin-top:0.5rem">Listo para analizar</div>
-                <div style="color:#065f46;font-size:0.78rem;margin-top:0.2rem">Toca el botón para generar el resumen</div>
-            </div>
-            """, unsafe_allow_html=True)
-            if st.button("⚡ Analizar documento", use_container_width=True):
-                st.session_state.generando_resumen = True
-                st.rerun()
-
-        if data:
-            emoji = data.get("emoji_categoria","📋")
-            titulo_doc = data.get("titulo","Documento analizado")
-            st.markdown(f"""
-            <div class="summary-card">
-                <div class="summary-card-title">{emoji} {titulo_doc}</div>
-                {data.get("resumen_ejecutivo","")}
-            </div>
-            """, unsafe_allow_html=True)
-
-            metricas = data.get("metricas",{})
-            if metricas:
-                pills = '<div class="metrics-grid">'
-                for k,v in list(metricas.items())[:4]:
-                    pills += f'<div class="metric-pill"><div class="metric-pill-label">{k}</div><div class="metric-pill-value">{v}</div></div>'
-                pills += '</div>'
-                st.markdown(pills, unsafe_allow_html=True)
-
-            puntos = data.get("puntos_clave",[])
-            if puntos:
-                tags = '<div class="tags-wrap">'+"".join([f'<span class="tag">✓ {p}</span>' for p in puntos])+'</div>'
-                st.markdown(tags, unsafe_allow_html=True)
-
-            hallazgo = data.get("hallazgo_destacado","")
-            if hallazgo:
-                st.markdown(f'<div class="hallazgo-card">💡 <strong>Hallazgo:</strong> {hallazgo}</div>', unsafe_allow_html=True)
-
-            # Exportar
-            st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
-            st.markdown('<div class="section-title">📥 Exportar informe</div>', unsafe_allow_html=True)
-            ab = st.session_state.archivo_bytes
-            ca = st.session_state.lista_cambios
-            c1,c2,c3 = st.columns(3)
-            with c1:
-                st.download_button("📄 Word",
-                    exportar_word(texto_activo, data, archivo_bytes=ab, archivo_tipo=tipo, cambios=ca),
-                    "Informe.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    use_container_width=True)
-            with c2:
-                st.download_button("📊 Excel",
-                    exportar_excel(texto_activo, data, archivo_bytes=ab, archivo_tipo=tipo, cambios=ca),
-                    "Informe.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True)
-            with c3:
-                st.download_button("📕 PDF",
-                    exportar_pdf(texto_activo, data),
-                    "Informe.pdf", mime="application/pdf", use_container_width=True)
-
-            if st.button("🔄 Regenerar resumen", use_container_width=True):
-                st.session_state.generando_resumen = True
-                st.session_state.resumen_data = None
-                st.rerun()
-
-    # ══════════════════════════════════════════
-    # TAB 2 — ASISTENTE (chat + edición)
-    # ══════════════════════════════════════════
-    elif nav == "asistente":
-
-        # Historial
-        for msg in st.session_state.historial_chat:
-            with st.chat_message("user" if msg["rol"]=="Usuario" else "assistant"):
-                st.write(msg["texto"])
-
-        # Preview pendiente
-        if st.session_state.preview_cambio:
-            preview = st.session_state.preview_cambio
-            st.markdown('<div class="section-title">👁 Vista previa</div>', unsafe_allow_html=True)
-            for c in preview:
-                bq = c["buscar"][:50]+("..." if len(c["buscar"])>50 else "")
-                rq = c["reemplazar"][:50]+("..." if len(c["reemplazar"])>50 else "")
-                idx = texto_activo.lower().find(c["buscar"].lower())
-                if idx != -1:
-                    ini=max(0,idx-30); fin=min(len(texto_activo),idx+len(c["buscar"])+30)
-                    ca2=texto_activo[ini:idx]; cd=texto_activo[idx+len(c["buscar"]):fin]
-                    st.markdown(
-                        f'<div style="background:#021008;border:1px solid #0a3d1a;border-radius:12px;padding:0.9rem;margin:0.4rem 0;font-size:0.8rem">'
-                        f'<div style="color:#6b7280;font-size:0.65rem;text-transform:uppercase">Antes</div>'
-                        f'<div style="color:#fca5a5;font-family:monospace;word-break:break-all">...{ca2}<mark style="background:#7f1d1d;color:#fca5a5;border-radius:3px;padding:0 3px">{bq}</mark>{cd}...</div>'
-                        f'<div style="color:#6b7280;font-size:0.65rem;text-transform:uppercase;margin-top:0.4rem">Después</div>'
-                        f'<div style="color:#86efac;font-family:monospace;word-break:break-all">...{ca2}<mark style="background:#14532d;color:#86efac;border-radius:3px;padding:0 3px">{rq}</mark>{cd}...</div>'
-                        f'</div>', unsafe_allow_html=True)
-                else:
-                    st.markdown(f'<div class="warn-box">⚠️ "{bq}" no encontrado en el documento</div>', unsafe_allow_html=True)
-
-            cs,cn = st.columns(2)
-            with cs:
-                if st.button("✅ Confirmar", use_container_width=True):
-                    st.session_state.lista_cambios.extend(preview)
-                    st.session_state.preview_cambio = None
-                    todos_c = st.session_state.lista_cambios
-                    ab_orig = st.session_state.archivo_bytes
-                    if tipo == "docx":
-                        final_bytes, n = reemplazar_docx_preservando_formato(ab_orig, todos_c)
-                    elif tipo == "xlsx":
-                        final_bytes, n = reemplazar_xlsx_preservando_formato(ab_orig, todos_c)
-                    elif tipo == "pdf" and PYMUPDF_OK:
-                        final_bytes, n = reemplazar_pdf_original(ab_orig, todos_c)
-                    else:
-                        txt_m=texto_activo; n=0
-                        for c2 in todos_c:
-                            txt_m,cnt=re.compile(re.escape(c2["buscar"]),re.IGNORECASE).subn(c2["reemplazar"],txt_m)
-                            n+=cnt
-                        final_bytes=txt_m.encode()
-                    txt_c=texto_activo
-                    for c2 in todos_c:
-                        txt_c=re.compile(re.escape(c2["buscar"]),re.IGNORECASE).sub(c2["reemplazar"],txt_c)
-                    st.session_state.texto_corregido  = txt_c
-                    st.session_state.cambios_aplicados= final_bytes
-                    st.session_state.resumen_data     = None
-                    st.session_state.generando_resumen= True
-                    st.session_state.edicion_counter += 1
-                    st.session_state.historial_chat.append({"rol":"Asistente","texto":f"✅ Listo — cambié **{preview[0]['buscar']}** → **{preview[0]['reemplazar']}**. ¿Algo más?"})
-                    st.rerun()
-            with cn:
-                if st.button("❌ Cancelar", use_container_width=True):
-                    st.session_state.preview_cambio = None
-                    st.session_state.edicion_counter += 1
-                    st.rerun()
-
-        # Historial de cambios
-        if st.session_state.lista_cambios:
-            with st.expander(f"📋 {len(st.session_state.lista_cambios)} cambio(s) aplicado(s)"):
-                for i,c in enumerate(st.session_state.lista_cambios,1):
-                    bs=c["buscar"][:28]+("..." if len(c["buscar"])>28 else "")
-                    rs=c["reemplazar"][:28]+("..." if len(c["reemplazar"])>28 else "")
-                    st.markdown(f'<div class="cambio-item"><span class="cambio-num">{i}.</span><span style="color:#fca5a5">{bs}</span><span class="cambio-arrow">→</span><span style="color:#86efac">{rs}</span></div>', unsafe_allow_html=True)
-                if st.button("🗑️ Limpiar cambios", use_container_width=True):
-                    st.session_state.lista_cambios=[]; st.session_state.cambios_aplicados=None
-                    st.session_state.texto_corregido=""; st.session_state.preview_cambio=None
-                    st.rerun()
-
-        # Descargar si hay cambios
-        if st.session_state.cambios_aplicados:
-            st.markdown('<div class="oro-divider"></div>', unsafe_allow_html=True)
-            st.markdown('<div class="section-title">📥 Descargar corregido</div>', unsafe_allow_html=True)
-            fb=st.session_state.cambios_aplicados; todos_c=st.session_state.lista_cambios
-            if tipo=="docx":
-                st.download_button("📄 Word corregido", fb, "Corregido.docx",
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True)
-            elif tipo=="xlsx":
-                st.download_button("📊 Excel corregido", fb, "Corregido.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
-            elif tipo=="pdf" and PYMUPDF_OK:
-                st.download_button("📕 PDF corregido", fb, "Corregido.pdf",
-                    mime="application/pdf", use_container_width=True)
-            wc=exportar_word(st.session_state.texto_corregido or texto, None)
-            st.download_button("📄 Exportar como Word", wc, "Exportado.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True)
-
-        # Estado vacío del chat
-        if not st.session_state.historial_chat and not st.session_state.preview_cambio:
-            st.markdown("""
-            <div style="text-align:center;padding:1.5rem 0 0.5rem">
-                <div style="font-size:2.2rem">💬</div>
-                <div style="color:#10b981;font-weight:700;font-size:0.95rem;margin-top:0.4rem">Conversa sobre el documento</div>
-                <div style="color:#065f46;font-size:0.8rem;margin-top:0.3rem">Edita palabras o haz preguntas en lenguaje natural</div>
-                <div style="display:flex;justify-content:center;gap:0.4rem;flex-wrap:wrap;margin-top:0.8rem">
-                    <span style="background:#021008;border:1px solid #0a3d1a;border-radius:20px;padding:0.2rem 0.7rem;font-size:0.72rem;color:#10b981">cambia X por Y</span>
-                    <span style="background:#021008;border:1px solid #0a3d1a;border-radius:20px;padding:0.2rem 0.7rem;font-size:0.72rem;color:#10b981">¿cuántas personas hay?</span>
-                    <span style="background:#021008;border:1px solid #0a3d1a;border-radius:20px;padding:0.2rem 0.7rem;font-size:0.72rem;color:#10b981">resume en 3 puntos</span>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-
-        entrada = st.chat_input("✍️ Escribe un cambio o una pregunta...", key=f"chat_{st.session_state.edicion_counter}")
-        if entrada:
-            st.session_state.historial_chat.append({"rol":"Usuario","texto":entrada})
-            palabras_cambio=["cambia","reemplaza","sustituye","corrige","agrega","añade","borra","elimina","pon","escribe","modifica","quita","actualiza"]
-            es_cambio=any(p in entrada.lower() for p in palabras_cambio)
-            if es_cambio:
-                with st.spinner("🔍 Procesando cambio..."):
-                    nuevos=solicitar_cambios(entrada, texto_activo)
-                if nuevos:
-                    st.session_state.preview_cambio=nuevos
-                    st.session_state.historial_chat.append({"rol":"Asistente","texto":"Encontré el cambio 👆 Revisa la vista previa arriba y confirma."})
-                else:
-                    st.session_state.historial_chat.append({"rol":"Asistente","texto":"No encontré qué cambiar. Intenta: *cambia 'palabra' por 'nueva palabra'*"})
-            else:
-                with st.spinner("🤔 Pensando..."):
-                    resp=preguntar_al_documento(entrada, texto_activo)
-                st.session_state.historial_chat.append({"rol":"Asistente","texto":resp})
-            st.rerun()
-
-    # ══════════════════════════════════════════
-    # TAB 3 — EVALUAR
-    # ══════════════════════════════════════════
-    elif nav == "evaluar":
-        if st.button("🔍 Evaluar documento ahora", use_container_width=True):
-            with st.spinner("Analizando errores e inconsistencias..."):
-                resultado = detectar_anomalias(texto_activo)
-            if resultado:
-                nivel=resultado.get("nivel_general","Regular")
-                puntaje=resultado.get("puntaje",0)
-                nivel_cfg={"Excelente":("#10b981","#021008","🟢"),"Bueno":("#34d399","#021008","🟢"),"Regular":("#f59e0b","#1c1003","🟡"),"Deficiente":("#ef4444","#1f0707","🔴")}
-                cfg=nivel_cfg.get(nivel,nivel_cfg["Regular"])
-                st.markdown(f"""
-                <div style="text-align:center;padding:1rem 0 0.5rem">
-                    <div style="font-size:3rem">{cfg[2]}</div>
-                    <div style="color:{cfg[0]};font-size:1.3rem;font-weight:800">{nivel}</div>
-                    <div style="color:#2d6a4f;font-size:0.8rem">Puntaje: <strong style="color:{cfg[0]}">{puntaje}/100</strong></div>
-                </div>
-                """, unsafe_allow_html=True)
-                niveles_e=[("criticos","🔴 Crítico","#ef4444","#1f0707","#450a0a"),("altos","🟠 Alto","#f97316","#1c0a03","#431407"),("medios","🟡 Medio","#f59e0b","#1c1003","#451a03"),("leves","🟢 Leve","#22c55e","#052e16","#14532d")]
-                hay=False
-                for key,label,cfg,cbg,cbrd in niveles_e:
-                    items_e=resultado.get(key,[])
-                    if items_e:
-                        hay=True
-                        rows="".join([f'<div style="color:#d1fae5;font-size:0.8rem;padding:0.2rem 0;border-bottom:1px solid {cbrd}">• {it}</div>' for it in items_e])
-                        st.markdown(f'<div style="background:{cbg};border:1px solid {cbrd};border-left:4px solid {cfg};border-radius:12px;padding:0.8rem 1rem;margin:0.5rem 0"><div style="color:{cfg};font-weight:700;font-size:0.85rem;margin-bottom:0.3rem">{label}</div>{rows}</div>', unsafe_allow_html=True)
-                if not hay:
-                    st.markdown('<div class="info-box">✅ ¡Sin problemas detectados! El documento se ve bien 🎉</div>', unsafe_allow_html=True)
-                rec=resultado.get("recomendacion","")
-                if rec:
-                    st.markdown(f'<div class="hallazgo-card">💡 <strong>Recomendación:</strong> {rec}</div>', unsafe_allow_html=True)
-            else:
-                st.markdown('<div class="warn-box">⚠️ No se pudo evaluar. Intenta de nuevo.</div>', unsafe_allow_html=True)
-        else:
-            st.markdown("""
-            <div style="text-align:center;padding:2rem 0">
-                <div style="font-size:3rem">🔍</div>
-                <div style="color:#34d399;font-weight:700;font-size:0.95rem;margin-top:0.5rem">Evaluación de calidad</div>
-                <div style="color:#065f46;font-size:0.8rem;margin-top:0.3rem;line-height:1.7">
-                    Detecta errores clasificados por nivel:<br>
-                    <span style="color:#ef4444">● Crítico</span> &nbsp;
-                    <span style="color:#f97316">● Alto</span> &nbsp;
-                    <span style="color:#f59e0b">● Medio</span> &nbsp;
-                    <span style="color:#22c55e">● Leve</span>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-
-else:
-    st.markdown("""
-    <div class="empty-state">
-        <div class="empty-icon">📂</div>
-        <div class="empty-title">Sube un archivo para empezar</div>
-        <div class="empty-hint">Toca el área de arriba para seleccionar tu documento</div>
-        <div class="format-badges">
-            <span class="format-badge">.docx</span>
-            <span class="format-badge">.xlsx</span>
-            <span class="format-badge">.pdf</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-zona_horaria = pytz.timezone('America/Caracas')
-hora = datetime.now(zona_horaria).strftime('%I:%M %p')
-
-st.markdown(f"<p class='oro-footer'>🏆 Oro Asistente · {hora} VET</p>", unsafe_allow_html=True)
+# Mostrar los resultados del análisis si existen
+if st.session_state.resumen_data:
+    res = st.session_state.resumen_data
+    st.markdown(f"### {res.get('emoji_categoria', '📋')} {res.get('titulo', 'Resumen')}")
+    st.markdown(f"<div class='summary-card'>{res.get('resumen_ejecutivo', '')}</div>", unsafe_allow_html=True)
+    
+    st.write("**Métricas Clave:**")
+    st.json(res.get('metricas', {}))
+    
+    st.write("**Puntos Clave:**")
+    for punto in res.get('puntos_clave', []):
+        st.write(f"- {punto}")
