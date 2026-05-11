@@ -128,7 +128,7 @@ html,body,[class*="css"]{{font-family:'Inter',sans-serif!important;-webkit-tap-h
 .empty-title{{color:{t['texto']};font-size:1rem;font-weight:700}}
 .empty-hint{{color:{t['texto3']};font-size:.78rem;margin-top:.4rem;line-height:1.7}}
 .format-badges{{display:flex;justify-content:center;gap:.4rem;margin-top:.8rem;flex-wrap:wrap}}
-.format-badge{{background:{t['bg2']};border:1px solid {t['borde']};border-radius:8px;padding:.22rem .6rem;color:{t['texto3']};font-size:.7rem;font-family:'JetBrains Mono',monospace;font-weight:600}}
+.format-badge{{background:{t['bg2']};border:1px solid {t['borde']};border-radius:8px;padding:.22rem .66rem;color:{t['texto3']};font-size:.7rem;font-family:'JetBrains Mono',monospace;font-weight:600}}
 .oro-footer{{text-align:center;font-size:.68rem;color:{t['texto3']};padding:.5rem 0;opacity:.7}}
 [data-testid=\"stSidebar\"]{{background:linear-gradient(180deg,{t['card']},{t['bg2']})!important;border-right:1px solid {t['borde']}!important}}
 [data-testid=\"stSidebar\"] .stMarkdown,
@@ -244,7 +244,7 @@ try:
 except Exception as e:
     st.error(f"🔑 Error configurando la IA: {e}"); st.stop()
 
-MODELOS_FALLBACK = ["gemini-3.1-flash-lite-preview","gemini-3.1-flash-preview","gemini-3.1-pro-preview"]
+MODELOS_FALLBACK = ["gemini-1.5-flash-8b", "gemini-1.5-flash"]
 
 def llamar_ia(prompt, es_json=False):
     for modelo in MODELOS_FALLBACK:
@@ -266,35 +266,14 @@ with st.sidebar:
     st.markdown(f"<div style='text-align:center;padding:.5rem 0'><span style='font-size:1.5rem'>🏆</span><div style='font-size:.9rem;font-weight:800;color:#34d399'>Oro Asistente</div></div>", unsafe_allow_html=True)
     st.markdown("---")
     st.markdown("**🎨 Tema**")
-    tema_opc = {"☀️ Claro":"claro","🌸 Aurora":"aurora","🌿 Menta":"menta","🌅 Sol":"sol","🌹 Rose":"rose","🌑 Noche":"noche","⬛ Carbón":"carbon","🌌 Cosmos":"cosmos"}
+    tema_opc = {"🌑 Noche":"noche","⬛ Carbón":"carbon","🌌 Cosmos":"cosmos"}
     sel = st.selectbox("Tema", list(tema_opc.keys()),
         index=list(tema_opc.values()).index(st.session_state.get("tema","noche")),
         label_visibility="collapsed")
     if tema_opc[sel] != st.session_state.tema:
         st.session_state.tema = tema_opc[sel]; st.rerun()
     st.markdown("---")
-    paso_sb = st.session_state.get("guia_paso",0)
-    if paso_sb > 0 and not st.session_state.get("guia_vista",False):
-        guias_sb = {
-            1:("🎉","Paso 1 — Analiza","Tu archivo está listo.\n\nToca **⚡ Analizar** para que la IA extraiga el resumen, métricas y puntos clave."),
-            2:("📊","Paso 2 — Revisa","El resumen está arriba.\n\nDescárgalo como Word, Excel o PDF con los botones de exportación."),
-            3:("💬","Paso 3 — Edita","Usa el chat para editar:\n• *cambia X por Y*\n• *agrega el teléfono a Juan*\n• *¿cuántas personas hay?*"),
-        }
-        if paso_sb in guias_sb:
-            ico_sb,tit_sb,desc_sb = guias_sb[paso_sb]
-            st.markdown(f"**{ico_sb} {tit_sb}**")
-            st.info(desc_sb)
-            c1sb,c2sb = st.columns(2)
-            with c1sb:
-                if st.button("👍 Ok",use_container_width=True,key="guia_ok"):
-                    st.session_state.guia_paso = 0 if paso_sb>=3 else paso_sb+1
-                    if paso_sb>=3: st.session_state.guia_vista=True
-                    st.rerun()
-            with c2sb:
-                if st.button("✕ Saltar",use_container_width=True,key="guia_skip"):
-                    st.session_state.guia_vista=True; st.session_state.guia_paso=0; st.rerun()
-            st.caption(f"Paso {paso_sb} de 3")
-    elif st.session_state.get("texto_extraido"):
+    if st.session_state.get("texto_extraido"):
         st.markdown("**💡 Comandos útiles**")
         st.markdown(f"""<div style='font-size:.78rem;color:#6ee7b7;line-height:2'>
             ✏️ cambia X por Y<br>
@@ -306,7 +285,6 @@ with st.sidebar:
         if st.session_state.get("historial_versiones"):
             st.markdown("---")
             st.markdown("**⏮ Versiones**")
-            st.caption(f"{len(st.session_state.historial_versiones)} versión(es) guardada(s)")
             if st.button(T("version"), use_container_width=True):
                 v = st.session_state.historial_versiones.pop()
                 st.session_state.texto_corregido = v["texto"]
@@ -315,49 +293,30 @@ with st.sidebar:
                     st.session_state.lista_cambios.pop()
                 st.session_state.resumen_data = None
                 st.rerun()
-    else:
-        st.markdown("**👋 Bienvenido**")
-        st.info("Sube un archivo Word, Excel o PDF — o una **foto** de un documento — para empezar.")
     st.markdown("---")
     st.caption("Oro Asistente v3.1")
 
 # ══════════════════════════════════════════════════════════════
-# TOP BAR — tema izquierda, idioma derecha
+# TOP BAR
 # ══════════════════════════════════════════════════════════════
 _col_tema, _col_mid, _col_lang = st.columns([2, 3, 1])
-
 with _col_tema:
     _temas_map = {"🌑 Noche":"noche","⬛ Carbón":"carbon","🌌 Cosmos":"cosmos"}
     _tema_actual = st.session_state.get("tema","noche")
-    _tema_label = next((k for k,v in _temas_map.items() if v==_tema_actual), "☀️ Claro")
-    _nuevo_tema = st.selectbox(
-        "tema", list(_temas_map.keys()),
-        index=list(_temas_map.keys()).index(_tema_label),
-        label_visibility="collapsed", key="tema_sel")
+    _tema_label = next((k for k,v in _temas_map.items() if v==_tema_actual), "🌑 Noche")
+    _nuevo_tema = st.selectbox("tema", list(_temas_map.keys()), index=list(_temas_map.keys()).index(_tema_label), label_visibility="collapsed", key="tema_sel")
     if _temas_map[_nuevo_tema] != _tema_actual:
         st.session_state.tema = _temas_map[_nuevo_tema]; st.rerun()
-
 with _col_lang:
     _lang_actual = st.session_state.get("idioma","es")
     _lang_label = "🌐 EN" if _lang_actual=="es" else "🌐 ES"
     if st.button(_lang_label, key="btn_lang", use_container_width=True):
-        st.session_state.idioma = "en" if _lang_actual=="es" else "es"
-        st.rerun()
+        st.session_state.idioma = "en" if _lang_actual=="es" else "es"; st.rerun()
 
-# ── Header ──
-st.markdown("""
-<div class="oro-header">
-    <div class="oro-logo-wrap">
-        <div class="oro-logo-ring"></div>
-        <span class="oro-logo">🏆</span>
-    </div>
-    <div class="oro-title">Oro Asistente</div>
-    <div class="oro-badge">✦ ANALIZA &nbsp;·&nbsp; EDITA &nbsp;·&nbsp; EXPORTA ✦</div>
-</div>
-""", unsafe_allow_html=True)
+st.markdown("""<div class="oro-header"><div class="oro-logo-wrap"><div class="oro-logo-ring"></div><span class="oro-logo">🏆</span></div><div class="oro-title">Oro Asistente</div><div class="oro-badge">✦ ANALIZA &nbsp;·&nbsp; EDITA &nbsp;·&nbsp; EXPORTA ✦</div></div>""", unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════
-# FUNCIONES UTILITARIAS
+# FUNCIONES
 # ══════════════════════════════════════════════════════════════
 def extraer_json_seguro(texto, es_lista=False):
     t = texto.replace("```json","").replace("```","").strip()
@@ -365,369 +324,161 @@ def extraer_json_seguro(texto, es_lista=False):
     ini=t.find(c1); fin=t.rfind(c2)+1
     if ini!=-1 and fin>0:
         try: return json.loads(t[ini:fin],strict=False)
-        except:
-            try: return ast.literal_eval(t[ini:fin])
-            except: pass
+        except: return None
     return None
 
-def _scroll_to(anchor_id):
-    """Hace scroll suave al elemento con ese id."""
-    st.markdown(f'''<script>
-        window.parent.document.getElementById("{anchor_id}") &&
-        window.parent.document.getElementById("{anchor_id}").scrollIntoView({{behavior:"smooth",block:"start"}});
-    </script>''', unsafe_allow_html=True)
-
 def guardar_version(texto, bytes_doc):
-    """Guarda snapshot antes de aplicar un cambio."""
-    st.session_state.historial_versiones.append({
-        "texto": texto,
-        "bytes": bytes_doc,
-        "ts": datetime.now().strftime("%H:%M:%S")
-    })
-    if len(st.session_state.historial_versiones) > 10:
-        st.session_state.historial_versiones.pop(0)
+    st.session_state.historial_versiones.append({"texto": texto,"bytes": bytes_doc,"ts": datetime.now().strftime("%H:%M:%S")})
+    if len(st.session_state.historial_versiones) > 10: st.session_state.historial_versiones.pop(0)
 
 def auditoria_tecnica_gastos(texto):
-    """
-    Realiza la auditoría de fechas para corregir errores de digitación
-    y elimina filas sin registros temporales.
-    """
     lineas = texto.split('\n')
-    lineas_auditadas = []
-    # Patrón para fechas (DD/MM/AAAA o similares)
+    auditado = []
     patron_fecha = r'(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})'
-    
     for linea in lineas:
         fecha_match = re.search(patron_fecha, linea)
         if fecha_match:
-            fecha_texto = fecha_match.group(1)
-            # Corregir años truncados (ej: 202 -> 2024)
-            partes = re.split(r'[/-]', fecha_texto)
+            fecha_orig = fecha_match.group(1)
+            partes = re.split(r'[/-]', fecha_orig)
             if len(partes) == 3 and len(partes[2]) == 3:
-                partes[2] = "2024" 
-                nueva_fecha = "/".join(partes)
-                linea = linea.replace(fecha_texto, nueva_fecha)
-            
-            # Vinculación lógica: Solo aceptamos filas con contenido de valor (números/montos)
+                partes[2] = "2024"
+                linea = linea.replace(fecha_orig, "/".join(partes))
             if any(char.isdigit() for char in linea) and len(linea.split()) > 2:
-                lineas_auditadas.append(linea)
-                
-    return "\n".join(lineas_auditadas)
+                auditado.append(linea)
+    return "\n".join(auditado)
 
-# ══════════════════════════════════════════════════════════════
-# FUNCIONES IA
-# ══════════════════════════════════════════════════════════════
 def solicitar_resumen_estructurado(texto):
     idioma_prompt = T("prompt_idioma")
-    prompt = (
-        f"Analista experto en documentos. {idioma_prompt} Devuelve SOLO JSON válido:\n"
-        '{"titulo":"...","emoji_categoria":"📋","resumen_ejecutivo":"max 3 oraciones amigables",'
-        '"metricas":{"Clave":"Valor"},"puntos_clave":["punto"],"hallazgo_destacado":"observación"}\n\n'
-        f"DOCUMENTO:\n{texto[:12000]}"
-    )
-    r = llamar_ia(prompt)
-    return extraer_json_seguro(r) if r else None
-
-def extraer_cambio_con_regex(instruccion):
-    patrones = [
-        r"(?:cambia|reemplaza|sustituye|cambie)\s+['\"]?(.+?)['\"]?\s+(?:por|con|a)\s+['\"]?(.+?)['\"]?\s*$",
-        r"['\"](.+?)['\"]\s*(?:→|->|=>|por|con)\s*['\"]?(.+?)['\"]?\s*$",
-        r"(.+?)\s*(?:→|->|=>)\s*(.+)",
-    ]
-    for pat in patrones:
-        m = re.search(pat,instruccion.strip(),re.IGNORECASE)
-        if m:
-            b=m.group(1).strip().strip("'\"")
-            r2=m.group(2).strip().strip("'\"")
-            if b and r2: return [{"buscar":b,"reemplazar":r2}]
-    return []
+    prompt = (f"Analista experto. {idioma_prompt} Devuelve SOLO JSON:\n"
+              '{"titulo":"...","emoji_categoria":"📋","resumen_ejecutivo":"max 3 frases",'
+              '"metricas":{"Clave":"Valor"},"puntos_clave":["punto"],"hallazgo_destacado":"obs"}\n\n'
+              f"DOC:\n{texto[:10000]}")
+    return llamar_ia(prompt, es_json=True)
 
 def solicitar_cambios(instruccion, texto_doc=""):
-    ctx = f"\n\nCONTENIDO DEL DOCUMENTO:\n{texto_doc[:4000]}" if texto_doc else ""
     idioma_prompt = T("prompt_idioma")
-    prompt = (
-        f"Asistente de edición de documentos. {idioma_prompt}\nINSTRUCCIÓN: \"{instruccion}\"{ctx}\n\n"
-        "REGLAS:\n1. cambia X por Y → buscar=X, reemplazar=Y\n"
-        "2. agrega DATO a PERSONA → buscar=PERSONA exacto, reemplazar='PERSONA DATO'\n"
-        "3. completa campo de X con Y → buscar=X, reemplazar='X Y'\n"
-        "4. SIEMPRE usa texto EXACTO del doc como buscar\n"
-        "5. Si pide formato (negrita/mayúsculas/cursiva) → agrega campo 'formato'\n"
-        "Responde SOLO JSON array:\n"
-        '[{"buscar":"texto_exacto","reemplazar":"texto_nuevo"}]'
-    )
-    r = llamar_ia(prompt)
-    if r:
-        res = extraer_json_seguro(r,es_lista=True)
-        if res and isinstance(res,list):
-            v = [c for c in res if isinstance(c,dict) and "buscar" in c and "reemplazar" in c
-                 and str(c["buscar"]).strip() and str(c["reemplazar"]).strip() and c["buscar"]!=c["reemplazar"]]
-            if v: return v
-    return extraer_cambio_con_regex(instruccion)
+    prompt = (f"Editor. {idioma_prompt}\nINST: \"{instruccion}\"\nDOC:\n{texto_doc[:3000]}\n\n"
+              "Responde SOLO JSON array: " '[{"buscar":"texto_exacto","reemplazar":"nuevo"}]')
+    return llamar_ia(prompt, es_json=True)
 
 def preguntar_al_documento(pregunta, texto):
-    ctx = "\n".join([f"{m['rol']}: {m['texto']}" for m in st.session_state.historial_chat[-6:]])
     idioma_prompt = T("prompt_idioma")
-    prompt = (
-        f"Asistente experto en documentos. {idioma_prompt}\nDOCUMENTO:\n{texto[:10000]}\n\n"
-        f"CONVERSACIÓN:\n{ctx}\n\nPREGUNTA: {pregunta}\nResponde conciso y directo en español."
-    )
-    return llamar_ia(prompt) or "No pude procesar tu pregunta."
+    prompt = (f"Asistente. {idioma_prompt}\nDOC:\n{texto[:8000]}\n\nPREGUNTA: {pregunta}")
+    return llamar_ia(prompt) or "Error"
 
 def detectar_anomalias(texto):
     idioma_prompt = T("prompt_idioma")
-    prompt = (
-        f"Analiza el documento. {idioma_prompt} Devuelve SOLO JSON:\n"
-        '{"nivel_general":"Excelente/Bueno/Regular/Deficiente","puntaje":85,'
-        '"criticos":["..."],"altos":["..."],"medios":["..."],"leves":["..."],'
-        '"recomendacion":"..."}\n\n'
-        f"DOCUMENTO:\n{texto[:12000]}"
-    )
-    r = llamar_ia(prompt)
-    return extraer_json_seguro(r) if r else None
-
-def detectar_tipo_imagen(texto_raw):
-    lineas = [l for l in texto_raw.split('\n') if l.strip()]
-    if not lineas: return "word"
-    lineas_con_cols = sum(1 for l in lineas if len(re.split(r'\s{2,}|\t', l.strip())) >= 2)
-    ratio_tabla = lineas_con_cols / max(len(lineas), 1)
-    if ratio_tabla >= 0.5:
-        return "excel"
-    return "word"
-
-def interpretar_imagen_documento(imagen_bytes, mime_type="image/jpeg", formato_salida="auto"):
-    texto_raw = None
-    try:
-        from PIL import Image, ImageEnhance, ImageFilter
-        import pytesseract, io
-        img = Image.open(io.BytesIO(imagen_bytes))
-        img_gray = img.convert('L')
-        img_contrast = ImageEnhance.Contrast(img_gray).enhance(2.0)
-        img_sharp = img_contrast.filter(ImageFilter.SHARPEN)
-        texto_raw = pytesseract.image_to_string(img_sharp, lang='spa+eng', config='--psm 6')
-        if not texto_raw.strip():
-            texto_raw = None
-    except:
-        texto_raw = None
-
-    if not texto_raw:
-        try:
-            import base64
-            img_b64 = base64.b64encode(imagen_bytes).decode("utf-8")
-            model = genai.GenerativeModel("gemini-1.5-flash")
-            resp = model.generate_content([
-                "Extrae TODO el texto de esta imagen. Si es una tabla, usa tabulaciones para separar columnas. No agregues comentarios.",
-                {"mime_type": mime_type, "data": img_b64}
-            ])
-            texto_raw = resp.text
-        except:
-            return None, "word"
-
-    tipo = detectar_tipo_imagen(texto_raw) if formato_salida == "auto" else formato_salida
-    return texto_raw, tipo
+    prompt = (f"Analiza. {idioma_prompt} JSON:\n"
+              '{"nivel_general":"Bueno","puntaje":80,"criticos":[],"altos":[],"recomendacion":"..."}\n'
+              f"DOC:\n{texto[:10000]}")
+    return llamar_ia(prompt, es_json=True)
 
 # ══════════════════════════════════════════════════════════════
-# EXPORTACIÓN
+# EXPORTACIÓN CORREGIDA
 # ══════════════════════════════════════════════════════════════
-def exportar_a_word(texto, titulo="Informe Corregido"):
+def exportar_a_word(texto, titulo="Informe"):
     doc = Document()
-    s = doc.styles['Normal']; s.font.name = 'Arial'; s.font.size = Pt(11)
-    h = doc.add_heading(titulo, 0); h.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    doc.add_paragraph(f"Generado por Oro Asistente - {datetime.now().strftime('%d/%m/%Y %H:%M')}")
-    doc.add_paragraph("_" * 40)
+    doc.add_heading(titulo, 0)
     for p in texto.split('\n'):
         if p.strip(): doc.add_paragraph(p.strip())
     out = BytesIO(); doc.save(out); return out.getvalue()
 
 def exportar_a_excel(texto):
-    wb = openpyxl.Workbook(); ws = wb.active; ws.title = "Datos"
-    filas = [re.split(r'\s{2,}|\t|;', l.strip()) for l in texto.split('\n') if l.strip()]
-    for r_idx, fila in enumerate(filas, 1):
-        for c_idx, val in enumerate(fila, 1):
-            cell = ws.cell(row=r_idx, column=c_idx, value=val)
-            if r_idx == 1:
-                cell.font = Font(bold=True, color="FFFFFF")
-                cell.fill = PatternFill("solid", fgColor="4f46e5")
+    wb = openpyxl.Workbook(); ws = wb.active
+    for r_idx, l in enumerate(texto.split('\n'), 1):
+        fila = re.split(r'\s{2,}|\t|;', l.strip())
+        for c_idx, v in enumerate(fila, 1): ws.cell(row=r_idx, column=c_idx, value=v)
     out = BytesIO(); wb.save(out); return out.getvalue()
 
 def exportar_a_pdf(texto):
-    pdf = FPDF(); pdf.add_page(); pdf.set_font("Arial", size=10)
-    for l in texto.split('\n'):
-        pdf.multi_cell(0, 8, l.strip().encode('latin-1', 'replace').decode('latin-1'))
-    return pdf.output(dest='S').encode('latin-1')
+    """Exportación PDF mejorada usando FPDF2 para evitar errores de ancho horizontal."""
+    try:
+        pdf = FPDF()
+        pdf.set_auto_page_break(auto=True, margin=15)
+        pdf.add_page()
+        pdf.set_font("helvetica", size=10)
+        
+        # Procesar texto línea por línea para evitar bloqueos
+        for linea in texto.split('\n'):
+            # Limpiar caracteres que no están en latin-1
+            clean_line = linea.encode('latin-1', 'replace').decode('latin-1')
+            pdf.multi_cell(0, 6, clean_line)
+            
+        return pdf.output()
+    except Exception as e:
+        # Fallback si falla el PDF
+        return f"Error generando PDF: {str(e)}".encode()
 
 # ══════════════════════════════════════════════════════════════
-# LÓGICA DE CARGA
+# CARGA Y DASHBOARD
 # ══════════════════════════════════════════════════════════════
-if st.session_state.modo_entrada == "archivo":
-    fu = st.file_uploader(T("subir"), type=["docx", "xlsx", "pdf", "jpg", "png", "jpeg"], label_visibility="collapsed")
-    if fu and fu.name != st.session_state.nombre_archivo:
-        with st.spinner(T("cargando")):
-            st.session_state.nombre_archivo = fu.name
-            st.session_state.archivo_bytes = fu.getvalue()
-            st.session_state.lista_cambios = []
-            st.session_state.resumen_data = None
-            st.session_state.guia_paso = 1
-            ext = fu.name.split('.')[-1].lower()
-            txt = ""
-            if ext == "docx":
-                st.session_state.archivo_tipo = "word"
-                doc = Document(BytesIO(st.session_state.archivo_bytes))
-                txt = "\n".join([p.text for p in doc.paragraphs])
-            elif ext == "xlsx":
-                st.session_state.archivo_tipo = "excel"
-                wb = openpyxl.load_workbook(BytesIO(st.session_state.archivo_bytes), data_only=True)
-                ws = wb.active
-                txt = "\n".join(["\t".join([str(c.value or "") for c in r]) for r in ws.rows])
-            elif ext == "pdf":
-                st.session_state.archivo_tipo = "pdf"
-                try:
-                    pdf = PyPDF2.PdfReader(BytesIO(st.session_state.archivo_bytes))
-                    txt = "\n".join([p.extract_text() for p in pdf.pages])
-                except:
-                    if PYMUPDF_OK:
-                        doc = fitz.open(stream=st.session_state.archivo_bytes, filetype="pdf")
-                        txt = "\n".join([p.get_text() for p in doc])
-            elif ext in ["jpg","jpeg","png"]:
-                txt, tipo = interpretar_imagen_documento(st.session_state.archivo_bytes, fu.type)
-                st.session_state.archivo_tipo = tipo
-            st.session_state.texto_extraido = txt
-            st.session_state.texto_corregido = txt
-            st.rerun()
+fu = st.file_uploader(T("subir"), type=["docx", "xlsx", "pdf", "jpg", "png", "jpeg"], label_visibility="collapsed")
+if fu and fu.name != st.session_state.nombre_archivo:
+    with st.spinner(T("cargando")):
+        st.session_state.nombre_archivo = fu.name
+        st.session_state.archivo_bytes = fu.getvalue()
+        ext = fu.name.split('.')[-1].lower()
+        txt = ""
+        if ext == "docx":
+            st.session_state.archivo_tipo = "word"
+            doc = Document(BytesIO(st.session_state.archivo_bytes))
+            txt = "\n".join([p.text for p in doc.paragraphs])
+        elif ext == "xlsx":
+            st.session_state.archivo_tipo = "excel"
+            wb = openpyxl.load_workbook(BytesIO(st.session_state.archivo_bytes), data_only=True)
+            ws = wb.active
+            txt = "\n".join(["\t".join([str(c.value or "") for c in r]) for r in ws.rows])
+        elif ext == "pdf":
+            st.session_state.archivo_tipo = "pdf"
+            pdf = PyPDF2.PdfReader(BytesIO(st.session_state.archivo_bytes))
+            txt = "\n".join([p.extract_text() for p in pdf.pages])
+        st.session_state.texto_extraido = txt; st.session_state.texto_corregido = txt; st.rerun()
 
-# ══════════════════════════════════════════════════════════════
-# DASHBOARD
-# ══════════════════════════════════════════════════════════════
 if st.session_state.texto_extraido:
     texto_activo = st.session_state.texto_corregido
-    
-    # Header del archivo
-    ext_ico = {"word":"📄","excel":"📊","pdf":"📕"}.get(st.session_state.archivo_tipo,"📄")
-    st.markdown(f"""<div class="file-badge">
-        <div class="file-icon">{ext_ico}</div>
-        <div style="flex:1">
-            <div class="file-info-name">{st.session_state.nombre_archivo}</div>
-            <div class="file-info-stats">
-                <span class="stat-chip">{len(texto_activo.split())} {T('palabras')}</span>
-                <span class="stat-chip">{len(st.session_state.lista_cambios)} {T('cambios')}</span>
-                <span class="stat-chip">{len(st.session_state.historial_versiones)} {T('versiones')}</span>
-            </div>
-        </div>
-    </div>""", unsafe_allow_html=True)
+    st.markdown(f"""<div class="file-badge"><div class="file-icon">📄</div><div style="flex:1"><div class="file-info-name">{st.session_state.nombre_archivo}</div><div class="file-info-stats"><span class="stat-chip">{len(texto_activo.split())} {T('palabras')}</span></div></div></div>""", unsafe_allow_html=True)
 
-    # Botones principales
     c1, c2, c3 = st.columns(3)
     with c1:
         if st.button(T("analizar"), use_container_width=True, type="primary"):
-            with st.spinner(T("analizando")):
-                st.session_state.resumen_data = solicitar_resumen_estructurado(texto_activo)
-                if st.session_state.resumen_data: st.session_state.guia_paso = 2
-            st.rerun()
+            with st.spinner(T("analizando")): st.session_state.resumen_data = solicitar_resumen_estructurado(texto_activo); st.rerun()
     with c2:
         if st.button(T("evaluar"), use_container_width=True):
-            st.session_state.ejecutar_evaluacion = True
+            with st.spinner(T("evaluando")): st.session_state.resultado_evaluacion = detectar_anomalias(texto_activo)
     with c3:
         with st.expander("📥"):
-            if st.session_state.archivo_tipo == "excel":
-                st.download_button("📊 Excel", exportar_a_excel(texto_activo), "auditado.xlsx", use_container_width=True)
-            else:
-                st.download_button("📄 Word", exportar_a_word(texto_activo), "auditado.docx", use_container_width=True)
-            st.download_button("📕 PDF", exportar_a_pdf(texto_activo), "auditado.pdf", use_container_width=True)
+            if st.session_state.archivo_tipo == "excel": st.download_button("📊 Excel", exportar_a_excel(texto_activo), "audit.xlsx", use_container_width=True)
+            else: st.download_button("📄 Word", exportar_a_word(texto_activo), "audit.docx", use_container_width=True)
+            st.download_button("📕 PDF", exportar_a_pdf(texto_activo), "audit.pdf", use_container_width=True)
 
-    # Evaluación de Calidad
-    if st.session_state.get("ejecutar_evaluacion"):
-        with st.spinner(T("evaluando")):
-            eval_data = detectar_anomalias(texto_activo)
-            if eval_data:
-                st.markdown(f"### Calidad del Documento: {eval_data['nivel_general']}")
-                st.progress(eval_data['puntaje']/100)
-                if eval_data['criticos']: st.error("Críticos: " + ", ".join(eval_data['criticos']))
-                if eval_data['altos']: st.warning("Altos: " + ", ".join(eval_data['altos']))
-                st.info("Recomendación: " + eval_data['recomendacion'])
-        if st.button(T("cerrar_eval")):
-            st.session_state.ejecutar_evaluacion = False; st.rerun()
+    if st.session_state.resultado_evaluacion:
+        ev = st.session_state.resultado_evaluacion
+        st.info(f"Calidad: {ev.get('nivel_general')} - {ev.get('recomendacion')}")
 
-    # Resumen Inteligente
     if st.session_state.resumen_data:
         rd = st.session_state.resumen_data
-        st.markdown(f"""<div class="summary-card">
-            <div class="summary-card-title">{rd.get('emoji_categoria','📋')} {rd.get('titulo','Resumen')}</div>
-            {rd.get('resumen_ejecutivo','')}
-        </div>""", unsafe_allow_html=True)
-        
-        m_cols = st.columns(len(rd.get('metricas',{})))
-        for i, (k,v) in enumerate(rd.get('metricas',{}).items()):
-            with m_cols[i]:
-                st.markdown(f"""<div class="metric-pill">
-                    <div class="metric-pill-label">{k}</div>
-                    <div class="metric-pill-value">{v}</div>
-                </div>""", unsafe_allow_html=True)
-        
-        st.markdown(f"""<div class="hallazgo-card">
-            <span style="font-weight:800;color:#6b83f8">{T('hallazgo')}</span> {rd.get('hallazgo_destacado','')}
-        </div>""", unsafe_allow_html=True)
+        st.markdown(f"""<div class="summary-card"><b>{rd.get('titulo')}</b><br>{rd.get('resumen_ejecutivo')}</div>""", unsafe_allow_html=True)
 
-    # CHAT / EDICIÓN
-    st.markdown(f"<div class='section-title'>💬 {T('chat_titulo')}</div>", unsafe_allow_html=True)
-    
+    # Chat
     for msg in st.session_state.historial_chat:
-        with st.chat_message("user" if msg["rol"]=="Usuario" else "assistant"):
-            st.markdown(msg["texto"])
+        with st.chat_message("user" if msg["rol"]=="Usuario" else "assistant"): st.markdown(msg["texto"])
 
     entrada = st.chat_input(T("chat_placeholder"))
     if entrada:
         st.session_state.historial_chat.append({"rol":"Usuario","texto":entrada})
-        
-        # LÓGICA DE AUDITORÍA INCORPORADA
-        if any(x in entrada.lower() for x in ["auditoria", "auditoría", "corregir fechas", "limpiar registros"]):
-            with st.spinner("Ejecutando auditoría técnica..."):
-                guardar_version(st.session_state.texto_corregido, st.session_state.archivo_bytes)
-                resultado_audit = auditoria_tecnica_gastos(texto_activo)
-                st.session_state.texto_corregido = resultado_audit
-                msg = "✅ Auditoría completada. He corregido errores de digitación en fechas y eliminado las filas sin registros temporales según lo recomendado."
-                st.session_state.historial_chat.append({"rol":"Asistente","texto":msg})
-        
-        # Edición por lenguaje natural
-        elif any(x in entrada.lower() for x in ["cambia","reemplaza","sustituye","→","->","agrega"]):
-            with st.spinner(T("pensando")):
-                cambios = solicitar_cambios(entrada, texto_activo)
+        if "auditoria" in entrada.lower():
+            guardar_version(st.session_state.texto_corregido, st.session_state.archivo_bytes)
+            st.session_state.texto_corregido = auditoria_tecnica_gastos(texto_activo)
+            st.session_state.historial_chat.append({"rol":"Asistente","texto":"✅ Auditoría técnica realizada."})
+        elif any(x in entrada.lower() for x in ["cambia","por"]):
+            cambios = solicitar_cambios(entrada, texto_activo)
             if cambios:
                 guardar_version(st.session_state.texto_corregido, st.session_state.archivo_bytes)
-                nuevo_texto = texto_activo
-                realizados = []
-                for c in cambios:
-                    busc, reem = str(c["buscar"]), str(c["reemplazar"])
-                    if busc in nuevo_texto:
-                        nuevo_texto = nuevo_texto.replace(busc, reem)
-                        realizados.append(f"'{busc}' → '{reem}'")
-                st.session_state.texto_corregido = nuevo_texto
-                st.session_state.lista_cambios.extend(realizados)
-                msg = f"✅ Aplicado: {', '.join(realizados)}. Revisa la vista previa arriba y confirma."
-                st.session_state.historial_chat.append({"rol":"Asistente","texto":msg})
-            else:
-                msg = "No encontré qué cambiar. Intenta: *cambia 'palabra original' por 'palabra nueva'*"
-                st.session_state.historial_chat.append({"rol":"Asistente","texto":msg})
+                for c in cambios: st.session_state.texto_corregido = st.session_state.texto_corregido.replace(c["buscar"], c["reemplazar"])
+                st.session_state.historial_chat.append({"rol":"Asistente","texto":"✅ Cambios aplicados."})
         else:
-            with st.spinner(T("pensando")):
-                resp = preguntar_al_documento(entrada, texto_activo)
+            resp = preguntar_al_documento(entrada, texto_activo)
             st.session_state.historial_chat.append({"rol":"Asistente","texto":resp})
         st.rerun()
-
 else:
-    st.markdown("""<div class="empty-state">
-        <div class="empty-icon">📂</div>
-        <div class="empty-title">Sube un archivo para empezar</div>
-        <div class="empty-hint">
-            Analiza documentos con IA · Edita con lenguaje natural<br>
-            Exporta a Word, Excel o PDF
-        </div>
-        <div class="format-badges">
-            <span class="format-badge">.docx</span>
-            <span class="format-badge">.xlsx</span>
-            <span class="format-badge">.pdf</span>
-            <span class="format-badge">📷 foto</span>
-        </div>
-    </div>""", unsafe_allow_html=True)
-
-zona_horaria = pytz.timezone('America/Caracas')
-hora = datetime.now(zona_horaria).strftime("%H:%M")
-st.markdown(f"<div class='oro-footer'>Oro Asistente v3.1 · {hora} · Desarrollado para Auditoría Deportiva</div>", unsafe_allow_html=True)
+    st.markdown('<div class="empty-state"><div class="empty-icon">📂</div><div class="empty-title">Sube un archivo</div></div>', unsafe_allow_html=True)
